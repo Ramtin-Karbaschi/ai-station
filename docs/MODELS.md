@@ -1,48 +1,102 @@
-# AI Station Model Provisioning
+# Model Management
 
-Model binaries are not stored in Git.
+AI Station does not commit model binaries to Git.
 
-The committed model definition is:
+The authoritative model definition is:
 
-    config/model-manifest.json
+~~~text
+config/model-manifest.json
+~~~
 
-Every model entry includes:
+## Manifest fields
 
-- Hugging Face repository
-- immutable source revision
-- exact source filename
-- destination beneath the persistent data root
-- expected file size
-- SHA-256 checksum
-- installation profiles
+Each model entry contains:
 
-## Core profile
+| Field | Meaning |
+|---|---|
+| `id` | Stable AI Station identifier |
+| `role` | General, coding, embedding or reranking role |
+| `repo_id` | Hugging Face repository |
+| `filename` | Exact upstream filename |
+| `revision` | Immutable source commit |
+| `destination` | Relative path beneath the data root |
+| `size_bytes` | Expected file size |
+| `sha256` | Expected SHA-256 checksum |
+| `profiles` | Installation profiles containing the model |
 
-The Core profile installs the default runtime models:
+## Profiles
 
-- general reasoning model
-- embedding model
+### Core
 
-Install or verify it with:
+The Core profile provides the default operational models:
 
-    ./scripts/provision-models.sh --profile core
-    ./scripts/verify-models.sh --profile core
+- Qwen3.6 35B-A3B general model;
+- Qwen3 Embedding 0.6B.
 
-## Complete profile
+~~~bash
+./scripts/provision-models.sh --profile core
+./scripts/verify-models.sh --profile core
+~~~
 
-The Complete profile additionally installs:
+### All
 
-- coding model
-- reranker model
+The complete profile additionally provisions:
 
-Install or verify it with:
+- Qwen3 Coder 30B-A3B;
+- Qwen3 Reranker 0.6B.
 
-    ./scripts/provision-models.sh --profile all
-    ./scripts/verify-models.sh --profile all
+~~~bash
+./scripts/provision-models.sh --profile all
+./scripts/verify-models.sh --profile all
+~~~
 
-The download cache is retained under:
+## Resume behavior
 
-    /srv/ai-station/cache/huggingface
+The Hugging Face cache is retained at:
 
-A model is moved into its final destination only after its size and
-SHA-256 checksum match the committed manifest.
+~~~text
+/srv/ai-station/cache/huggingface
+~~~
+
+Interrupted downloads can resume from this cache.
+
+A downloaded file is placed at its final destination only after:
+
+1. its size matches the manifest;
+2. its SHA-256 checksum matches the manifest.
+
+Invalid existing files are quarantined rather than silently overwritten.
+
+## Default model paths
+
+~~~text
+/srv/ai-station/models/general
+/srv/ai-station/models/coder
+/srv/ai-station/models/embedding
+/srv/ai-station/models/reranker
+/srv/ai-station/models/ocr
+/srv/ai-station/models/vision
+/srv/ai-station/models/whisper
+~~~
+
+## VRAM policy
+
+The default general and coding models are heavy models. On a 24 GB GPU, avoid
+running multiple heavy models simultaneously.
+
+Stop an unused heavy model before starting another.
+
+## Adding or replacing a model
+
+A model update is incomplete until all of these are updated:
+
+1. model file source;
+2. immutable source revision;
+3. local destination;
+4. expected size;
+5. SHA-256 checksum;
+6. service command or runtime catalog;
+7. documentation;
+8. release audit result.
+
+Do not use a mutable branch such as `main` as a production model revision.

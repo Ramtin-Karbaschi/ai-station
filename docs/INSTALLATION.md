@@ -1,61 +1,174 @@
-# AI Station Installation
+# Installation Guide
 
-AI Station uses two host paths:
+This guide describes the supported AI Station installation flow.
 
-- Application: `/opt/ai-station`
-- Persistent data: `/srv/ai-station`
+## Supported installation layout
 
-The repository may be cloned anywhere. The installer deploys the application
-to the supported application root and keeps models, backups and runtime data
-outside Git.
+~~~text
+/opt/ai-station
+/srv/ai-station
+~~~
 
-## Requirements
+The repository may initially be cloned elsewhere. The installer deploys the
+application into `/opt/ai-station` and stores models, caches and backups under
+`/srv/ai-station`.
 
-- Linux or WSL2
-- Docker Engine or Docker Desktop with Linux-container integration
-- Docker Compose v2
-- NVIDIA GPU visibility through `nvidia-smi`
-- At least 80 GiB of free storage for the current model pack
-- Git, OpenSSL, Python 3 and rsync
+## Before installation
 
-## Preflight
+The installer does not install or configure the Windows NVIDIA driver,
+WSL2 or Docker Desktop.
 
-Run:
+Complete these host-level prerequisites first:
 
-    ./scripts/preflight-install.sh
+1. Install or enable WSL2.
+2. Install an Ubuntu-based WSL distribution.
+3. Install Docker Desktop or Docker Engine.
+4. Enable Docker integration for the WSL distribution.
+5. Install a compatible Windows NVIDIA driver.
+6. Confirm the GPU is visible inside WSL.
 
-## Validate the installer
+Verify:
 
-Run:
+~~~bash
+wsl.exe --status
+docker version
+docker compose version
+nvidia-smi
+~~~
 
-    ./scripts/install.sh --validate-only
+## Required tools
+
+The installation expects:
+
+- Bash;
+- Git;
+- Docker;
+- Docker Compose v2;
+- Python 3;
+- OpenSSL;
+- curl;
+- rsync;
+- `nvidia-smi`.
+
+Missing basic Ubuntu packages may be installed automatically by the installer.
+
+## Storage requirements
+
+The configured preflight requires at least 80 GiB of free storage.
+
+The full model profile requires substantially more space than the Core profile
+because both the final model file and the resumable Hugging Face cache may
+exist simultaneously.
+
+## Clone the repository
+
+~~~bash
+git clone https://github.com/Ramtin-Karbaschi/ai-station.git
+cd ai-station
+~~~
+
+## Validate without modifying the system
+
+~~~bash
+./scripts/install.sh --validate-only
+~~~
+
+Do not continue until the preflight reports:
+
+~~~text
+Errors:   0
+Warnings: 0
+INSTALLATION PREFLIGHT PASSED
+~~~
 
 ## Install
 
-Run:
+~~~bash
+sudo ./scripts/install.sh
+~~~
 
-    sudo ./scripts/install.sh
+The installer performs these stages:
+
+1. validates the host;
+2. verifies container and Dockerfile locks;
+3. creates application and data directories;
+4. creates local configuration;
+5. preserves an existing installation backup;
+6. pulls immutable registry images;
+7. builds repository-controlled images;
+8. provisions the Core models;
+9. verifies model checksums;
+10. starts the stack;
+11. waits for health checks.
 
 ## Prepare without starting services
 
-Run:
+~~~bash
+sudo ./scripts/install.sh --prepare-only
+~~~
 
-    sudo ./scripts/install.sh --prepare-only
+## Infrastructure-only testing
 
-## Model artifacts
+The following option skips model checks:
 
-The installer verifies every model file referenced by Docker Compose.
+~~~bash
+sudo ./scripts/install.sh --skip-model-check
+~~~
 
-Model binaries are intentionally excluded from Git. They must be provisioned
-under `/srv/ai-station/models` before the services are started.
+Use it only for infrastructure troubleshooting. A normal runtime cannot pass
+the final verification without the required local models.
 
-The model provisioning workflow is maintained separately from infrastructure
-installation so large model downloads can be resumed and verified by checksum.
+## Verify after installation
 
-## Upgrade behavior
+~~~bash
+cd /opt/ai-station
+./scripts/verify.sh
+~~~
 
-When the target application directory already exists, the installer creates
-a timestamped backup under `/srv/ai-station/backups` before deploying the new
-repository files.
+Expected services include:
 
-The existing `.env` file is preserved.
+- Open WebUI;
+- UI Gateway;
+- Apache Tika;
+- SearXNG;
+- embedding server;
+- general model server;
+- Persian OCR;
+- local Whisper large-v3.
+
+## Install the complete model profile
+
+~~~bash
+cd /opt/ai-station
+./scripts/provision-models.sh --profile all
+./scripts/verify-models.sh --profile all
+~~~
+
+## Upgrade
+
+From the installation directory:
+
+~~~bash
+cd /opt/ai-station
+git pull --ff-only
+sudo ./scripts/install.sh
+~~~
+
+When an existing application directory is replaced, the installer creates a
+timestamped backup under:
+
+~~~text
+/srv/ai-station/backups
+~~~
+
+The local `.env` file is preserved.
+
+## Clean-machine acceptance
+
+Before using the project for unattended deployment:
+
+1. test installation on a disposable WSL distribution;
+2. verify all host gateway services;
+3. confirm a full restart survives `wsl --shutdown`;
+4. test backup restoration;
+5. record the tested Git commit and model manifest checksums.

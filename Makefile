@@ -1,34 +1,77 @@
-.PHONY: config build core llm obs edge down logs ps backup restore-test gpu-test
+SHELL := /usr/bin/env bash
+
+.PHONY: \
+	help \
+	config \
+	pull \
+	build \
+	start \
+	stop \
+	restart \
+	status \
+	logs \
+	verify \
+	models-core \
+	models-all \
+	models-verify \
+	docs-audit \
+	audit
+
+help:
+	@printf '%s\n' \
+		'AI Station commands:' \
+		'  make config         Validate Docker Compose configuration' \
+		'  make pull           Pull locked registry images' \
+		'  make build          Build repository-controlled images' \
+		'  make start          Start AI Station' \
+		'  make stop           Stop AI Station' \
+		'  make restart        Restart AI Station' \
+		'  make status         Show service and endpoint status' \
+		'  make logs           Follow service logs' \
+		'  make verify         Verify the active runtime' \
+		'  make models-core    Provision the Core model profile' \
+		'  make models-all     Provision the complete model profile' \
+		'  make models-verify  Verify the Core model profile' \
+		'  make docs-audit     Validate documentation quality' \
+		'  make audit          Run the complete release audit'
 
 config:
-	docker compose config
+	docker compose config --quiet
+
+pull:
+	docker compose pull --ignore-buildable
 
 build:
 	docker compose build
 
-core:
-	docker compose up -d postgres redis api worker web
+start:
+	./scripts/start.sh
 
-llm:
-	docker compose --profile llm up -d llm
+stop:
+	./scripts/stop.sh
 
-obs:
-	docker compose --profile obs up -d prometheus grafana
+restart: stop start
 
-edge:
-	docker compose --profile edge up -d edge
-
-down:
-	docker compose down
+status:
+	./scripts/status.sh
 
 logs:
-	docker compose logs -f --tail=200
+	./scripts/logs.sh
 
-ps:
-	docker compose ps
+verify:
+	./scripts/verify.sh
 
-gpu-test:
-	docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi
+models-core:
+	./scripts/provision-models.sh --profile core
 
-backup:
-	bash scripts/backup.sh
+models-all:
+	./scripts/provision-models.sh --profile all
+
+models-verify:
+	./scripts/verify-models.sh --profile core
+
+docs-audit:
+	./scripts/docs-audit.sh
+
+audit:
+	./scripts/release-audit.sh

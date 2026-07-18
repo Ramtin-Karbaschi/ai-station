@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200"
+     height="360"
+     viewBox="0 0 1200 360"
+     role="img"
+     aria-labelledby="title description">
+  <title id="title">AI Station</title>
+  <desc id="description">
+    A local-first AI workstation for WSL2, Docker and NVIDIA GPUs.
+  </desc>
+
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07111f"/>
+      <stop offset="55%" stop-color="#10243f"/>
+      <stop offset="100%" stop-color="#123b51"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="url(#background)"/>
+
+  <circle cx="1075" cy="65" r="170" fill="#0ea5e9" opacity="0.08"/>
+  <circle cx="930" cy="350" r="210" fill="#14b8a6" opacity="0.07"/>
+
+  <g transform="translate(70 72)">
+    <rect width="72" height="72" rx="18"
+          fill="none"
+          stroke="url(#accent)"
+          stroke-width="4"/>
+
+    <circle cx="24" cy="25" r="6" fill="#5eead4"/>
+    <circle cx="49" cy="25" r="6" fill="#60a5fa"/>
+    <circle cx="36" cy="49" r="6" fill="#a7f3d0"/>
+
+    <path d="M24 25 L49 25 L36 49 Z"
+          fill="none"
+          stroke="#dbeafe"
+          stroke-width="3"/>
+  </g>
+
+  <text x="170" y="122"
+        fill="#f8fafc"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="58"
+        font-weight="750"
+        letter-spacing="3">
+    AI STATION
+  </text>
+
+  <rect x="171" y="143" width="398" height="5" rx="2.5"
+        fill="url(#accent)"/>
+
+  <text x="72" y="208"
+        fill="#cbd5e1"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="25">
+    Local-first AI workstation foundation
+  </text>
+
+  <text x="72" y="247"
+        fill="#94a3b8"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="19">
+    WSL2  •  Docker Compose  •  NVIDIA GPU  •  Local RAG
+  </text>
+
+  <g transform="translate(705 76)"
+     font-family="Inter, Segoe UI, Arial, sans-serif">
+
+    <path d="M100 37 H225 M100 107 H225 M225 37 V177"
+          fill="none"
+          stroke="#475569"
+          stroke-width="3"/>
+
+    <rect x="0" y="10" width="190" height="55" rx="14"
+          fill="#0f2940"
+          stroke="#38bdf8"
+          stroke-width="2"/>
+    <text x="95" y="44"
+          text-anchor="middle"
+          fill="#e0f2fe"
+          font-size="17">
+      Open WebUI
+    </text>
+
+    <rect x="0" y="80" width="190" height="55" rx="14"
+          fill="#0f2940"
+          stroke="#5eead4"
+          stroke-width="2"/>
+    <text x="95" y="114"
+          text-anchor="middle"
+          fill="#ccfbf1"
+          font-size="17">
+      Local Gateway
+    </text>
+
+    <rect x="225" y="10" width="205" height="55" rx="14"
+          fill="#162b46"
+          stroke="#818cf8"
+          stroke-width="2"/>
+    <text x="327" y="44"
+          text-anchor="middle"
+          fill="#e0e7ff"
+          font-size="17">
+      llama.cpp + GGUF
+    </text>
+
+    <rect x="225" y="80" width="205" height="55" rx="14"
+          fill="#162b46"
+          stroke="#34d399"
+          stroke-width="2"/>
+    <text x="327" y="114"
+          text-anchor="middle"
+          fill="#d1fae5"
+          font-size="17">
+      Embeddings + pgvector
+    </text>
+
+    <rect x="225" y="150" width="205" height="55" rx="14"
+          fill="#162b46"
+          stroke="#fbbf24"
+          stroke-width="2"/>
+    <text x="327" y="184"
+          text-anchor="middle"
+          fill="#fef3c7"
+          font-size="17">
+      Search + OCR + STT
+    </text>
+  </g>
+
+  <text x="72" y="319"
+        fill="#64748b"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="15">
+    Reproducible images • Immutable model revisions • SHA-256 verification
+  </text>
+</svg>

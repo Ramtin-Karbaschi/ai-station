@@ -248,6 +248,20 @@ fi
 
 # END MODEL MANIFEST VALIDATION
 
+# BEGIN DOCUMENTATION QUALITY VALIDATION
+
+if [[ -x scripts/docs-audit.sh ]]; then
+    if scripts/docs-audit.sh; then
+        pass "Documentation quality audit passed"
+    else
+        fail "Documentation quality audit failed"
+    fi
+else
+    fail "Documentation audit script is missing"
+fi
+
+# END DOCUMENTATION QUALITY VALIDATION
+
 # ------------------------------------------------------------
 # Final result
 # ------------------------------------------------------------
