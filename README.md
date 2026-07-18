@@ -104,9 +104,9 @@ flowchart LR
     W --> R[(Redis)]
     W --> STT[Local Whisper Cache]
 
-    L --> M[/srv/ai-station/models]
+    L --> M["/srv/ai-station/models"]
     E --> M
-    STT --> D[/srv/ai-station runtime data]
+    STT --> D["/srv/ai-station runtime data"]
     P --> D
     R --> D
 ~~~

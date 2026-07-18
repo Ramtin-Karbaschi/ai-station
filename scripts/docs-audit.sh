@@ -263,6 +263,12 @@ print(
 )
 PY
 
+# BEGIN MERMAID VALIDATION
+
+"$ROOT/scripts/verify-mermaid.sh"
+
+# END MERMAID VALIDATION
+
 git diff --check
 
 echo "OK: Git whitespace validation passed."
