@@ -1,0 +1,31 @@
+# Files permitted to reference the canonical host installation root.
+# Any new reference outside this list will be reported by the release audit.
+
+AI Station/AI Station Manager.cmd
+README.md
+apps/gateway/app/main.py
+apps/ocr/app/main.py
+config/install-layout.env
+config/skills/local-ai-ops.md
+docs/INSTALLATION.md
+docs/MODELS.md
+docs/PORTABILITY_POLICY.md
+docs/ops/AI_STATION_CURRENT_STATE.md
+scripts/ai-station-models.sh
+scripts/ai-station-safe-cleanup.sh
+scripts/backup.sh
+scripts/build-tika-fa.sh
+scripts/collect-ai-station-state.sh
+scripts/finalize-runtime-for-github.sh
+scripts/fix-openwebui-restart-loop.sh
+scripts/fix-postgres-openwebui-password.sh
+scripts/install.sh
+scripts/logs-ai-station.sh
+scripts/preflight-install.sh
+scripts/provision-whisper-cache-resilient.sh
+scripts/start-ai-station.sh
+scripts/status-ai-station.sh
+scripts/stop-ai-station-models.sh
+scripts/stop-ai-station.sh
+scripts/switch-ai-station-model.sh
+scripts/verify-ai-station-final.sh

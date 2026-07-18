@@ -1,0 +1,78 @@
+{
+  "data_root": "/srv/ai-station",
+  "default_profile": "core",
+  "generated_at": "2026-07-18T18:58:37.983709+00:00",
+  "models": [
+    {
+      "destination": "models/general/qwen3.6-35b-a3b-ud-q4_k_m.gguf",
+      "filename": "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
+      "id": "general-qwen3.6-35b-a3b-q4",
+      "profiles": [
+        "core",
+        "all"
+      ],
+      "repo_id": "unsloth/Qwen3.6-35B-A3B-GGUF",
+      "required_for_runtime": true,
+      "revision": "a483e9e6cbd595906af30beda3187c2663a1118c",
+      "revision_is_immutable": true,
+      "role": "general_reasoning",
+      "sha256": "ac0e2c1189e055faa36eff361580e79c5bd6f8e76bffb4ce547f167d53e31a61",
+      "size_bytes": 22134528992
+    },
+    {
+      "destination": "models/coder/qwen3-coder-30b-a3b-instruct-q4.gguf",
+      "filename": "Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf",
+      "id": "coder-qwen3-30b-a3b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "required_for_runtime": false,
+      "revision": "b17cb02dd882d5b6ab62fc777ad2995f19668350",
+      "revision_is_immutable": true,
+      "role": "coding_agent",
+      "sha256": "2841aa314d916434860cfb8990347528dcdfe5c350dbcb9d1461dbee88ff2533",
+      "size_bytes": 17665334432
+    },
+    {
+      "destination": "models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
+      "filename": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+      "id": "embedding-qwen3-0.6b-q8",
+      "profiles": [
+        "core",
+        "all"
+      ],
+      "repo_id": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+      "required_for_runtime": true,
+      "revision": "370f27d7550e0def9b39c1f16d3fbaa13aa67728",
+      "revision_is_immutable": true,
+      "role": "embedding",
+      "sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
+      "size_bytes": 639150592
+    },
+    {
+      "destination": "models/reranker/qwen3-reranker-0.6b-q8_0.gguf",
+      "filename": "qwen3-reranker-0.6b-q8_0.gguf",
+      "id": "reranker-qwen3-0.6b-q8",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF",
+      "required_for_runtime": false,
+      "revision": "a02f48bb4f057028298c21fa033da2b30d7742d5",
+      "revision_is_immutable": true,
+      "role": "reranker",
+      "sha256": "22c9979ce4fbcdc5acdc310c6641c32797eff1aa980b8f7a2db8a8ea23429a48",
+      "size_bytes": 639153184
+    }
+  ],
+  "profiles": {
+    "all": {
+      "description": "Complete model pack including coding and reranking models."
+    },
+    "core": {
+      "description": "Required runtime models: general reasoning and embedding."
+    }
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,86 @@
+{
+  "base_compose": [
+    "compose.yml",
+    "compose.hardening.yaml",
+    "compose.local-builds.yaml"
+  ],
+  "docker_compose_version": "5.3.0",
+  "docker_version": "29.6.1",
+  "generated_at": "2026-07-18T18:42:47.184294+00:00",
+  "lock_file": "compose.images.lock.yaml",
+  "project": "ai-station",
+  "schema_version": 1,
+  "services": {
+    "embedder": {
+      "build": null,
+      "configured_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
+      "container_id": "4b471a111f1bc079cca48629908f9c1fa823b8229616bb43106d8aba47e215ed",
+      "current_image_id": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "lock_policy": "digest",
+      "locked_image": "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "source_type": "registry"
+    },
+    "llm-general": {
+      "build": null,
+      "configured_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
+      "container_id": "f8248c377196280b6e2be49f5195a119127ba2234bc616045b55669a0f0e8b82",
+      "current_image_id": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "lock_policy": "digest",
+      "locked_image": "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "source_type": "registry"
+    },
+    "open-webui": {
+      "build": null,
+      "configured_image": "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0",
+      "container_id": "4edfa2b687144ff0a9325df97d1f280ea309e30513d04730dc368aa4672f6e7b",
+      "current_image_id": "sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0",
+      "lock_policy": "digest",
+      "locked_image": "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0",
+      "source_type": "registry"
+    },
+    "postgres": {
+      "build": null,
+      "configured_image": "pgvector/pgvector:pg17",
+      "container_id": "c3f987a99ea6bc4bda048496d049cadab916954bd37c2473fd51489685acefb8",
+      "current_image_id": "sha256:dd467f03ca5c5581222490e5217e48a262864ccb659be559f8491bbafdc97da0",
+      "lock_policy": "digest",
+      "locked_image": "pgvector/pgvector@sha256:dd467f03ca5c5581222490e5217e48a262864ccb659be559f8491bbafdc97da0",
+      "source_type": "registry"
+    },
+    "redis": {
+      "build": null,
+      "configured_image": "redis:7-alpine",
+      "container_id": "13f04735e82a69eeff9085618451f0055641ceda571b5d7dc3272a74035dd529",
+      "current_image_id": "sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99",
+      "lock_policy": "digest",
+      "locked_image": "redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99",
+      "source_type": "registry"
+    },
+    "searxng": {
+      "build": null,
+      "configured_image": "searxng/searxng:latest",
+      "container_id": "9910208de44f5e7bfa34d497e157642a9104254f218301a6f934b66650256eb2",
+      "current_image_id": "sha256:969e3d79c400b26b7b83c023ef48300d9e122e0828ef7160daac990b1ac27d7c",
+      "lock_policy": "digest",
+      "locked_image": "searxng/searxng@sha256:969e3d79c400b26b7b83c023ef48300d9e122e0828ef7160daac990b1ac27d7c",
+      "source_type": "registry"
+    },
+    "tika": {
+      "build": {
+        "context": "./infra/tika-fa",
+        "dockerfile": "Dockerfile"
+      },
+      "configured_image": "ai-station/tika-fa:3.3.0.0-full",
+      "container_id": "46f7d80429d44f72b16a1625ad4879582c5db24d62f8eae05152781b00d92482",
+      "current_image_id": "sha256:3d3503d76ec6f362b3a12dfdfa1cc2ce4288879d2a5164637ff625196f9aa682",
+      "lock_policy": "build",
+      "source_type": "local-build"
+    }
+  },
+  "summary": {
+    "local_artifact_services": 0,
+    "local_build_services": 1,
+    "registry_digest_services": 6,
+    "total_services": 7
+  }
+}

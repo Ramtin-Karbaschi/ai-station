@@ -1,0 +1,5 @@
+services:
+  open-webui:
+    environment:
+      CORS_ALLOW_ORIGIN: "http://localhost:3000;http://127.0.0.1:3000"
+      USER_AGENT: "AI-Station/1.0"

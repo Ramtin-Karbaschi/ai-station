@@ -1,0 +1,14 @@
+AI Station Docker Image Lock
+============================
+Total services: 7
+Registry images pinned by digest: 6
+Services built from repository: 1
+Required local image artifacts: 0
+
+embedder: registry | digest | ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289
+llm-general: registry | digest | ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289
+open-webui: registry | digest | ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0
+postgres: registry | digest | pgvector/pgvector@sha256:dd467f03ca5c5581222490e5217e48a262864ccb659be559f8491bbafdc97da0
+redis: registry | digest | redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+searxng: registry | digest | searxng/searxng@sha256:969e3d79c400b26b7b83c023ef48300d9e122e0828ef7160daac990b1ac27d7c
+tika: local-build | build | build from repository

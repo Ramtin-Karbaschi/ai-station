@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Station</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 40px; max-width: 960px; }
+    h1 { margin-bottom: 0; }
+    .sub { color: #555; margin-top: 6px; }
+    button { padding: 10px 14px; margin: 8px 8px 8px 0; cursor: pointer; }
+    pre { background: #111; color: #eee; padding: 16px; overflow: auto; border-radius: 8px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 18px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>AI Station</h1>
+  <p class="sub">Local AI product foundation — workflow, retrieval, rules, review.</p>
+
+  <div class="card">
+    <button onclick="call('/health', 'GET')">Core Health</button>
+    <button onclick="call('/health/llm', 'GET')">LLM Health</button>
+    <button onclick="call('/jobs/smoke', 'POST')">Enqueue Worker Job</button>
+    <button onclick="call('/llm/smoke', 'POST')">LLM Smoke</button>
+  </div>
+
+  <pre id="out">Ready.</pre>
+
+  <script>
+    async function call(path, method) {
+      const out = document.getElementById('out');
+      out.textContent = 'Loading...';
+      try {
+        const res = await fetch('http://127.0.0.1:8080' + path, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: method === 'POST' && path === '/jobs/smoke'
+            ? JSON.stringify({ source: 'web', note: 'AI Station UI smoke job' })
+            : method === 'POST' ? '{}' : undefined
+        });
+        const text = await res.text();
+        try { out.textContent = JSON.stringify(JSON.parse(text), null, 2); }
+        catch { out.textContent = text; }
+      } catch (e) {
+        out.textContent = String(e);
+      }
+    }
+  </script>
+</body>
+</html>

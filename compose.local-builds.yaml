@@ -1,0 +1,6 @@
+# Local images built from repository-controlled sources.
+services:
+  tika:
+    build:
+      context: "./infra/tika-fa"
+      dockerfile: "Dockerfile"

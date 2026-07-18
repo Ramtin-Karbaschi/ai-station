@@ -1,0 +1,23 @@
+use_default_settings: true
+
+server:
+  bind_address: "0.0.0.0"
+  port: 8080
+  secret_key: "3d53a4ea948ec2925684030588c298facc5ff25075b0a5c81507fa6a7179d1e7"
+  limiter: false
+  image_proxy: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  formats:
+    - html
+    - json
+
+outgoing:
+  request_timeout: 10.0
+  pool_connections: 20
+  pool_maxsize: 20
+
+ui:
+  static_use_hash: true

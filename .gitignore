@@ -1,0 +1,125 @@
+.env
+.env.*
+!.env.example
+
+secrets/
+_archive/
+support/
+backups/
+
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.tmp
+*.bak*
+*.old*
+*.backup*
+
+.vscode/
+.idea/
+
+*.gguf
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+*.tar
+*.tar.gz
+*.zip
+
+# BEGIN AI-STATION MANAGED RULES
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+
+# Models and large AI artifacts
+models/
+**/models/
+*.gguf
+*.safetensors
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Runtime and persistent data
+data/
+runtime/
+cache/
+logs/
+backups/
+uploads/
+artifacts/
+*.log
+*.pid
+
+# Databases and database exports
+*.sql
+*.sql.gz
+*.dump
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# JavaScript
+node_modules/
+.npm/
+.pnpm-store/
+
+# IDE and operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Temporary and generated files
+*.tmp
+*.swp
+*.swo
+*.bak
+*.backup-*
+*~
+
+# END AI-STATION MANAGED RULES
+
+# BEGIN AI-STATION RELEASE EXCLUSIONS
+
+# Historical snapshots and local diagnostics
+_archive/
+support/
+audit-output/
+release-output/
+
+# Timestamped backups
+*.bak
+*.bak-*
+*.backup
+*.backup-*
+*.old
+*.old-*
+*.orig
+
+# Local generated manifests containing runtime details
+compose-resolved-sensitive.yaml
+
+# END AI-STATION RELEASE EXCLUSIONS
