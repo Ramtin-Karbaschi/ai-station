@@ -7,9 +7,13 @@ apps/gateway/app/main.py
 apps/ocr/app/main.py
 config/install-layout.env
 config/skills/local-ai-ops.md
+docs/ARCHITECTURE.md
 docs/INSTALLATION.md
 docs/MODELS.md
+docs/OPERATIONS.md
 docs/PORTABILITY_POLICY.md
+docs/README_FA.md
+docs/TROUBLESHOOTING.md
 docs/ops/AI_STATION_CURRENT_STATE.md
 scripts/ai-station-models.sh
 scripts/ai-station-safe-cleanup.sh

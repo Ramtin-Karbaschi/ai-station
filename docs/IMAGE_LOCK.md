@@ -1,39 +1,60 @@
 # Docker Image Lock
 
-AI Station separates container images into three categories.
+AI Station separates Docker images into two active categories.
 
 ## Registry images
 
-Registry-backed images are pinned using immutable SHA-256 digest references
-inside `compose.images.lock.yaml`.
+Registry images are pinned to immutable SHA-256 digests in:
+
+~~~text
+compose.images.lock.yaml
+~~~
+
+A tag such as `latest` or `7-alpine` is human-readable but mutable. The lock
+file determines the exact content used by the validated release.
 
 ## Repository builds
 
-Services that contain a Compose `build` definition use:
+Images built from project-controlled Dockerfiles use:
 
-    pull_policy: build
+~~~yaml
+pull_policy: build
+~~~
 
-They are built from the source and Dockerfile contained in the repository.
+Their upstream `FROM` images are independently pinned by digest and recorded
+in:
 
-## Local image artifacts
+~~~text
+config/dockerfile-base-lock.json
+~~~
 
-Images created by provisioning scripts but not published to a registry use:
-
-    pull_policy: never
-
-The installer must build or provision those images before starting the
-Compose project.
+The current local build is the Persian-enabled Apache Tika image.
 
 ## Updating the lock
 
-Run:
+After an approved container update:
 
-    ./scripts/update-image-lock.sh
+~~~bash
+./scripts/update-image-lock.sh
+./scripts/verify-image-lock.sh
+./scripts/verify-build-lock.sh
+./scripts/release-audit.sh
+~~~
 
-Then execute:
+Commit these files together when applicable:
 
-    ./scripts/verify-image-lock.sh
-    ./scripts/release-audit.sh
+- `compose.images.lock.yaml`;
+- `config/image-lock.json`;
+- `config/image-lock-summary.txt`;
+- Dockerfile changes;
+- `config/dockerfile-base-lock.json`.
 
-The image-lock file must be committed whenever an approved image version
-changes.
+## Prohibited release state
+
+A release must not be accepted when:
+
+- a registry service lacks a digest;
+- a Dockerfile base image lacks a digest;
+- a local image cannot be reproduced from the repository;
+- the resolved Compose configuration differs from the committed lock;
+- the release audit reports a warning or error.

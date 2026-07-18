@@ -1,34 +1,87 @@
-# AI Station Portability Policy
+# Portability Policy
 
-AI Station is portable at the repository and Compose level, but it has one canonical Linux/WSL installation root:
+## Supported contract
 
-`/opt/ai-station`
+AI Station is portable at the repository and Docker Compose level, while using
+a canonical installed application root:
 
-This is intentional.
+~~~text
+/opt/ai-station
+~~~
 
-The supported installation flow must install or clone the repository into that path, then place runtime data, model files, backups, and large generated artifacts outside the Git repository.
+Persistent data is stored separately:
 
-## Repository portability
+~~~text
+/srv/ai-station
+~~~
 
-The repository must not depend on machine-specific secrets, local backups, local model binaries, or generated runtime state.
+This is an intentional installation contract, not arbitrary-path portability.
 
-The Compose file list is stored with relative paths:
+## Compose portability
 
-```text
-COMPOSE_FILE=compose.yml:compose.hardening.yaml
-Runtime data policy
+The active Compose chain is repository-relative:
 
-The following must not be committed:
+~~~text
+COMPOSE_FILE=compose.yml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
+~~~
 
-.env
-model files
-database files
-backup files
-generated logs
-runtime uploads
-local support bundles
-Canonical path policy
+Relative paths are resolved from the repository base.
 
-References to /opt/ai-station are allowed only in files that intentionally define installation, operations, local launchers, service definitions, diagnostics, or current-state documentation.
+## Repository exclusions
 
-Any new occurrence of /opt/ai-station outside the allowlist should be reviewed before release.
+The following must never be committed:
+
+- `.env`;
+- secret values;
+- model binaries;
+- database files;
+- Docker volume exports;
+- backups;
+- generated logs;
+- uploads;
+- Hugging Face caches;
+- support bundles;
+- timestamped archives.
+
+## Canonical path allowlist
+
+References to `/opt/ai-station` are allowed only in files that intentionally
+define:
+
+- installation;
+- operations;
+- local launchers;
+- service definitions;
+- diagnostics;
+- current-state documentation.
+
+Approved files are listed in:
+
+~~~text
+config/release-path-allowlist.txt
+~~~
+
+Any new canonical-path occurrence outside that list must be reviewed.
+
+## Portable installer expectation
+
+A clone may exist in an arbitrary temporary directory.
+
+The supported installer must:
+
+1. validate the source;
+2. deploy application files into `/opt/ai-station`;
+3. preserve `.env`;
+4. preserve persistent data outside Git;
+5. avoid embedding the temporary clone path into generated files;
+6. complete the release verification after installation.
+
+## Portability limitations
+
+Portability does not imply that:
+
+- the default model fits every GPU;
+- Docker or NVIDIA drivers are installed automatically;
+- native Windows execution is supported;
+- the system is safe for direct internet exposure;
+- all Linux distributions are equally supported.

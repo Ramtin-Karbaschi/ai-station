@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible AI Station failure
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove secrets, tokens, personal documents and private model data
+        before submitting logs.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide deterministic steps.
+      placeholder: |
+        1. Run ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include WSL, Ubuntu, Docker, NVIDIA and GPU information.
+      placeholder: |
+        Windows:
+        WSL:
+        Ubuntu:
+        Docker:
+        NVIDIA driver:
+        GPU:
+        Git commit:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized logs
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets and private data.
+          required: true
+        - label: I searched existing issues.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
