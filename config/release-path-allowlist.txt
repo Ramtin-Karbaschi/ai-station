@@ -15,6 +15,7 @@ docs/PORTABILITY_POLICY.md
 docs/README_FA.md
 docs/TROUBLESHOOTING.md
 docs/ops/AI_STATION_CURRENT_STATE.md
+scripts/ai-station-manager-action.sh
 scripts/ai-station-models.sh
 scripts/ai-station-safe-cleanup.sh
 scripts/backup.sh
