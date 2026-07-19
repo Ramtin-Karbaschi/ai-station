@@ -4,35 +4,25 @@ import json
 import mimetypes
 import os
 import re
-import tempfile
 import urllib.error
-import urllib.parse
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
 HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "0.0.0.0")
 PORT = int(os.getenv("AI_STATION_UI_GATEWAY_PORT", "8890"))
 UPSTREAM = os.getenv("AI_STATION_GATEWAY_UPSTREAM", "http://127.0.0.1:8888/v1").rstrip("/")
-DOCLING_URL = os.getenv("AI_STATION_DOCLING_URL", "http://127.0.0.1:5001").rstrip("/")
 OPENWEBUI_URL = os.getenv("AI_STATION_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
 TIKA_URL = os.getenv("AI_STATION_TIKA_URL", "http://127.0.0.1:9998").rstrip("/")
 
+# Open WebUI model ids -> gateway catalog ids
 MODEL_MAP = {
     "general-qwen3.6": "general-qwen3_6-35b-a3b",
-    "thinking-deepseek-r1": "thinking-deepseek-r1-qwen-32b",
-    "coding-qwen3-coder": "coder-qwen3-coder-30b-a3b",
-    "coding-qwen3-coder-next": "coder-qwen3-coder-next-80b-a3b",
 }
 
 MODEL_NAMES = {
-    "general-qwen3.6": "general-qwen3.6",
-    "thinking-deepseek-r1": "thinking-deepseek-r1",
-    "coding-qwen3-coder": "coding-qwen3-coder",
-    "coding-qwen3-coder-next": "coding-qwen3-coder-next",
+    "general-qwen3.6": "General | Qwen3.6 35B A3B",
 }
-
 
 MODEL_CAPABILITIES = {
     "vision": True,
@@ -43,7 +33,6 @@ MODEL_CAPABILITIES = {
     "code_interpreter": False,
     "terminal": False,
 }
-
 
 
 def guess_ext(mime: str) -> str:
@@ -59,67 +48,9 @@ def guess_ext(mime: str) -> str:
     return mapping.get(mime, mimetypes.guess_extension(mime or "") or ".bin")
 
 
-def extract_text_from_docling_response(data):
-    if isinstance(data, dict):
-        for key in ("md_content", "markdown", "text_content", "text"):
-            value = data.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-
-        for value in data.values():
-            found = extract_text_from_docling_response(value)
-            if found:
-                return found
-
-    elif isinstance(data, list):
-        for item in data:
-            found = extract_text_from_docling_response(item)
-            if found:
-                return found
-
-    return ""
-
-
-def multipart_post_file(url: str, file_bytes: bytes, filename: str, mime: str, fields: dict, timeout: int = 300):
-    boundary = "----AIStationBoundary" + uuid.uuid4().hex
-    chunks = []
-
-    for name, value in fields.items():
-        chunks.append(f"--{boundary}\r\n".encode())
-        chunks.append(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode())
-        chunks.append(str(value).encode("utf-8"))
-        chunks.append(b"\r\n")
-
-    chunks.append(f"--{boundary}\r\n".encode())
-    chunks.append(
-        f'Content-Disposition: form-data; name="files"; filename="{filename}"\r\n'
-        f"Content-Type: {mime or 'application/octet-stream'}\r\n\r\n".encode()
-    )
-    chunks.append(file_bytes)
-    chunks.append(b"\r\n")
-    chunks.append(f"--{boundary}--\r\n".encode())
-
-    body = b"".join(chunks)
-
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "Accept": "application/json",
-        },
-        method="POST",
-    )
-
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
-
-
 def tika_extract_bytes(file_bytes: bytes, filename: str, mime: str) -> str:
     url = f"{TIKA_URL}/tika"
-
     language_headers = ["fas+eng", "fas", "eng", ""]
-
     last_error = None
 
     for lang in language_headers:
@@ -128,38 +59,30 @@ def tika_extract_bytes(file_bytes: bytes, filename: str, mime: str) -> str:
             "Content-Type": mime or "application/octet-stream",
             "Content-Disposition": f'attachment; filename="{filename}"',
         }
-
         if lang:
             headers["X-Tika-OCRLanguage"] = lang
 
-        req = urllib.request.Request(
-            url,
-            data=file_bytes,
-            headers=headers,
-            method="PUT",
-        )
-
+        req = urllib.request.Request(url, data=file_bytes, headers=headers, method="PUT")
         try:
-            with urllib.request.urlopen(req, timeout=600) as r:
-                text = r.read().decode("utf-8", errors="replace").strip()
-
+            with urllib.request.urlopen(req, timeout=600) as response:
+                text = response.read().decode("utf-8", errors="replace").strip()
             if text:
                 return text
-
             last_error = f"Tika returned empty text with OCR language={lang or 'default'}"
-
-        except Exception as e:
-            last_error = repr(e)
+        except Exception as exc:
+            last_error = repr(exc)
             continue
 
-    return f"[Tika extraction completed but no readable text was extracted. Last error: {last_error}]"
+    return (
+        "[Tika extraction completed but no readable text was extracted. "
+        f"Last error: {last_error}]"
+    )
 
 
 def parse_data_url(url: str):
     match = re.match(r"^data:([^;]+);base64,(.*)$", url, re.DOTALL)
     if not match:
         return None
-
     mime = match.group(1)
     b64 = match.group(2)
     return base64.b64decode(b64), mime
@@ -173,9 +96,9 @@ def fetch_url_bytes(url: str, auth_header: str | None = None):
     if auth_header:
         req.add_header("Authorization", auth_header)
 
-    with urllib.request.urlopen(req, timeout=120) as r:
-        content_type = r.headers.get("Content-Type", "application/octet-stream").split(";")[0].strip()
-        return r.read(), content_type
+    with urllib.request.urlopen(req, timeout=120) as response:
+        content_type = response.headers.get("Content-Type", "application/octet-stream").split(";")[0].strip()
+        return response.read(), content_type
 
 
 def get_image_url_from_item(item: dict):
@@ -201,7 +124,6 @@ def get_image_url_from_item(item: dict):
 
 def image_item_to_ocr_text(item: dict, index: int, auth_header: str | None = None) -> str:
     url = get_image_url_from_item(item)
-
     if not url:
         return f"[Attached image {index}: could not locate image data.]"
 
@@ -214,19 +136,16 @@ def image_item_to_ocr_text(item: dict, index: int, auth_header: str | None = Non
 
         ext = guess_ext(mime)
         filename = f"attached-image-{index}{ext}"
-
         ocr_text = tika_extract_bytes(file_bytes, filename, mime)
-
         return (
             f"\n\n[Attached image {index} processed by local Apache Tika OCR]\n"
             f"{ocr_text}\n"
             f"[/Attached image {index} OCR]\n"
         )
-
-    except Exception as e:
+    except Exception as exc:
         return (
             f"\n\n[Attached image {index} could not be OCR-processed locally. "
-            f"Error: {repr(e)}]\n"
+            f"Error: {repr(exc)}]\n"
         )
 
 
@@ -244,19 +163,15 @@ def sanitize_messages(messages, auth_header=None):
             for item in content:
                 if isinstance(item, dict):
                     item_type = item.get("type")
-
                     if item_type == "text":
                         text_parts.append(item.get("text", ""))
-
                     elif item_type in {"image_url", "input_image", "image"}:
-                        text_parts.append(image_item_to_ocr_text(item, image_index, auth_header=auth_header))
+                        text_parts.append(
+                            image_item_to_ocr_text(item, image_index, auth_header=auth_header)
+                        )
                         image_index += 1
-
-                    else:
-                        # Preserve unknown textual items when possible.
-                        if "text" in item and isinstance(item["text"], str):
-                            text_parts.append(item["text"])
-
+                    elif "text" in item and isinstance(item["text"], str):
+                        text_parts.append(item["text"])
                 elif isinstance(item, str):
                     text_parts.append(item)
 
@@ -291,38 +206,45 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in {"/", "/health"}:
-            self._send_json(200, {
-                "ok": True,
-                "service": "ai-station-ui-gateway",
-                "upstream": UPSTREAM,
-                "docling": DOCLING_URL,
-                "models": list(MODEL_MAP.keys()),
-            })
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "service": "ai-station-ui-gateway",
+                    "upstream": UPSTREAM,
+                    "tika": TIKA_URL,
+                    "models": list(MODEL_MAP.keys()),
+                },
+            )
             return
 
         if self.path in {"/v1/models", "/models"}:
-            self._send_json(200, {
-                "object": "list",
-                "data": [
-                    {
-                        "id": model_id,
-                        "object": "model",
-                        "created": 0,
-                        "owned_by": "ai-station",
-                        "name": MODEL_NAMES[model_id],
-                        "info": {
-                            "meta": {
-                                "capabilities": MODEL_CAPABILITIES,
-                                "description": "Local AI Station model with file upload, OCR/RAG, image OCR routing, and web search enabled."
-                            }
-                        },
-                        "meta": {
-                            "capabilities": MODEL_CAPABILITIES
+            self._send_json(
+                200,
+                {
+                    "object": "list",
+                    "data": [
+                        {
+                            "id": model_id,
+                            "object": "model",
+                            "created": 0,
+                            "owned_by": "ai-station",
+                            "name": MODEL_NAMES[model_id],
+                            "info": {
+                                "meta": {
+                                    "capabilities": MODEL_CAPABILITIES,
+                                    "description": (
+                                        "Local AI Station model with file upload, "
+                                        "Tika OCR/RAG, and web search enabled."
+                                    ),
+                                }
+                            },
+                            "meta": {"capabilities": MODEL_CAPABILITIES},
                         }
-                    }
-                    for model_id in MODEL_MAP
-                ],
-            })
+                        for model_id in MODEL_MAP
+                    ],
+                },
+            )
             return
 
         self._send_json(404, {"error": "not found", "path": self.path})
@@ -337,18 +259,20 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             body = json.loads(raw.decode("utf-8"))
-        except Exception as e:
-            self._send_json(400, {"error": f"invalid json: {e}"})
+        except Exception as exc:
+            self._send_json(400, {"error": f"invalid json: {exc}"})
             return
 
         requested_model = body.get("model")
         mapped_model = MODEL_MAP.get(requested_model)
-
         if not mapped_model:
-            self._send_json(400, {
-                "error": f"Model '{requested_model}' is not exposed by AI Station UI Gateway.",
-                "available_models": list(MODEL_MAP.keys()),
-            })
+            self._send_json(
+                400,
+                {
+                    "error": f"Model '{requested_model}' is not exposed by AI Station UI Gateway.",
+                    "available_models": list(MODEL_MAP.keys()),
+                },
+            )
             return
 
         body["model"] = mapped_model
@@ -360,7 +284,6 @@ class Handler(BaseHTTPRequestHandler):
             )
 
         upstream_url = f"{UPSTREAM}/chat/completions"
-
         req = urllib.request.Request(
             upstream_url,
             data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
@@ -372,16 +295,16 @@ class Handler(BaseHTTPRequestHandler):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=900) as r:
-                response_body = r.read()
-                status = r.status
-                content_type = r.headers.get("Content-Type", "application/json")
-        except urllib.error.HTTPError as e:
-            response_body = e.read()
-            status = e.code
-            content_type = e.headers.get("Content-Type", "application/json")
-        except Exception as e:
-            self._send_json(502, {"error": repr(e), "upstream": upstream_url})
+            with urllib.request.urlopen(req, timeout=900) as response:
+                response_body = response.read()
+                status = response.status
+                content_type = response.headers.get("Content-Type", "application/json")
+        except urllib.error.HTTPError as exc:
+            response_body = exc.read()
+            status = exc.code
+            content_type = exc.headers.get("Content-Type", "application/json")
+        except Exception as exc:
+            self._send_json(502, {"error": repr(exc), "upstream": upstream_url})
             return
 
         self.send_response(status)
@@ -396,7 +319,7 @@ def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"AI Station UI Gateway listening on http://{HOST}:{PORT}", flush=True)
     print(f"Upstream: {UPSTREAM}", flush=True)
-    print(f"Tika: {DOCLING_URL}", flush=True)
+    print(f"Tika: {TIKA_URL}", flush=True)
     server.serve_forever()
 
 

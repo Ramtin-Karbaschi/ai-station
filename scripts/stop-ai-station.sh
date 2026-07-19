@@ -3,27 +3,16 @@ set -Eeuo pipefail
 
 cd /opt/ai-station
 
-./scripts/compose-ai-station.sh \
-  --profile console \
-  --profile llm-general \
-  --profile coder \
-  --profile thinking \
-  --profile vision \
-  --profile rag \
-  --profile reranker \
-  stop \
+./scripts/compose-ai-station.sh stop \
   open-webui \
   llm-general \
-  llm-coder \
-  llm-thinking \
-  vlm \
   embedder \
-  reranker \
-  api \
-  worker \
+  searxng \
+  tika \
   redis \
   postgres || true
 
-systemctl stop ai-station-gateway || true
+systemctl stop ai-station-ui-gateway 2>/dev/null || true
+systemctl stop ai-station-gateway 2>/dev/null || true
 
 echo "AI Station stopped."
