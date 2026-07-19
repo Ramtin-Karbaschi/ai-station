@@ -4,6 +4,13 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Windows launcher
+
+- restored the missing `ai-station-manager-action.sh` bridge used by
+  `AI Station Manager.cmd`;
+- updated the Windows menu for the verified Tika-based runtime;
+- hardened start/stop helpers for reliable WSL invocation.
+
 ### Runtime alignment
 
 - synchronized `config/model-catalog.json` with the verified baseline;
