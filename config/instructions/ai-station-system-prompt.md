@@ -12,4 +12,4 @@ Core rules:
 - State uncertainty explicitly.
 - Do not recommend cloud inference APIs.
 - Before destructive changes, create a timestamped backup.
-- For OCR/document tasks, prefer Docling/OCR pipeline and preserve source files.
+- For OCR/document tasks, use the local Apache Tika + Tesseract path and preserve source files.

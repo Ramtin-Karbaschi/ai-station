@@ -37,6 +37,15 @@ The authoritative downloaded model list is:
 config/model-manifest.json
 ~~~
 
+The authoritative runtime catalog exposed by the gateway is:
+
+~~~text
+config/model-catalog.json
+~~~
+
+Only enabled chat models in that catalog are selectable. Optional coder and
+reranker entries remain disabled until a matching Compose service is verified.
+
 ## Document processing
 
 The verified extraction path is:
