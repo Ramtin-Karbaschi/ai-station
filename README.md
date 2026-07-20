@@ -75,7 +75,9 @@ Warnings: 0
 | Capability | Implementation |
 |---|---|
 | Local chat interface | Open WebUI |
-| OpenAI-compatible inference | AI Station gateway + llama.cpp server |
+| Multi-project GenAI API | LiteLLM gateway `:4000` + per-project virtual keys |
+| OpenAI-compatible inference | LiteLLM + host gateway + llama.cpp server |
+| Model switching | Compose profiles via `ai models use` |
 | GPU inference | NVIDIA CUDA container runtime |
 | Retrieval-augmented generation | Open WebUI RAG + local embeddings |
 | Vector persistence | PostgreSQL + pgvector |
@@ -280,6 +282,7 @@ installer for unattended or organizational deployment.
 |---|---|
 | [Installation](docs/INSTALLATION.md) | Beginner-friendly installation and upgrade |
 | [Architecture](docs/ARCHITECTURE.md) | Components, flows and trust boundaries |
+| [Platform](docs/PLATFORM.md) | Multi-project LiteLLM gateway and CLI |
 | [Operations](docs/OPERATIONS.md) | Start, stop, status, logs and validation |
 | [Models](docs/MODELS.md) | Profiles, downloads and checksum policy |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common failure diagnosis |

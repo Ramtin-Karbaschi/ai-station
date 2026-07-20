@@ -18,21 +18,33 @@ CATALOG_PATH = Path(
     os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
 )
 
-COMPOSE_BASE = [
-    "docker",
-    "compose",
-    "--project-name",
-    os.getenv("COMPOSE_PROJECT_NAME", "ai-station"),
-    "--env-file",
-    str(PROJECT_DIR / ".env"),
-]
+COMPOSE_HELPER = PROJECT_DIR / "scripts" / "compose-ai-station.sh"
+COMPOSE_BASE = (
+    [str(COMPOSE_HELPER)]
+    if COMPOSE_HELPER.is_file()
+    else [
+        "docker",
+        "compose",
+        "--project-name",
+        os.getenv("COMPOSE_PROJECT_NAME", "ai-station"),
+        "--env-file",
+        str(PROJECT_DIR / ".env"),
+    ]
+)
 
-HEAVY_SERVICES = ["llm-general"]
+HEAVY_SERVICES = ["llm-general", "llm-coder", "llm-reasoning", "llm-vision"]
+SERVICE_PROFILES = {
+    "llm-general": "general",
+    "llm-coder": "coder",
+    "llm-reasoning": "reasoning",
+    "llm-vision": "vision",
+    "reranker": "reranker",
+}
 MODEL_LOCK = asyncio.Lock()
 QUEUE: list[dict[str, Any]] = []
 ACTIVE_MODEL_ID: str | None = None
 
-app = FastAPI(title="AI Station Gateway", version="0.3.0")
+app = FastAPI(title="AI Station Gateway", version="0.4.0")
 
 
 def load_catalog() -> dict[str, Any]:
@@ -82,11 +94,22 @@ async def compose(args: list[str], timeout: int = 180) -> subprocess.CompletedPr
     return await asyncio.to_thread(run_compose, args, timeout)
 
 
+def profile_args_for_services(services: list[str]) -> list[str]:
+    args: list[str] = []
+    seen: set[str] = set()
+    for service in services:
+        profile = SERVICE_PROFILES.get(service)
+        if profile and profile not in seen:
+            args.extend(["--profile", profile])
+            seen.add(profile)
+    return args
+
+
 async def stop_other_heavy(target_service: str) -> None:
     to_stop = [s for s in HEAVY_SERVICES if s != target_service]
     if not to_stop:
         return
-    await compose(["stop", *to_stop], timeout=240)
+    await compose([*profile_args_for_services(to_stop), "stop", *to_stop], timeout=240)
 
 
 async def wait_ready(model: dict[str, Any], attempts: int = 480) -> None:
@@ -126,7 +149,10 @@ async def start_runtime(model: dict[str, Any]) -> None:
     if model.get("heavy"):
         await stop_other_heavy(service)
 
-    result = await compose(["up", "-d", service], timeout=300)
+    result = await compose(
+        [*profile_args_for_services([service]), "up", "-d", service],
+        timeout=300,
+    )
     if result.returncode != 0:
         raise HTTPException(
             status_code=500,
@@ -162,7 +188,7 @@ def rewrite_messages(model: dict[str, Any], body: dict[str, Any]) -> dict[str, A
 async def health() -> dict[str, Any]:
     return {
         "ok": True,
-        "version": "0.3.0",
+        "version": "0.4.0",
         "active_model_id": ACTIVE_MODEL_ID,
         "queue_length": len(QUEUE),
         "catalog_path": str(CATALOG_PATH),

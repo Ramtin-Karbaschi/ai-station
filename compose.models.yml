@@ -1,0 +1,167 @@
+# On-demand llama.cpp runtimes.
+# Only one heavy profile (general|coder|reasoning|vision) may be active on ~24GB VRAM.
+# Always start heavy profiles via: scripts/ai models use <profile>
+# or: docker compose --profile <name> up -d
+
+x-llama-common: &llama-common
+  image: ghcr.io/ggml-org/llama.cpp:server-cuda
+  restart: unless-stopped
+  gpus: all
+  env_file:
+    - .env.models
+  volumes:
+    - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
+  networks:
+    - default
+    - ai-platform
+
+services:
+  llm-general:
+    <<: *llama-common
+    profiles: ["general"]
+    container_name: ai-station-llm-general
+    command:
+      - -m
+      - /models/${LLM_GENERAL_MODEL_FILE:-general/qwen3.6-35b-a3b-ud-q4_k_m.gguf}
+      - --alias
+      - ai-station-general
+      - --reasoning
+      - "off"
+      - --reasoning-budget
+      - "0"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8082"
+      - -ngl
+      - "999"
+      - -c
+      - "${LLM_GENERAL_CONTEXT:-8192}"
+      - --parallel
+      - "${LLM_GENERAL_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${GENERAL_LLM_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8082/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  llm-coder:
+    <<: *llama-common
+    profiles: ["coder"]
+    container_name: ai-station-llm-coder
+    command:
+      - -m
+      - /models/${LLM_CODER_MODEL_FILE:-coder/qwen3-coder-30b-a3b-instruct-q4.gguf}
+      - --alias
+      - ai-station-coder
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8083"
+      - -ngl
+      - "999"
+      - -c
+      - "${LLM_CODER_CONTEXT:-8192}"
+      - --parallel
+      - "${LLM_CODER_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${CODER_LLM_PORT:-8083}:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8083/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  llm-reasoning:
+    <<: *llama-common
+    profiles: ["reasoning"]
+    container_name: ai-station-llm-reasoning
+    command:
+      - -m
+      - /models/${REASONING_MODEL_FILE:-thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf}
+      - --alias
+      - ai-station-reasoning
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8084"
+      - -ngl
+      - "999"
+      - -c
+      - "${REASONING_CONTEXT:-8192}"
+      - --parallel
+      - "${REASONING_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${REASONING_LLM_PORT:-8084}:8084"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8084/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  llm-vision:
+    <<: *llama-common
+    profiles: ["vision"]
+    container_name: ai-station-llm-vision
+    command:
+      - -m
+      - /models/${VISION_MODEL_FILE:-vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf}
+      - --mmproj
+      - /models/${VISION_MMPROJ_FILE:-vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf}
+      - --alias
+      - ai-station-vision
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8085"
+      - -ngl
+      - "999"
+      - -c
+      - "${VISION_CONTEXT:-4096}"
+      - --parallel
+      - "${VISION_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${VISION_LLM_PORT:-8085}:8085"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8085/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  # Small model; CPU-only by default so it can coexist with a heavy GPU model.
+  reranker:
+    <<: *llama-common
+    profiles: ["reranker"]
+    container_name: ai-station-reranker
+    gpus: []
+    command:
+      - -m
+      - /models/${RERANKER_MODEL_FILE:-reranker/qwen3-reranker-0.6b-q8_0.gguf}
+      - --alias
+      - ai-station-reranker
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8091"
+      - -ngl
+      - "0"
+      - -c
+      - "${RERANKER_CONTEXT:-4096}"
+      - --embedding
+      - --pooling
+      - rank
+      - --rerank
+    ports:
+      - "127.0.0.1:${RERANKER_PORT:-8091}:8091"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8091/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s

@@ -2,13 +2,16 @@
 
 ## Design goals
 
-AI Station is designed around five constraints:
+AI Station is designed around six constraints:
 
 1. inference and document processing remain local;
 2. heavy models are stored outside the source repository;
 3. container and model versions are reproducible;
 4. services are exposed only on loopback by default;
-5. operational state can be verified through deterministic checks.
+5. operational state can be verified through deterministic checks;
+6. multiple application projects share one GenAI platform via a stable API.
+
+See also [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
 
 ## Logical architecture
 
@@ -16,13 +19,15 @@ AI Station is designed around five constraints:
 flowchart TB
     subgraph Host["Windows 11 / WSL2 host"]
         Browser["Browser"]
+        Apps["Application projects"]
         UIGateway["UI Gateway :8890"]
-        Gateway["AI Station Gateway :8888"]
+        Gateway["Host Gateway :8888"]
     end
 
     subgraph Docker["Docker Compose"]
         WebUI["Open WebUI :3000"]
-        LLM["llama.cpp LLM :8082"]
+        LiteLLM["LiteLLM Gateway :4000"]
+        LLM["llama.cpp heavy profile"]
         Embedder["llama.cpp Embeddings :8090"]
         Tika["Apache Tika + Tesseract :9998"]
         Search["SearXNG :8889"]
@@ -32,7 +37,7 @@ flowchart TB
 
     subgraph Storage["Persistent storage"]
         Models["/srv/ai-station/models"]
-        Cache["/srv/ai-station/cache"]
+        Runtime["/srv/ai-station/runtime"]
         Backups["/srv/ai-station/backups"]
         Volumes["Docker volumes"]
     end
@@ -41,6 +46,9 @@ flowchart TB
     WebUI --> UIGateway
     UIGateway --> Gateway
     Gateway --> LLM
+    Apps --> LiteLLM
+    LiteLLM --> LLM
+    LiteLLM --> Embedder
 
     WebUI --> Embedder
     WebUI --> Tika
@@ -50,23 +58,28 @@ flowchart TB
 
     LLM --> Models
     Embedder --> Models
-    WebUI --> Cache
     Postgres --> Volumes
     Redis --> Volumes
     Volumes --> Backups
+    LiteLLM --> Runtime
 ~~~
 
 ## Request flow
 
-### Chat
+### Application chat / completion
+
+1. A project sends an OpenAI-compatible request to LiteLLM on `:4000`.
+2. LiteLLM authenticates the project virtual key and enforces model allowlists.
+3. The request is routed to the active llama.cpp profile (`local-general`,
+   `local-coder`, `local-reasoning`, or `local-vision`).
+4. Only one heavy profile is loaded on the GPU at a time.
+
+### Human chat (Open WebUI)
 
 1. The user sends a request through Open WebUI.
-2. Open WebUI calls the UI Gateway.
-3. The UI Gateway normalizes the model name and locally processes supported
-   attachments.
-4. The AI Station Gateway exposes the OpenAI-compatible endpoint.
-5. The gateway sends the request to the active llama.cpp server.
-6. The response returns to Open WebUI.
+2. Open WebUI calls the UI Gateway for OCR-aware attachment handling.
+3. The host gateway exposes the OpenAI-compatible endpoint used by the UI path.
+4. The gateway sends the request to the active llama.cpp server.
 
 ### Retrieval-augmented generation
 
@@ -89,11 +102,12 @@ flowchart TB
 | Boundary | Policy |
 |---|---|
 | Browser to Open WebUI | Localhost HTTP |
-| Open WebUI to gateway | Localhost or Docker host gateway |
-| Container-to-container | Docker Compose network |
+| Applications to LiteLLM | Localhost `:4000` or Docker network `ai-platform` |
+| Open WebUI to UI gateway | Docker host gateway |
+| Container-to-container | Compose network + external `ai-platform` |
 | Host service exposure | `127.0.0.1` only |
 | Model storage | Read-only bind mount where possible |
-| Secrets | Local `.env` and ignored secret files |
+| Secrets | Local `.env`, `secrets/`, and `projects/*.env` |
 | Internet | Required only for provisioning and optional web search |
 
 ## Persistence
@@ -102,7 +116,7 @@ Persistent information is divided into:
 
 - Docker volumes for PostgreSQL, Redis and Open WebUI state;
 - `/srv/ai-station/models` for model binaries;
-- `/srv/ai-station/cache` for resumable model caches;
+- `/srv/ai-station/runtime` for active heavy-profile state;
 - `/srv/ai-station/backups` for timestamped backups;
 - `/opt/ai-station` for version-controlled application files.
 
@@ -132,6 +146,9 @@ The model manifest defines:
 - SHA-256 checksum;
 - installation profile.
 
+The model registry (`config/registry/models.yaml`) defines stable aliases used
+by applications.
+
 ### Release audit
 
 The release audit verifies:
@@ -147,13 +164,3 @@ The release audit verifies:
 - installer validity;
 - documentation quality;
 - model manifest validity.
-
-## Known architectural constraints
-
-- The primary supported deployment is a single NVIDIA workstation.
-- Only one heavy model should be active when VRAM is constrained.
-- The project is not designed for direct public internet exposure.
-- Native Windows execution without WSL2 is unsupported.
-- Multi-node orchestration is outside the current scope.
-- The host gateway path should be tested on a clean machine before an
-  unattended organizational rollout.

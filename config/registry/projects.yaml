@@ -1,0 +1,16 @@
+version: 1
+defaults:
+  base_url_host: http://127.0.0.1:4000/v1
+  base_url_docker: http://llm-gateway:4000/v1
+  docker_network: ai-platform
+  default_model: local-general
+  timeout_seconds: 120
+projects:
+- id: demo-app
+  models:
+  - local-general
+  - local-embedding
+  status: active
+  created_at: '2026-07-20T18:29:53.908956+00:00'
+  key_alias: demo-app
+  litellm_key_hash: f123c04709846f5b894f304628ab182b1d0e8b3916eb0cb809c2e5c23d9bc93f
