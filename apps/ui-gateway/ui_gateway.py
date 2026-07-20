@@ -18,10 +18,18 @@ TIKA_URL = os.getenv("AI_STATION_TIKA_URL", "http://127.0.0.1:9998").rstrip("/")
 # Open WebUI model ids -> gateway catalog ids
 MODEL_MAP = {
     "general-qwen3.6": "general-qwen3_6-35b-a3b",
+    "local-general": "general-qwen3_6-35b-a3b",
+    "local-coder": "coder-qwen3-coder-30b-a3b",
+    "local-reasoning": "reasoning-deepseek-r1-32b",
+    "local-vision": "vision-qwen3-vl-32b",
 }
 
 MODEL_NAMES = {
     "general-qwen3.6": "General | Qwen3.6 35B A3B",
+    "local-general": "Local General",
+    "local-coder": "Local Coder",
+    "local-reasoning": "Local Reasoning",
+    "local-vision": "Local Vision",
 }
 
 MODEL_CAPABILITIES = {

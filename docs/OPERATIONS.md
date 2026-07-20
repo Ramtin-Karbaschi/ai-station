@@ -6,6 +6,35 @@ Run operational commands from:
 /opt/ai-station
 ~~~
 
+## Platform CLI
+
+The preferred control plane is the `ai` CLI:
+
+~~~bash
+ai status
+ai start --profile general
+ai models use coder
+ai models active
+ai projects create my-app --models local-general,local-embedding
+ai projects list
+ai verify
+~~~
+
+Application projects must call:
+
+~~~text
+http://127.0.0.1:4000/v1
+~~~
+
+or, from Docker Compose services attached to the external `ai-platform`
+network:
+
+~~~text
+http://llm-gateway:4000/v1
+~~~
+
+See [PLATFORM.md](PLATFORM.md) for the full multi-project contract.
+
 ## Command overview
 
 ~~~bash

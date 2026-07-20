@@ -575,14 +575,17 @@ for f in \
   scripts/ai-station-hard-reset-upload-stack.sh \
   scripts/ai-station-fix-stt-large-v3-runtime.sh \
   scripts/ai-station-repair-runtime.sh \
-  scripts/ai-station-user-start.sh \
-  scripts/ai-station-user-stop.sh \
-  scripts/ai-station-ingest-file.sh \
-  scripts/ai-station-admin-action.sh \
-  scripts/ai-station-manager-action.sh
+  scripts/ai-station-ingest-file.sh
 do
   [ -f "$f" ] && mv "$f" "$ARCHIVE/obsolete-default-path/" || true
 done
+
+# Keep production Windows/WSL launch entrypoints in place:
+#   ai-station-user-start.sh
+#   ai-station-user-stop.sh
+#   ai-station-admin-action.sh
+#   ai-station-manager-action.sh
+
 
 echo
 echo "=== Start clean runtime ==="

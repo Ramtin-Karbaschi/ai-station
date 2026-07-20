@@ -2,22 +2,37 @@
 # Any new reference outside this list will be reported by the release audit.
 
 AI Station/AI Station Manager.cmd
+AI Station/AI Station.cmd
+AI Station/AI Station.ps1
+AI Station/AI Station Admin.cmd
+AI Station/README.md
 README.md
 apps/gateway/app/main.py
 apps/ocr/app/main.py
 config/install-layout.env
 config/skills/local-ai-ops.md
+config/registry/models.yaml
+config/registry/projects.yaml
+config/gateway/litellm.yaml
 docs/ARCHITECTURE.md
 docs/INSTALLATION.md
 docs/MODELS.md
 docs/OPERATIONS.md
+docs/PLATFORM.md
 docs/PORTABILITY_POLICY.md
 docs/README_FA.md
 docs/TROUBLESHOOTING.md
 docs/ops/AI_STATION_CURRENT_STATE.md
+scripts/ai
+scripts/lib/ai-common.sh
 scripts/ai-station-manager-action.sh
+scripts/ai-station-admin-action.sh
+scripts/ai-station-user-start.sh
+scripts/ai-station-user-stop.sh
 scripts/ai-station-models.sh
 scripts/ai-station-safe-cleanup.sh
+scripts/ensure-litellm-db.sh
+scripts/sync-litellm-db-url.sh
 scripts/backup.sh
 scripts/build-tika-fa.sh
 scripts/collect-ai-station-state.sh

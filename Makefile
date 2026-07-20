@@ -14,6 +14,8 @@ SHELL := /usr/bin/env bash
 	models-core \
 	models-all \
 	models-verify \
+	models-use \
+	projects-list \
 	docs-audit \
 	audit
 
@@ -23,17 +25,21 @@ help:
 		'  make config         Validate Docker Compose configuration' \
 		'  make pull           Pull locked registry images' \
 		'  make build          Build repository-controlled images' \
-		'  make start          Start AI Station' \
+		'  make start          Start AI Station (default: general profile)' \
 		'  make stop           Stop AI Station' \
 		'  make restart        Restart AI Station' \
 		'  make status         Show service and endpoint status' \
-		'  make logs           Follow service logs' \
+		'  make logs           Follow LiteLLM gateway logs' \
 		'  make verify         Verify the active runtime' \
 		'  make models-core    Provision the Core model profile' \
 		'  make models-all     Provision the complete model profile' \
 		'  make models-verify  Verify the Core model profile' \
+		'  make models-use PROFILE=coder   Switch heavy model profile' \
+		'  make projects-list  List registered application projects' \
 		'  make docs-audit     Validate documentation quality' \
-		'  make audit          Run the complete release audit'
+		'  make audit          Run the complete release audit' \
+		'' \
+		'Platform CLI: ai --help'
 
 config:
 	docker compose config --quiet
@@ -56,7 +62,7 @@ status:
 	./scripts/status.sh
 
 logs:
-	./scripts/logs.sh
+	./scripts/ai logs gateway
 
 verify:
 	./scripts/verify.sh
@@ -69,6 +75,12 @@ models-all:
 
 models-verify:
 	./scripts/verify-models.sh --profile core
+
+models-use:
+	./scripts/ai models use $(PROFILE)
+
+projects-list:
+	./scripts/ai projects list
 
 docs-audit:
 	./scripts/docs-audit.sh
