@@ -1,0 +1,115 @@
+# AI Station Model Registry — canonical runtime aliases and profiles.
+# Application code must use aliases (local-*), never raw filenames.
+
+version: 1
+runtime_policy:
+  max_active_heavy_profiles: 1
+  heavy_profiles:
+    - general
+    - coder
+    - reasoning
+    - vision
+  always_on:
+    - embedder
+    - llm-gateway
+  optional_profiles:
+    - reranker
+
+models:
+  local-general:
+    alias: local-general
+    catalog_id: general-qwen3_6-35b-a3b
+    role: general
+    kind: chat
+    heavy: true
+    profile: general
+    service: llm-general
+    port: 8082
+    backend_model: ai-station-general
+    runtime: llama-cpp
+    file: general/qwen3.6-35b-a3b-ud-q4_k_m.gguf
+    context_size: 8192
+    status: production
+    manifest_id: general-qwen3.6-35b-a3b-q4
+
+  local-coder:
+    alias: local-coder
+    catalog_id: coder-qwen3-coder-30b-a3b
+    role: coder
+    kind: chat
+    heavy: true
+    profile: coder
+    service: llm-coder
+    port: 8083
+    backend_model: ai-station-coder
+    runtime: llama-cpp
+    file: coder/qwen3-coder-30b-a3b-instruct-q4.gguf
+    context_size: 8192
+    status: production
+    manifest_id: coder-qwen3-30b-a3b-q4
+
+  local-reasoning:
+    alias: local-reasoning
+    catalog_id: reasoning-deepseek-r1-32b
+    role: reasoning
+    kind: chat
+    heavy: true
+    profile: reasoning
+    service: llm-reasoning
+    port: 8084
+    backend_model: ai-station-reasoning
+    runtime: llama-cpp
+    file: thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf
+    context_size: 8192
+    status: production
+    note: Weights under models/thinking; Compose profile name is reasoning.
+
+  local-vision:
+    alias: local-vision
+    catalog_id: vision-qwen3-vl-32b
+    role: vision
+    kind: vision
+    heavy: true
+    profile: vision
+    service: llm-vision
+    port: 8085
+    backend_model: ai-station-vision
+    runtime: llama-cpp
+    file: vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf
+    mmproj: vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf
+    context_size: 4096
+    status: production
+
+  local-embedding:
+    alias: local-embedding
+    catalog_id: embedding-qwen3-0_6b
+    role: embedding
+    kind: embedding
+    heavy: false
+    profile: default
+    service: embedder
+    port: 8090
+    backend_model: ai-station-embedding
+    runtime: llama-cpp
+    file: embedding/qwen3-embedding-0.6b-q8_0.gguf
+    context_size: 8192
+    status: production
+    manifest_id: embedding-qwen3-0.6b-q8
+
+  local-reranker:
+    alias: local-reranker
+    catalog_id: reranker-qwen3-0_6b
+    role: reranker
+    kind: reranker
+    heavy: false
+    profile: reranker
+    service: reranker
+    port: 8091
+    backend_model: ai-station-reranker
+    runtime: llama-cpp
+    file: reranker/qwen3-reranker-0.6b-q8_0.gguf
+    context_size: 4096
+    status: production
+    gpu_layers: 0
+    note: CPU-only by default to coexist with one heavy GPU model.
+    manifest_id: reranker-qwen3-0.6b-q8

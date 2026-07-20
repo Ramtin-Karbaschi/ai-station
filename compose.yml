@@ -1,5 +1,12 @@
 name: ai-station
 
+networks:
+  default:
+    name: ai-station_default
+  ai-platform:
+    name: ai-platform
+    external: true
+
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -13,8 +20,12 @@ services:
       - postgres_password
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init-litellm.sql:/docker-entrypoint-initdb.d/20-litellm.sql:ro
     ports:
       - "127.0.0.1:5432:5432"
+    networks:
+      - default
+      - ai-platform
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openwebui} -d ${POSTGRES_DB:-openwebui}"]
       interval: 10s
@@ -29,6 +40,9 @@ services:
       - redisdata:/data
     ports:
       - "127.0.0.1:6379:6379"
+    networks:
+      - default
+      - ai-platform
 
   searxng:
     image: searxng/searxng:latest
@@ -42,6 +56,8 @@ services:
       - ./infra/searxng:/etc/searxng:ro
     ports:
       - "127.0.0.1:${SEARXNG_PORT:-8889}:8080"
+    networks:
+      - default
 
   tika:
     image: ai-station/tika-fa:3.3.0.0-full
@@ -52,6 +68,8 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms512m -Xmx3g -XX:+ExitOnOutOfMemoryError"
     ports:
       - "127.0.0.1:${TIKA_PORT:-9998}:9998"
+    networks:
+      - default
     healthcheck:
       test: ["CMD-SHELL", "timeout 3 bash -lc '</dev/tcp/127.0.0.1/9998' || exit 1"]
       interval: 20s
@@ -83,6 +101,9 @@ services:
       - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
     ports:
       - "127.0.0.1:${EMBEDDER_PORT:-8090}:8090"
+    networks:
+      - default
+      - ai-platform
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8090/v1/models >/dev/null || exit 1"]
       interval: 30s
@@ -90,39 +111,44 @@ services:
       retries: 20
       start_period: 60s
 
-  llm-general:
-    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+  llm-gateway:
+    image: ghcr.io/berriai/litellm-database:main-stable
+    container_name: ai-station-llm-gateway
     restart: unless-stopped
-    gpus: all
-    command:
-      - -m
-      - /models/${GENERAL_MODEL_FILE:-general/qwen3.6-35b-a3b-ud-q4_k_m.gguf}
-      - --alias
-      - ai-station-general
-      - --reasoning
-      - "off"
-      - --reasoning-budget
-      - "0"
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8082"
-      - -ngl
-      - "999"
-      - -c
-      - "${GENERAL_CONTEXT:-8192}"
-      - --parallel
-      - "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_MASTER_KEY}"
+      LITELLM_SALT_KEY: "${LITELLM_SALT_KEY}"
+      DATABASE_URL: "${LITELLM_DATABASE_URL}"
+      STORE_MODEL_IN_DB: "False"
+      LITELLM_MODE: "PRODUCTION"
+      DISABLE_ADMIN_UI: "False"
     volumes:
-      - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
+      - ./config/gateway/litellm.yaml:/app/config.yaml:ro
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--port"
+      - "4000"
+      - "--num_workers"
+      - "1"
     ports:
-      - "127.0.0.1:${GENERAL_LLM_PORT:-8082}:8082"
+      - "127.0.0.1:${LITELLM_PORT:-4000}:4000"
+    networks:
+      - default
+      - ai-platform
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8082/v1/models >/dev/null || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')\"",
+        ]
       interval: 30s
       timeout: 10s
-      retries: 30
-      start_period: 300s
+      retries: 10
+      start_period: 90s
 
   open-webui:
     image: ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0
@@ -144,9 +170,9 @@ services:
       WEBUI_SECRET_KEY: "${WEBUI_SECRET_KEY}"
       WEBUI_URL: "http://localhost:${WEBUI_PORT:-3000}"
 
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-openwebui}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-openwebui}"
+      DATABASE_URL: "${OPENWEBUI_DATABASE_URL}"
       VECTOR_DB: "pgvector"
-      PGVECTOR_DB_URL: "postgresql://${POSTGRES_USER:-openwebui}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-openwebui}"
+      PGVECTOR_DB_URL: "${PGVECTOR_DB_URL}"
       REDIS_URL: "redis://redis:6379/0"
       WEBSOCKET_MANAGER: "redis"
       ENABLE_WEBSOCKET_SUPPORT: "true"
@@ -155,7 +181,7 @@ services:
       ENABLE_OLLAMA_API: "False"
       OPENAI_API_BASE_URLS: "http://host.docker.internal:8890/v1"
       OPENAI_API_KEYS: "local-not-used"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["general-qwen3.6"], "tags": [], "connection_type": "openai"}}'
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["general-qwen3.6", "local-general", "local-coder", "local-reasoning", "local-vision"], "tags": [], "connection_type": "openai"}}'
 
       ENABLE_PERSISTENT_CONFIG: "False"
       DEFAULT_MODELS: "general-qwen3.6"
@@ -205,6 +231,8 @@ services:
       - openwebui-data:/app/backend/data
     ports:
       - "127.0.0.1:${WEBUI_PORT:-3000}:8080"
+    networks:
+      - default
 
 volumes:
   pgdata:

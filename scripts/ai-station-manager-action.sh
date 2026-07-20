@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
+# Single Windows↔WSL control plane for AI Station.
 set -Eeuo pipefail
 
 ROOT="/opt/ai-station"
 cd "$ROOT"
 
 ACTION="${1:-}"
+ARG2="${2:-}"
+ARG3="${3:-}"
 
-require_root_tools() {
+require_tools() {
   command -v docker >/dev/null 2>&1 || {
     echo "ERROR: docker is not available inside WSL."
     exit 1
@@ -26,56 +29,191 @@ ensure_docker() {
   fi
 }
 
+ai_bin() {
+  "$ROOT/scripts/ai" "$@"
+}
+
 case "$ACTION" in
   start)
-    require_root_tools
+    require_tools
     ensure_docker
     echo "Starting AI Station..."
-    ./scripts/start.sh
+    "$ROOT/scripts/ai-station-user-start.sh"
     ;;
 
   stop)
-    require_root_tools
+    require_tools
     ensure_docker
     echo "Stopping AI Station..."
-    ./scripts/stop.sh
+    "$ROOT/scripts/ai-station-user-stop.sh"
+    ;;
+
+  restart)
+    require_tools
+    ensure_docker
+    echo "Restarting AI Station..."
+    "$ROOT/scripts/ai-station-user-stop.sh" || true
+    "$ROOT/scripts/ai-station-user-start.sh"
     ;;
 
   stop-heavy-models)
-    require_root_tools
+    require_tools
     ensure_docker
     echo "Stopping heavy LLM containers..."
-    ./scripts/stop-ai-station-models.sh
+    ai_bin models stop
     ;;
 
   status)
-    require_root_tools
-    ./scripts/status.sh
+    require_tools
+    ai_bin status
+    ;;
+
+  verify)
+    require_tools
+    ensure_docker
+    ai_bin verify
     echo
-    ./scripts/status-ai-station.sh
+    curl -fsS --max-time 5 http://127.0.0.1:4000/health/liveliness || true
+    echo
+    curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null | python3 -m json.tool || true
+    curl -fsS --max-time 5 http://127.0.0.1:8890/health 2>/dev/null | python3 -m json.tool || true
+    ;;
+
+  model-use)
+    require_tools
+    ensure_docker
+    if [[ -z "$ARG2" ]]; then
+      echo "Usage: $0 model-use <general|coder|reasoning|vision>"
+      exit 2
+    fi
+    ai_bin models use "$ARG2"
+    ;;
+
+  models-list)
+    ai_bin models list
+    echo
+    ai_bin models active
+    ;;
+
+  projects-list)
+    ai_bin projects list
+    ;;
+
+  projects-create)
+    require_tools
+    ensure_docker
+    if [[ -z "$ARG2" ]]; then
+      echo "Usage: $0 projects-create <project-id> [models-csv]"
+      exit 2
+    fi
+    MODELS="${ARG3:-local-general,local-embedding}"
+    ai_bin projects create "$ARG2" --models "$MODELS"
+    ;;
+
+  projects-show)
+    if [[ -z "$ARG2" ]]; then
+      echo "Usage: $0 projects-show <project-id>"
+      exit 2
+    fi
+    ai_bin projects show "$ARG2"
+    echo
+    ENV_FILE="$ROOT/projects/${ARG2}.env"
+    if [[ -f "$ENV_FILE" ]]; then
+      echo "=== Credentials file (secrets redacted) ==="
+      sed -E 's/(LLM_API_KEY=).*/\1***REDACTED***/' "$ENV_FILE"
+      echo
+      echo "Full secret file (WSL): $ENV_FILE"
+      echo "Windows path: \\\\wsl.localhost\\Ubuntu\\opt\\ai-station\\projects\\${ARG2}.env"
+    fi
+    ;;
+
+  projects-revoke)
+    require_tools
+    ensure_docker
+    if [[ -z "$ARG2" ]]; then
+      echo "Usage: $0 projects-revoke <project-id>"
+      exit 2
+    fi
+    ai_bin projects revoke "$ARG2"
+    ;;
+
+  api-info)
+    cat <<EOF
+AI Station Application API
+==========================
+Base URL (host):   http://127.0.0.1:4000/v1
+Base URL (Docker): http://llm-gateway:4000/v1
+Docker network:    ai-platform (external)
+Admin / health:    http://127.0.0.1:4000/health/liveliness
+LiteLLM UI:        http://127.0.0.1:4000/ui
+
+Stable model aliases:
+  local-general
+  local-coder
+  local-reasoning
+  local-vision
+  local-embedding
+  local-reranker
+
+Create a project key:
+  ai projects create <id> --models local-general,local-embedding
+
+Python example:
+  from openai import OpenAI
+  client = OpenAI(base_url="http://127.0.0.1:4000/v1", api_key="...")
+EOF
+    echo
+    ai_bin projects list
+    ;;
+
+  reset-webui-password)
+    require_tools
+    ensure_docker
+    "$ROOT/scripts/reset-openwebui-password.sh" "${ARG2:-}" "${ARG3:-}"
+    ;;
+
+  logs|logs-all)
+    echo "=== LiteLLM gateway (last 80 lines) ==="
+    docker logs --tail 80 ai-station-llm-gateway 2>&1 || true
+    echo
+    echo "=== Open WebUI (last 80 lines) ==="
+    docker logs --tail 80 ai-station-open-webui-1 2>&1 || true
+    echo
+    echo "=== Host gateway journal (last 60 lines) ==="
+    journalctl -u ai-station-gateway -n 60 --no-pager 2>&1 || true
+    echo
+    echo "=== UI gateway journal (last 40 lines) ==="
+    journalctl -u ai-station-ui-gateway -n 40 --no-pager 2>&1 || true
     ;;
 
   logs-gateway)
-    echo "=== ai-station-gateway (last 120 lines) ==="
-    journalctl -u ai-station-gateway -n 120 --no-pager || true
+    echo "=== LiteLLM gateway (last 120 lines) ==="
+    docker logs --tail 120 ai-station-llm-gateway 2>&1 || true
     echo
-    echo "=== ai-station-ui-gateway (last 80 lines) ==="
-    journalctl -u ai-station-ui-gateway -n 80 --no-pager || true
+    echo "=== ai-station-gateway (last 80 lines) ==="
+    journalctl -u ai-station-gateway -n 80 --no-pager || true
+    echo
+    echo "=== ai-station-ui-gateway (last 40 lines) ==="
+    journalctl -u ai-station-ui-gateway -n 40 --no-pager || true
     ;;
 
   logs-webui)
-    echo "=== open-webui (last 120 lines) ==="
     docker logs --tail 120 ai-station-open-webui-1 2>&1 || true
     ;;
 
   logs-tika|logs-ocr)
-    echo "=== tika (last 120 lines) ==="
     docker logs --tail 120 ai-station-tika 2>&1 || true
     ;;
 
   logs-general)
-    echo "=== llm-general (last 120 lines) ==="
-    docker logs --tail 120 ai-station-llm-general-1 2>&1 || true
+    docker logs --tail 120 ai-station-llm-general 2>&1 \
+      || docker logs --tail 120 ai-station-llm-general-1 2>&1 \
+      || true
+    ;;
+
+  backup)
+    require_tools
+    "$ROOT/scripts/backup.sh"
     ;;
 
   vscode)
@@ -83,8 +221,7 @@ case "$ACTION" in
       code "$ROOT"
     else
       echo "VS Code CLI (code) is not installed inside WSL."
-      echo "Open the folder from Windows instead:"
-      echo "  \\\\wsl.localhost\\Ubuntu\\opt\\ai-station"
+      echo "Open from Windows: \\\\wsl.localhost\\Ubuntu\\opt\\ai-station"
     fi
     ;;
 
@@ -105,32 +242,31 @@ case "$ACTION" in
     docker system df || true
     ;;
 
-  verify)
-    require_root_tools
-    ensure_docker
-    ./scripts/verify.sh
-    echo
-    curl -fsS --max-time 5 http://127.0.0.1:8888/health | python3 -m json.tool || true
-    curl -fsS --max-time 5 http://127.0.0.1:8890/health | python3 -m json.tool || true
-    ;;
-
   help|"")
     cat <<'HELP'
-Usage: ai-station-manager-action.sh <action>
+Usage: ai-station-manager-action.sh <action> [args]
 
-Actions:
-  start
-  stop
+Platform:
+  start | stop | restart | status | verify | backup | disk
+
+Models:
+  models-list
+  model-use <general|coder|reasoning|vision>
   stop-heavy-models
-  status
-  verify
-  logs-gateway
-  logs-webui
-  logs-tika
-  logs-general
-  vscode
-  git
-  disk
+
+API / Projects:
+  api-info
+  projects-list
+  projects-create <id> [models-csv]
+  projects-show <id>
+  projects-revoke <id>
+  reset-webui-password [email] [password]
+
+Logs:
+  logs | logs-gateway | logs-webui | logs-tika | logs-general
+
+Dev:
+  vscode | git
 HELP
     ;;
 
