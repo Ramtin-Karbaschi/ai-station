@@ -1,7 +1,7 @@
 {
   "data_root": "/srv/ai-station",
   "default_profile": "core",
-  "generated_at": "2026-07-18T18:58:37.983709+00:00",
+  "generated_at": "2026-07-23T18:57:16.854705+00:00",
   "models": [
     {
       "destination": "models/general/qwen3.6-35b-a3b-ud-q4_k_m.gguf",
@@ -64,11 +64,56 @@
       "role": "reranker",
       "sha256": "22c9979ce4fbcdc5acdc310c6641c32797eff1aa980b8f7a2db8a8ea23429a48",
       "size_bytes": 639153184
+    },
+    {
+      "destination": "models/thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf",
+      "filename": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
+      "id": "reasoning-deepseek-r1-32b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
+      "required_for_runtime": false,
+      "revision": "1dc8cf9ffa5dd333057ea1b09ccf4772d8726dec",
+      "revision_is_immutable": true,
+      "role": "thinking_reasoning",
+      "sha256": "bed9b0f551f5b95bf9da5888a48f0f87c37ad6b72519c4cbd775f54ac0b9fc62",
+      "size_bytes": 19851335840
+    },
+    {
+      "destination": "models/vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf",
+      "filename": "Qwen3VL-32B-Instruct-Q4_K_M.gguf",
+      "id": "vision-qwen3-vl-32b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "Qwen/Qwen3-VL-32B-Instruct-GGUF",
+      "required_for_runtime": false,
+      "revision": "e3e1fe0c76de7ee58ea65db420c643adfe2e457c",
+      "revision_is_immutable": true,
+      "role": "vision_language",
+      "sha256": "5cf0136e721d6294718ec71fd8c93b17ab5dd4e2714d6079e83fa46571ad94c8",
+      "size_bytes": 19762150432
+    },
+    {
+      "destination": "models/vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf",
+      "filename": "mmproj-Qwen3VL-32B-Instruct-Q8_0.gguf",
+      "id": "vision-qwen3-vl-32b-mmproj-q8",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "Qwen/Qwen3-VL-32B-Instruct-GGUF",
+      "required_for_runtime": false,
+      "revision": "e3e1fe0c76de7ee58ea65db420c643adfe2e457c",
+      "revision_is_immutable": true,
+      "role": "vision_mmproj",
+      "sha256": "c01734a97adc350c1eebb957ed433afee4e376ebd0949163f659c76d8dcf20ca",
+      "size_bytes": 772360224
     }
   ],
   "profiles": {
     "all": {
-      "description": "Complete model pack including coding and reranking models."
+      "description": "Complete model pack including coding, reasoning, vision, and reranking models."
     },
     "core": {
       "description": "Required runtime models: general reasoning and embedding."
