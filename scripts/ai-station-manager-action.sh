@@ -163,7 +163,24 @@ Python example:
   client = OpenAI(base_url="http://127.0.0.1:4000/v1", api_key="...")
 EOF
     echo
+    if [[ -f "$ROOT/secrets/litellm_ui_credentials.txt" ]]; then
+      echo "=== LiteLLM Admin UI login ==="
+      cat "$ROOT/secrets/litellm_ui_credentials.txt"
+      echo
+    else
+      echo "LiteLLM UI default login: username=admin , password=<LITELLM_MASTER_KEY from .env>"
+      echo
+    fi
     ai_bin projects list
+    ;;
+
+  litellm-ui-credentials)
+    if [[ -f "$ROOT/secrets/litellm_ui_credentials.txt" ]]; then
+      cat "$ROOT/secrets/litellm_ui_credentials.txt"
+    else
+      echo "No secrets/litellm_ui_credentials.txt found."
+      echo "Default: username=admin , password=value of LITELLM_MASTER_KEY in .env"
+    fi
     ;;
 
   reset-webui-password)
@@ -261,6 +278,7 @@ API / Projects:
   projects-show <id>
   projects-revoke <id>
   reset-webui-password [email] [password]
+  litellm-ui-credentials
 
 Logs:
   logs | logs-gateway | logs-webui | logs-tika | logs-general
