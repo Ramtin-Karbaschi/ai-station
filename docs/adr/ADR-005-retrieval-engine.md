@@ -1,6 +1,6 @@
 # ADR-005: Retrieval Engine — Retain pgvector, Evaluate Before Any Migration
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-23
 
 ## Context

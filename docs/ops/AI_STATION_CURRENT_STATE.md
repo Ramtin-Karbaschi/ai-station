@@ -5,17 +5,19 @@ This document records the verified release baseline. It is not a roadmap.
 ## Active runtime
 
 - Open WebUI;
-- AI Station host gateway;
-- UI gateway;
+- LiteLLM multi-project gateway (`:4000`);
+- AI Station host gateway (`:8888`, loopback);
+- UI gateway (`:8890`, loopback);
 - PostgreSQL;
 - pgvector;
 - Redis;
 - SearXNG;
 - Apache Tika;
 - Tesseract Persian OCR language pack;
-- llama.cpp general model server;
+- llama.cpp heavy profiles (one at a time): general, coder, reasoning, vision;
 - llama.cpp embedding server;
-- local faster-whisper large-v3 cache.
+- local faster-whisper large-v3 cache;
+- provider registry (`config/providers.yaml`) and admission dry-run.
 
 ## Active default models
 
@@ -24,12 +26,15 @@ This document records the verified release baseline. It is not a roadmap.
 | General reasoning | Qwen3.6 35B-A3B GGUF |
 | Embedding | Qwen3 Embedding 0.6B Q8 |
 
-## Downloaded optional models
+## Selectable heavy profiles
 
 | Role | Model | Default runtime |
 |---|---|---|
-| Coding | Qwen3 Coder 30B-A3B | Not active |
-| Reranking | Qwen3 Reranker 0.6B | Not active |
+| General | Qwen3.6 35B-A3B | Active when profile=`general` |
+| Coding | Qwen3 Coder 30B-A3B | On demand via `ai models use coder` |
+| Reasoning | DeepSeek-R1 Distill Qwen 32B | On demand via `ai models use reasoning` |
+| Vision | Qwen3-VL 32B + mmproj | On demand via `ai models use vision` |
+| Reranking | Qwen3 Reranker 0.6B | Optional CPU profile |
 
 The authoritative downloaded model list is:
 
@@ -43,8 +48,11 @@ The authoritative runtime catalog exposed by the gateway is:
 config/model-catalog.json
 ~~~
 
-Only enabled chat models in that catalog are selectable. Optional coder and
-reranker entries remain disabled until a matching Compose service is verified.
+The authoritative provider lifecycle registry is:
+
+~~~text
+config/providers.yaml
+~~~
 
 ## Document processing
 
@@ -54,8 +62,7 @@ The verified extraction path is:
 - Tesseract;
 - Persian and English OCR.
 
-Docling and experimental OCR/VLM entries are not part of the verified default
-runtime.
+Docling remains a Phase 5 trial candidate behind a document router.
 
 ## Removed or unsupported default components
 
@@ -63,18 +70,15 @@ runtime.
 - FLUX and WAN generation stacks;
 - direct cloud model APIs;
 - multi-node inference;
-- direct public internet exposure.
-
-Legacy catalog entries must not be interpreted as installed or operational
-unless they also appear in the active Compose configuration and pass runtime
-verification.
+- direct public internet exposure;
+- unused Caddy/Prometheus stubs (removed in Phase 1).
 
 ## Storage
 
 ~~~text
 Code:       /opt/ai-station
 Models:     /srv/ai-station/models
-Cache:      /srv/ai-station/cache
+Quarantine: /srv/ai-station/quarantine
 Backups:    /srv/ai-station/backups
 Runtime:    /srv/ai-station/runtime
 ~~~
@@ -84,9 +88,10 @@ Runtime:    /srv/ai-station/runtime
 | Service | Endpoint |
 |---|---|
 | Open WebUI | `127.0.0.1:3000` |
+| LiteLLM | `127.0.0.1:4000` |
 | General model | `127.0.0.1:8082` |
 | Embedding | `127.0.0.1:8090` |
-| Gateway | `127.0.0.1:8888` |
+| Host Gateway | `127.0.0.1:8888` |
 | SearXNG | `127.0.0.1:8889` |
 | UI Gateway | `127.0.0.1:8890` |
 | Tika | `127.0.0.1:9998` |

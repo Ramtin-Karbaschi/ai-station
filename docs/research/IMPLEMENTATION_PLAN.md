@@ -1,7 +1,7 @@
 # Implementation Plan: Adaptive Inference Fabric (Reduced Form)
 
 Date: 2026-07-23
-Status: Phase 0 complete; Phases 1+ require approval at each gate.
+Status: Phase 0 complete; Phase 1 implemented on architecture/adaptive-inference-fabric. Phase 2+ remain gated.
 
 Governing decisions are recorded in [docs/adr](../adr/ADR-001-adaptive-inference-fabric.md).
 The plan implements the reduced fabric confirmed in the
