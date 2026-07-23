@@ -62,6 +62,7 @@ models:
     file: thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf
     context_size: 8192
     status: production
+    manifest_id: reasoning-deepseek-r1-32b-q4
     note: Weights under models/thinking; Compose profile name is reasoning.
 
   local-vision:
@@ -79,6 +80,7 @@ models:
     mmproj: vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf
     context_size: 4096
     status: production
+    manifest_id: vision-qwen3-vl-32b-q4
 
   local-embedding:
     alias: local-embedding

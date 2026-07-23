@@ -1,6 +1,6 @@
 # ADR-003: llama.cpp Permanent Roles
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-23
 
 ## Context
