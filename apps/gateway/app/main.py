@@ -13,6 +13,14 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from apps.gateway.app.admission import admit
+from apps.gateway.app.providers import (
+    heavy_services,
+    provider_for_catalog_model,
+    registry,
+    service_profiles,
+)
+
 PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
 CATALOG_PATH = Path(
     os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
@@ -32,19 +40,12 @@ COMPOSE_BASE = (
     ]
 )
 
-HEAVY_SERVICES = ["llm-general", "llm-coder", "llm-reasoning", "llm-vision"]
-SERVICE_PROFILES = {
-    "llm-general": "general",
-    "llm-coder": "coder",
-    "llm-reasoning": "reasoning",
-    "llm-vision": "vision",
-    "reranker": "reranker",
-}
 MODEL_LOCK = asyncio.Lock()
 QUEUE: list[dict[str, Any]] = []
 ACTIVE_MODEL_ID: str | None = None
+GATEWAY_VERSION = "0.5.0"
 
-app = FastAPI(title="AI Station Gateway", version="0.4.0")
+app = FastAPI(title="AI Station Gateway", version=GATEWAY_VERSION)
 
 
 def load_catalog() -> dict[str, Any]:
@@ -57,7 +58,6 @@ def catalog_models() -> list[dict[str, Any]]:
 
 
 def normalize_model_id(model_id: str) -> str:
-    # Open WebUI / UI gateway may prefix model names, e.g. gateway.general-qwen...
     if "." in model_id:
         return model_id.split(".")[-1]
     return model_id
@@ -97,8 +97,9 @@ async def compose(args: list[str], timeout: int = 180) -> subprocess.CompletedPr
 def profile_args_for_services(services: list[str]) -> list[str]:
     args: list[str] = []
     seen: set[str] = set()
+    profiles = service_profiles()
     for service in services:
-        profile = SERVICE_PROFILES.get(service)
+        profile = profiles.get(service)
         if profile and profile not in seen:
             args.extend(["--profile", profile])
             seen.add(profile)
@@ -106,7 +107,7 @@ def profile_args_for_services(services: list[str]) -> list[str]:
 
 
 async def stop_other_heavy(target_service: str) -> None:
-    to_stop = [s for s in HEAVY_SERVICES if s != target_service]
+    to_stop = [s for s in heavy_services() if s != target_service]
     if not to_stop:
         return
     await compose([*profile_args_for_services(to_stop), "stop", *to_stop], timeout=240)
@@ -139,12 +140,40 @@ async def wait_ready(model: dict[str, Any], attempts: int = 480) -> None:
     )
 
 
-async def start_runtime(model: dict[str, Any]) -> None:
+def evaluate_admission(model: dict[str, Any]) -> dict[str, Any]:
+    provider = provider_for_catalog_model(model)
+    policy = (registry().get("admission") or {})
+    decision = admit(provider["id"])
+    payload = decision.to_dict()
+    payload["enforce"] = bool(policy.get("enforce", True))
+    if decision.decision == "REJECT" and payload["enforce"]:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "stage": "admission",
+                "decision": payload,
+            },
+        )
+    if decision.decision == "FALLBACK" and payload["enforce"]:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "stage": "admission",
+                "decision": payload,
+                "message": "Provider rejected; use fallback explicitly",
+            },
+        )
+    return payload
+
+
+async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
     global ACTIVE_MODEL_ID
 
     service = model.get("service")
     if not service:
         raise HTTPException(status_code=400, detail=f"Model has no runtime service: {model['id']}")
+
+    admission = evaluate_admission(model)
 
     if model.get("heavy"):
         await stop_other_heavy(service)
@@ -162,6 +191,7 @@ async def start_runtime(model: dict[str, Any]) -> None:
                 "service": service,
                 "stdout": result.stdout[-4000:],
                 "stderr": result.stderr[-4000:],
+                "admission": admission,
             },
         )
 
@@ -169,6 +199,8 @@ async def start_runtime(model: dict[str, Any]) -> None:
 
     if model.get("heavy"):
         ACTIVE_MODEL_ID = model["id"]
+
+    return admission
 
 
 def rewrite_messages(model: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]:
@@ -188,10 +220,11 @@ def rewrite_messages(model: dict[str, Any], body: dict[str, Any]) -> dict[str, A
 async def health() -> dict[str, Any]:
     return {
         "ok": True,
-        "version": "0.4.0",
+        "version": GATEWAY_VERSION,
         "active_model_id": ACTIVE_MODEL_ID,
         "queue_length": len(QUEUE),
         "catalog_path": str(CATALOG_PATH),
+        "providers": list((registry().get("providers") or {}).keys()),
         "models": [m["id"] for m in selectable_models()],
     }
 
@@ -224,6 +257,25 @@ async def queue() -> dict[str, Any]:
     }
 
 
+@app.get("/v1/providers")
+async def providers() -> dict[str, Any]:
+    return {
+        "admission": registry().get("admission") or {},
+        "providers": registry().get("providers") or {},
+    }
+
+
+@app.post("/v1/admission/dry-run")
+async def admission_dry_run(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    provider_id = body.get("provider_id") or body.get("model")
+    if not provider_id:
+        raise HTTPException(status_code=400, detail="provider_id or model required")
+    context = body.get("context")
+    decision = admit(str(provider_id), context=context)
+    return decision.to_dict()
+
+
 @app.post("/v1/chat/completions")
 async def chat(request: Request):
     raw_body = await request.json()
@@ -252,8 +304,9 @@ async def chat(request: Request):
     try:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
-            await start_runtime(model)
+            admission = await start_runtime(model)
             item["state"] = "running"
+            item["admission"] = admission
 
             async with httpx.AsyncClient(timeout=None) as client:
                 response = await client.post(
@@ -280,8 +333,9 @@ async def stream_proxy(
         async with MODEL_LOCK:
             item["state"] = "starting_model"
             yield b": AI Station is preparing the selected local model\n\n"
-            await start_runtime(model)
+            admission = await start_runtime(model)
             item["state"] = "running"
+            item["admission"] = admission
 
             async with httpx.AsyncClient(timeout=None) as client:
                 async with client.stream(

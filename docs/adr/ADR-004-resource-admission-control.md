@@ -1,6 +1,6 @@
 # ADR-004: Resource Admission Control
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-23
 
 ## Context
