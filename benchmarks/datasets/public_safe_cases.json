@@ -1,0 +1,44 @@
+[
+  {
+    "id": "short-prompt",
+    "messages": [
+      {"role": "user", "content": "Reply with exactly: OK"}
+    ],
+    "max_tokens": 8,
+    "temperature": 0
+  },
+  {
+    "id": "code-generation",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Write a Python function `is_palindrome(s: str) -> bool` with a docstring. No markdown."
+      }
+    ],
+    "max_tokens": 160,
+    "temperature": 0
+  },
+  {
+    "id": "json-schema-like",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Return only valid JSON object with keys name (string) and score (integer 0-100). Example name=alpha."
+      }
+    ],
+    "max_tokens": 64,
+    "temperature": 0
+  },
+  {
+    "id": "context-8k-synthetic",
+    "messages": [
+      {
+        "role": "user",
+        "content": "CONTEXT_MARKER\n{{PAD}}\nQuestion: What is the marker word on the first line? Answer with one word."
+      }
+    ],
+    "pad_tokens_approx": 7500,
+    "max_tokens": 8,
+    "temperature": 0
+  }
+]
