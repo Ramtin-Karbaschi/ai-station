@@ -1,0 +1,19 @@
+[Unit]
+Description=AI Station UI Gateway
+After=network-online.target docker.service ai-station-gateway.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ai-station
+Environment=AI_STATION_UI_GATEWAY_HOST=127.0.0.1
+Environment=AI_STATION_UI_GATEWAY_PORT=8890
+Environment=AI_STATION_GATEWAY_UPSTREAM=http://127.0.0.1:8888/v1
+Environment=AI_STATION_TIKA_URL=http://127.0.0.1:9998
+Environment=AI_STATION_OPENWEBUI_URL=http://127.0.0.1:3000
+ExecStart=/usr/bin/python3 /opt/ai-station/apps/ui-gateway/ui_gateway.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
