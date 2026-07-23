@@ -1,6 +1,6 @@
 # ADR-007: Observability Boundary — Engine-Native Metrics, No External Telemetry
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-23
 
 ## Context

@@ -1,0 +1,46 @@
+# Experimental SGLang provider (Phase 2 scaffold).
+# Off by default. Do not start until an AWQ/GPTQ artifact is
+# manifest-pinned and the Phase 1 admission controller is active.
+#
+# Usage (after model artifact exists):
+#   docker compose -f compose.yml -f compose.sglang.experimental.yaml \
+#     --profile sglang-experimental config
+#
+# This file intentionally uses an image tag placeholder. Replace with a
+# digest pin in compose.images.lock.yaml before any production trial.
+
+services:
+  sglang-experimental:
+    profiles: ["sglang-experimental"]
+    image: lmsysorg/sglang:v0.5.13-cu126
+    container_name: ai-station-sglang-experimental
+    restart: "no"
+    gpus: all
+    environment:
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    command:
+      - python3
+      - -m
+      - sglang.launch_server
+      - --model-path
+      - /models/${SGLANG_MODEL_DIR:-experimental/sglang-not-provisioned}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --mem-fraction-static
+      - "0.85"
+    volumes:
+      - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
+    ports:
+      - "127.0.0.1:${SGLANG_PORT:-8100}:8100"
+    networks:
+      - default
+      - ai-platform
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8100/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s

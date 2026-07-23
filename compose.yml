@@ -43,6 +43,11 @@ services:
     networks:
       - default
       - ai-platform
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   searxng:
     image: searxng/searxng:latest
@@ -58,6 +63,16 @@ services:
       - "127.0.0.1:${SEARXNG_PORT:-8889}:8080"
     networks:
       - default
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/')\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   tika:
     image: ai-station/tika-fa:3.3.0.0-full
@@ -125,6 +140,9 @@ services:
       STORE_MODEL_IN_DB: "False"
       LITELLM_MODE: "PRODUCTION"
       DISABLE_ADMIN_UI: "False"
+      UI_USERNAME: "${UI_USERNAME:-admin}"
+      UI_PASSWORD: "${UI_PASSWORD}"
+      PROXY_BASE_URL: "http://127.0.0.1:${LITELLM_PORT:-4000}"
     volumes:
       - ./config/gateway/litellm.yaml:/app/config.yaml:ro
     command:
