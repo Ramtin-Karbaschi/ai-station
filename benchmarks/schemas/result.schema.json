@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIStationBenchmarkResult",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "engine",
+    "model",
+    "started_at",
+    "hardware_profile_ref",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer" },
+    "engine": { "type": "string" },
+    "model": { "type": "string" },
+    "endpoint": { "type": "string" },
+    "quantization": { "type": "string" },
+    "started_at": { "type": "string" },
+    "finished_at": { "type": "string" },
+    "hardware_profile_ref": { "type": "string" },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "ok", "ttft_ms", "decode_tokens_per_s", "e2e_ms"],
+        "properties": {
+          "id": { "type": "string" },
+          "ok": { "type": "boolean" },
+          "prompt_tokens": { "type": "integer" },
+          "completion_tokens": { "type": "integer" },
+          "ttft_ms": { "type": ["number", "null"] },
+          "prompt_tokens_per_s": { "type": ["number", "null"] },
+          "decode_tokens_per_s": { "type": ["number", "null"] },
+          "e2e_ms": { "type": ["number", "null"] },
+          "peak_vram_mib": { "type": ["number", "null"] },
+          "error": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}
