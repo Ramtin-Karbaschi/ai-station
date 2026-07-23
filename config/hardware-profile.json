@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-23",
+  "generated_by": "Phase 0 architecture audit (read-only inspection)",
+  "notes": "Non-sensitive hardware capability snapshot. No hostnames, usernames, secrets, or machine-unique identifiers. Regenerate after driver, WSL, or hardware changes.",
+  "cpu": {
+    "model": "Intel Core Ultra 9 275HX",
+    "vcpus_visible_in_wsl": 20,
+    "threads_per_core": 1,
+    "instruction_sets": {
+      "avx2": true,
+      "avx_vnni": true,
+      "avx512": false,
+      "amx": false,
+      "aes_ni": true,
+      "sha_ni": true
+    },
+    "implication": "No AVX-512 and no AMX: CPU-side INT4/INT8 MoE kernels that require AVX-512/AMX (for example KTransformers AMX backend) fall back to slower AVX2 paths."
+  },
+  "memory": {
+    "wsl_visible_total_gib": 47,
+    "wsl_visible_available_gib_at_scan": 43,
+    "swap_gib": 16,
+    "host_physical_gib_reported": 64,
+    "note": "WSL2 memory ceiling is configured below host physical RAM. Admission decisions must use the WSL-visible value, not the host value."
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 5090 Laptop GPU",
+    "architecture": "Blackwell (consumer)",
+    "compute_capability": "12.0",
+    "sm_arch": "sm_120",
+    "vram_total_mib": 24463,
+    "vram_used_mib_at_scan": 23956,
+    "driver_version": "610.62",
+    "cuda_umd_version": "13.3",
+    "power_limit_watts_observed_cap": 175,
+    "docker_gpu_access": "verified (llama.cpp CUDA containers running)",
+    "wsl2_constraints": {
+      "cuda_graph_capture": "supported on WSL2 >= 2.7.0 (current: 2.7.10)",
+      "fp8_tensor_cores": "not verified as exposed through dxgkrnl; community reports show FP8 falling back to slow emulated paths under WSL2",
+      "nvfp4": "not verified under WSL2",
+      "recommended_quantization_under_wsl2": "GGUF K-quants (llama.cpp) or AWQ/GPTQ Marlin INT4 (vLLM/SGLang)"
+    }
+  },
+  "storage": {
+    "type": "WSL2 virtual disk (VHDX) backed by NVMe",
+    "total_gib": 1007,
+    "free_gib_at_scan": 771,
+    "sequential_read_gbps_direct_io": 2.7,
+    "sequential_read_method": "dd iflag=direct, 512 MiB and 1 GiB samples from existing model files (read-only)",
+    "random_read": "not measured (avoided invasive benchmarking on the live system)"
+  },
+  "platform": {
+    "host_os": "Windows 11 Pro",
+    "wsl_version": "2.7.10.0",
+    "wsl_kernel": "6.18.33.2-microsoft-standard-WSL2",
+    "linux_distribution": "Ubuntu-based WSL distribution",
+    "docker_version": "29.6.2",
+    "docker_compose_version": "v5.3.1",
+    "system_python": "3.14.4"
+  },
+  "capacity_model": {
+    "vram_budget_mib": 24463,
+    "observed_steady_state": "general 35B-A3B Q4_K_M weights (~21 GiB) + embedder 0.6B Q8 (~0.7 GiB) + KV cache at 8K context consume ~23.9 GiB of 24.4 GiB",
+    "headroom_mib_at_scan": 507,
+    "conclusion": "The GPU operates at capacity with one heavy model plus the GPU-resident embedder. Any additional GPU provider requires stopping the active heavy profile first, or moving the embedder to CPU."
+  }
+}
