@@ -2,7 +2,7 @@
 # AI Station platform CLI — production control plane for local GenAI.
 set -Eeuo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-common.sh"
 AI_STATION_ROOT="$ROOT"
@@ -22,6 +22,12 @@ Usage:
   ai models stop
   ai models start-reranker
   ai models stop-reranker
+  ai provider list
+  ai provider status
+  ai provider inspect <id>
+  ai provider start <id> [--dry-run] [--context N]
+  ai provider stop <id>
+  ai provider doctor <id>
   ai projects list
   ai projects create <id> [--models local-general,local-embedding] [--rpm N] [--tpm N]
   ai projects revoke <id>
@@ -269,6 +275,139 @@ cmd_models_start_reranker() {
 cmd_models_stop_reranker() {
   ai_compose --profile reranker stop reranker 2>/dev/null || true
   echo "Reranker stopped."
+}
+
+cmd_provider_list() {
+  PYTHONPATH="$ROOT" python3 - <<'PY'
+from apps.gateway.app.admission import load_providers
+reg = load_providers()
+print(f"{'ID':<28} {'ENGINE':<12} {'HEAVY':<6} {'CLASS'}")
+for pid, p in (reg.get("providers") or {}).items():
+    print(
+        f"{pid:<28} {str(p.get('engine','')):<12} "
+        f"{str(p.get('heavy','')):<6} {p.get('classification','')}"
+    )
+PY
+}
+
+cmd_provider_status() {
+  echo "Active heavy profile: $(ai_active_heavy_profile || true)"
+  echo "VRAM free MiB:        $(ai_vram_free_mib)"
+  cmd_provider_list
+}
+
+cmd_provider_inspect() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || { echo "Usage: ai provider inspect <id>" >&2; exit 2; }
+  PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys, yaml
+from apps.gateway.app.admission import get_provider, load_providers
+provider = get_provider(load_providers(), sys.argv[1])
+print(yaml.safe_dump(provider, sort_keys=False))
+PY
+}
+
+cmd_provider_start() {
+  local id="${1:-}"
+  shift || true
+  local dry_run=0
+  local context=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run) dry_run=1; shift ;;
+      --context) context="$2"; shift 2 ;;
+      *) echo "Unknown argument: $1" >&2; exit 2 ;;
+    esac
+  done
+  [[ -n "$id" ]] || { echo "Usage: ai provider start <id> [--dry-run] [--context N]" >&2; exit 2; }
+
+  local args=("$id")
+  [[ -n "$context" ]] && args+=(--context "$context")
+  if (( dry_run )); then
+    PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission "${args[@]}"
+    return 0
+  fi
+
+  local decision profile
+  decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission "${args[@]}" --json)"
+  echo "$decision" | PYTHONPATH="$ROOT" python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["decision"]); print("\n".join(d.get("reasons") or []))'
+
+  profile="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+p = get_provider(load_providers(), sys.argv[1])
+print(p.get("profile") or "")
+PY
+)"
+  if ai_is_heavy_profile "$profile"; then
+    cmd_models_use "$profile"
+  else
+    case "$profile" in
+      reranker) cmd_models_start_reranker ;;
+      default|"")
+        local service
+        service="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
+PY
+)"
+        [[ -n "$service" ]] && ai_compose up -d "$service"
+        ;;
+      *) echo "ERROR: unsupported provider profile '$profile'" >&2; exit 2 ;;
+    esac
+  fi
+}
+
+cmd_provider_stop() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || { echo "Usage: ai provider stop <id>" >&2; exit 2; }
+  local profile service
+  profile="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+print(get_provider(load_providers(), sys.argv[1]).get("profile") or "")
+PY
+)"
+  service="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
+PY
+)"
+  if ai_is_heavy_profile "$profile"; then
+    ai_compose --profile "$profile" stop "$service" 2>/dev/null || true
+    if [[ "$(ai_active_heavy_profile || true)" == "$profile" ]]; then
+      ai_set_active_heavy_profile ""
+    fi
+  elif [[ "$profile" == "reranker" ]]; then
+    cmd_models_stop_reranker
+  else
+    ai_compose stop "$service" 2>/dev/null || true
+  fi
+  echo "Stopped provider: $id"
+}
+
+cmd_provider_doctor() {
+  local id="${1:-}"
+  [[ -n "$id" ]] || { echo "Usage: ai provider doctor <id>" >&2; exit 2; }
+  cmd_provider_inspect "$id"
+  echo "--- admission dry-run ---"
+  cmd_provider_start "$id" --dry-run
+  local health
+  health="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+print(get_provider(load_providers(), sys.argv[1]).get("health_endpoint") or "")
+PY
+)"
+  if [[ -n "$health" ]]; then
+    if curl -fsS --max-time 5 "$health" >/dev/null; then
+      echo "OK: health endpoint $health"
+    else
+      echo "DOWN: health endpoint $health"
+    fi
+  fi
 }
 
 cmd_projects_list() {
@@ -529,6 +668,19 @@ main() {
         start-reranker) cmd_models_start_reranker ;;
         stop-reranker) cmd_models_stop_reranker ;;
         *) echo "Unknown models command: $sub" >&2; usage; exit 2 ;;
+      esac
+      ;;
+    provider|providers)
+      local sub="${1:-}"
+      shift || true
+      case "$sub" in
+        list) cmd_provider_list ;;
+        status) cmd_provider_status ;;
+        inspect) cmd_provider_inspect "$@" ;;
+        start) cmd_provider_start "$@" ;;
+        stop) cmd_provider_stop "$@" ;;
+        doctor) cmd_provider_doctor "$@" ;;
+        *) echo "Unknown provider command: $sub" >&2; usage; exit 2 ;;
       esac
       ;;
     projects)

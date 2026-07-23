@@ -1,0 +1,218 @@
+# AI Station provider registry — schema version 1
+# Lifecycle and admission metadata. OpenAI-facing catalog remains
+# config/model-catalog.json. Application aliases remain
+# config/registry/models.yaml.
+
+version: 1
+admission:
+  enforce: true
+  safety_margin_vram_mib: 1024
+  safety_margin_ram_mib: 4096
+  max_active_heavy: 1
+  allow_auto_stop_production: true
+  default_fallback_provider: llama-cpp-general
+
+providers:
+  llama-cpp-general:
+    id: llama-cpp-general
+    engine: llama.cpp
+    deployment_type: compose
+    classification: production_default
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-general
+    profile: general
+    port: 8082
+    endpoint: http://127.0.0.1:8082/v1
+    health_endpoint: http://127.0.0.1:8082/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - general-qwen3_6-35b-a3b
+    model_aliases:
+      - local-general
+    capabilities:
+      - chat
+      - tools
+      - json_schema
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 21000
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 22000
+    kv_cache_mib_per_1k_context: 180
+    default_context: 8192
+    max_context: 32768
+    required_features:
+      - nvidia_cuda
+    fallback_provider: null
+    lifecycle_command: "ai models use general"
+
+  llama-cpp-coder:
+    id: llama-cpp-coder
+    engine: llama.cpp
+    deployment_type: compose
+    classification: production_default
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-coder
+    profile: coder
+    port: 8083
+    endpoint: http://127.0.0.1:8083/v1
+    health_endpoint: http://127.0.0.1:8083/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - coder-qwen3-coder-30b-a3b
+    model_aliases:
+      - local-coder
+    capabilities:
+      - chat
+      - tools
+      - json_schema
+      - code
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 17500
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 18000
+    kv_cache_mib_per_1k_context: 160
+    default_context: 8192
+    max_context: 32768
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use coder"
+
+  llama-cpp-reasoning:
+    id: llama-cpp-reasoning
+    engine: llama.cpp
+    deployment_type: compose
+    classification: production_default
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-reasoning
+    profile: reasoning
+    port: 8084
+    endpoint: http://127.0.0.1:8084/v1
+    health_endpoint: http://127.0.0.1:8084/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - reasoning-deepseek-r1-32b
+    model_aliases:
+      - local-reasoning
+    capabilities:
+      - chat
+      - reasoning
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 19500
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 20000
+    kv_cache_mib_per_1k_context: 200
+    default_context: 8192
+    max_context: 16384
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use reasoning"
+
+  llama-cpp-vision:
+    id: llama-cpp-vision
+    engine: llama.cpp
+    deployment_type: compose
+    classification: production_default
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-vision
+    profile: vision
+    port: 8085
+    endpoint: http://127.0.0.1:8085/v1
+    health_endpoint: http://127.0.0.1:8085/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - vision-qwen3-vl-32b
+    model_aliases:
+      - local-vision
+    capabilities:
+      - chat
+      - vision
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 20000
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 21000
+    kv_cache_mib_per_1k_context: 220
+    default_context: 4096
+    max_context: 8192
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use vision"
+
+  llama-cpp-embedder:
+    id: llama-cpp-embedder
+    engine: llama.cpp
+    deployment_type: compose
+    classification: production_default
+    experimental: false
+    heavy: false
+    resource_group: gpu-light
+    service: embedder
+    profile: default
+    port: 8090
+    endpoint: http://127.0.0.1:8090/v1
+    health_endpoint: http://127.0.0.1:8090/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - embedding-qwen3-0_6b
+    model_aliases:
+      - local-embedding
+    capabilities:
+      - embedding
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 800
+    minimum_ram_mib: 1024
+    minimum_storage_mib: 700
+    kv_cache_mib_per_1k_context: 0
+    default_context: 8192
+    max_context: 8192
+    required_features:
+      - nvidia_cuda
+    fallback_provider: null
+    lifecycle_command: "docker compose up -d embedder"
+
+  llama-cpp-reranker:
+    id: llama-cpp-reranker
+    engine: llama.cpp
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: false
+    resource_group: cpu
+    service: reranker
+    profile: reranker
+    port: 8091
+    endpoint: http://127.0.0.1:8091/v1
+    health_endpoint: http://127.0.0.1:8091/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - reranker-qwen3-0_6b
+    model_aliases:
+      - local-reranker
+    capabilities:
+      - rerank
+    latency_class: batch
+    stability_class: production
+    minimum_vram_mib: 0
+    minimum_ram_mib: 2048
+    minimum_storage_mib: 700
+    kv_cache_mib_per_1k_context: 0
+    default_context: 4096
+    max_context: 4096
+    required_features: []
+    fallback_provider: null
+    lifecycle_command: "ai models start-reranker"
