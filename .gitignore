@@ -34,9 +34,6 @@ __pycache__/
 
 # BEGIN AI-STATION MANAGED RULES
 .*
-
-
-
 !.github/
 !.github/**
 !.env.example
