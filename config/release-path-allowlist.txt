@@ -17,6 +17,7 @@ config/registry/projects.yaml
 config/gateway/litellm.yaml
 docs/ARCHITECTURE.md
 docs/INSTALLATION.md
+docs/MULTI_MACHINE_DEPLOYMENT.md
 docs/MODELS.md
 docs/OPERATIONS.md
 docs/PLATFORM.md
