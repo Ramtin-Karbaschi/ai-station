@@ -1,0 +1,4 @@
+FAILURE_FIXTURE
+This file is intentionally tiny and should still extract quickly.
+If an extractor hangs forever on this fixture, treat it as a timeout failure.
+Required token: timeout-probe

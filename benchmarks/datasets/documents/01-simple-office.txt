@@ -1,0 +1,14 @@
+AI Station Document Fixture — Simple Office Text
+
+Heading One: Platform Scope
+This fixture is public-safe synthetic content for extraction baselines.
+
+Heading Two: Required Tokens
+- loopback-binding
+- benchmark-first
+- pgvector-default
+
+Table sketch (plain text):
+item,count
+alpha,2
+beta,3

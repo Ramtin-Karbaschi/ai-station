@@ -1,0 +1,63 @@
+{
+  "suite_id": "document-golden-v1",
+  "notes": "Public-safe fixtures only. No private documents.",
+  "fixtures": [
+    {
+      "id": "simple-office",
+      "path": "benchmarks/datasets/documents/01-simple-office.txt",
+      "class": "simple_office",
+      "required_substrings": [
+        "Platform Scope",
+        "loopback-binding",
+        "benchmark-first",
+        "pgvector-default"
+      ],
+      "require_persian": false
+    },
+    {
+      "id": "clean-digital-pdf",
+      "path": "benchmarks/datasets/documents/02-clean-digital.pdf",
+      "class": "clean_digital_pdf",
+      "required_substrings": [
+        "Platform Scope",
+        "loopback-binding",
+        "benchmark-first",
+        "pgvector-default"
+      ],
+      "require_persian": false
+    },
+    {
+      "id": "multicolumn",
+      "path": "benchmarks/datasets/documents/03-multicolumn.txt",
+      "class": "multicolumn_pdf",
+      "required_substrings": [
+        "Platform Scope",
+        "loopback-binding",
+        "benchmark-first",
+        "pgvector-default"
+      ],
+      "min_digit_runs": 4,
+      "require_persian": false
+    },
+    {
+      "id": "persian-scan-placeholder",
+      "path": "benchmarks/datasets/documents/04-persian-scan-placeholder.txt",
+      "class": "scanned_persian",
+      "required_substrings": [
+        "Platform Scope",
+        "loopback-binding",
+        "benchmark-first",
+        "pgvector-default"
+      ],
+      "require_persian": true
+    },
+    {
+      "id": "timeout-probe",
+      "path": "benchmarks/datasets/documents/05-timeout-probe.txt",
+      "class": "failure_timeout",
+      "required_substrings": ["timeout-probe"],
+      "max_latency_ms": 5000,
+      "require_persian": false
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+engine: sglang
+provider_id: sglang-general-experimental
+endpoint: http://127.0.0.1:8100/v1
+model: ai-station-sglang-general
+quantization: AWQ-4bit
+dataset: benchmarks/datasets/public_safe_cases.json
+warmup_requests: 1
+concurrency: 1
+timeout_seconds: 300
+notes:
+  - Experimental SGLang trial against Qwen3.6-35B-A3B AWQ-4bit.
+  - Mutually exclusive with llama.cpp heavy profiles and GPU embedder.
+  - Quantization is close but not identical to production GGUF Q4_K_M.

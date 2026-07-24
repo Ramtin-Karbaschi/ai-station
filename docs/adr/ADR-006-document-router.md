@@ -1,7 +1,8 @@
 # ADR-006: Document Router — Tika Default, Docling Trial for Complex PDFs
 
-- Status: Proposed
+- Status: Accepted (Docling trial deferred)
 - Date: 2026-07-23
+- Updated: 2026-07-24
 
 ## Context
 
@@ -59,3 +60,11 @@ its Compose profile.
 - Golden-set report comparing extraction quality (not visual impressions)
   for Tika vs Docling per document class; router promoted only for classes
   with measured wins.
+
+## Phase 5 evidence (2026-07-24)
+
+Tika baseline on the public-safe golden set:
+`benchmarks/results/20260724/documents/tika-golden-v1.json`
+(5/5 fixtures passed structural checks). No Docling install is justified
+until a fixture class fails Tika (or a harder scanned-PDF OCR set is
+added). Router design remains the long-term path; production stays Tika.
