@@ -54,3 +54,11 @@ index rebuild from Postgres as its rollback path.
 
 - Phase 4 evaluation report with the metrics above, or an explicit
   decision to keep this ADR as final with pgvector-only.
+
+## Phase 4 evidence (2026-07-24)
+
+Lexical public-safe baseline committed at
+`benchmarks/results/20260724/retrieval/lexical-public-safe-v1.json`
+(Recall@3=1.0, MRR=0.9, nDCG≈0.93). No specialist engine installed.
+pgvector remains production default; Qdrant stays optional-only pending an
+embedding-backed gap on a larger corpus.

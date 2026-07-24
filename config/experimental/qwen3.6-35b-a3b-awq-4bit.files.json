@@ -1,0 +1,32 @@
+[
+  {
+    "filename": "model-00001-of-00006.safetensors",
+    "sha256": "c891132409d4a307fe823ef79850f5af966066a9bfc463c4d84abbeb8c6c92d4",
+    "size_bytes": 5003326816
+  },
+  {
+    "filename": "model-00002-of-00006.safetensors",
+    "sha256": "8120f800f5433f2eca1a0c500e8b02c53fb1e929e2bf919eee8fc6653a6751da",
+    "size_bytes": 5003377800
+  },
+  {
+    "filename": "model-00003-of-00006.safetensors",
+    "sha256": "a4eecfcbc4ce890f7983458e591bac0d90586d875696bdbb2e6347e0ddabc61e",
+    "size_bytes": 5002869776
+  },
+  {
+    "filename": "model-00004-of-00006.safetensors",
+    "sha256": "1b37d15adfacdfbdd8063bdc8b71a77dd944cb5188c63a937a33a1e219679c39",
+    "size_bytes": 4091590840
+  },
+  {
+    "filename": "model-00005-of-00006.safetensors",
+    "sha256": "6b2a05921830d4f6bd020548af539ea19b69a3c55a05c7fc3e1e300145e7874e",
+    "size_bytes": 4998869216
+  },
+  {
+    "filename": "model-00006-of-00006.safetensors",
+    "sha256": "bf9299874e2dd09c007f9bc8f6fbe2bdfd12b34da916c97517d50c42efd1c182",
+    "size_bytes": 869773960
+  }
+]

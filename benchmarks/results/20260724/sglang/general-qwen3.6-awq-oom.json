@@ -1,0 +1,57 @@
+{
+  "engine": "sglang",
+  "provider_id": "sglang-general-experimental",
+  "model": "ai-station-sglang-general",
+  "quantization": "AWQ-4bit (awq_marlin)",
+  "image_digest": "sha256:920df39109c60429b0a23eaacfd2786fcf1595c12f3ca4fc6e153b2abe34865f",
+  "artifact": {
+    "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
+    "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
+    "path": "experimental/qwen3.6-35b-a3b-awq-4bit",
+    "sha256_verified": true
+  },
+  "generated_at": "2026-07-24T05:53:54.034291+00:00",
+  "status": "failed_to_serve",
+  "ok": false,
+  "attempts": [
+    {
+      "config": {
+        "quantization": "awq",
+        "dtype": "bfloat16"
+      },
+      "error": "torch.bfloat16 is not supported for quantization method awq; requires float16"
+    },
+    {
+      "config": {
+        "quantization": "awq_marlin",
+        "dtype": "float16",
+        "context_length": 8192,
+        "mem_fraction_static": 0.78
+      },
+      "observed": {
+        "weight_mem_gb": 22.49,
+        "avail_mem_after_load_gb": 0.0
+      },
+      "error": "Not enough GPU memory for hybrid mamba/linear-attention state cache (rest_memory=-4.95 GB)"
+    },
+    {
+      "config": {
+        "quantization": "awq_marlin",
+        "dtype": "float16",
+        "context_length": 4096,
+        "mem_fraction_static": 0.92,
+        "cpu_offload_gb": 6,
+        "max_running_requests": 1
+      },
+      "error": "Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!"
+    }
+  ],
+  "decision_impact": {
+    "promotion_threshold_met": false,
+    "reason": "SGLang could not become healthy on RTX 5090 Laptop 24GB with the same-family AWQ MoE artifact; no TTFT/decode comparison is possible."
+  },
+  "notes": [
+    "Weights alone consume ~22.5 GiB under SGLang AWQ; hybrid mamba cache needs additional headroom llama.cpp GGUF path does not require in the same way.",
+    "CPU offload path is broken for this AWQ Marlin load (device mismatch)."
+  ]
+}

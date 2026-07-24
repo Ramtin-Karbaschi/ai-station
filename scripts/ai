@@ -339,19 +339,48 @@ p = get_provider(load_providers(), sys.argv[1])
 print(p.get("profile") or "")
 PY
 )"
+  compose_files="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+p = get_provider(load_providers(), sys.argv[1])
+files = p.get("compose_files") or []
+print(" ".join(str(f) for f in files))
+PY
+)"
+  service="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
+PY
+)"
+  if [[ -n "$compose_files" ]]; then
+    # Experimental / alternate Compose overlays (e.g. SGLang).
+    cmd_models_stop
+    ai_compose stop embedder 2>/dev/null || true
+    local -a file_args=()
+    local f
+    for f in $compose_files; do
+      file_args+=(-f "$f")
+    done
+    (
+      cd "$ROOT"
+      # Avoid inheriting production COMPOSE_FILE when overlay files are explicit.
+      env -u COMPOSE_FILE docker compose \
+        --project-name ai-station \
+        --env-file .env \
+        "${file_args[@]}" \
+        --profile "$profile" \
+        up -d "$service"
+    )
+    ai_set_active_heavy_profile "$profile"
+    return 0
+  fi
   if ai_is_heavy_profile "$profile"; then
     cmd_models_use "$profile"
   else
     case "$profile" in
       reranker) cmd_models_start_reranker ;;
       default|"")
-        local service
-        service="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
-import sys
-from apps.gateway.app.admission import get_provider, load_providers
-print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
-PY
-)"
         [[ -n "$service" ]] && ai_compose up -d "$service"
         ;;
       *) echo "ERROR: unsupported provider profile '$profile'" >&2; exit 2 ;;
@@ -362,7 +391,7 @@ PY
 cmd_provider_stop() {
   local id="${1:-}"
   [[ -n "$id" ]] || { echo "Usage: ai provider stop <id>" >&2; exit 2; }
-  local profile service
+  local profile service compose_files
   profile="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
 import sys
 from apps.gateway.app.admission import get_provider, load_providers
@@ -375,7 +404,39 @@ from apps.gateway.app.admission import get_provider, load_providers
 print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
 PY
 )"
-  if ai_is_heavy_profile "$profile"; then
+  compose_files="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
+import sys
+from apps.gateway.app.admission import get_provider, load_providers
+p = get_provider(load_providers(), sys.argv[1])
+files = p.get("compose_files") or []
+print(" ".join(str(f) for f in files))
+PY
+)"
+  if [[ -n "$compose_files" ]]; then
+    local -a file_args=()
+    local f
+    for f in $compose_files; do
+      file_args+=(-f "$f")
+    done
+    (
+      cd "$ROOT"
+      env -u COMPOSE_FILE docker compose \
+        --project-name ai-station \
+        --env-file .env \
+        "${file_args[@]}" \
+        --profile "$profile" \
+        stop "$service" 2>/dev/null || true
+      env -u COMPOSE_FILE docker compose \
+        --project-name ai-station \
+        --env-file .env \
+        "${file_args[@]}" \
+        --profile "$profile" \
+        rm -f "$service" 2>/dev/null || true
+    )
+    if [[ "$(ai_active_heavy_profile || true)" == "$profile" ]]; then
+      ai_set_active_heavy_profile ""
+    fi
+  elif ai_is_heavy_profile "$profile"; then
     ai_compose --profile "$profile" stop "$service" 2>/dev/null || true
     if [[ "$(ai_active_heavy_profile || true)" == "$profile" ]]; then
       ai_set_active_heavy_profile ""

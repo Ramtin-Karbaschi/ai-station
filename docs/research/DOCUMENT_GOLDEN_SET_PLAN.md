@@ -1,15 +1,34 @@
-# Document extraction golden-set plan (Phase 5 scaffold)
+# Document extraction golden-set plan (Phase 5)
 
-Golden fixtures must be non-sensitive. Suggested classes:
+Golden fixtures are non-sensitive and live under
+`benchmarks/datasets/documents/`.
 
-1. Simple office document (Tika expected to win or tie)
-2. Clean digital PDF
-3. Multi-column PDF with tables
-4. Scanned Persian page (OCR path)
-5. Failure/timeout fixture
+## Fixture classes
 
-Measure extraction quality with structural checks (required headings,
-table cell counts, Persian character presence), not visual impressions.
+1. Simple office document (`01-simple-office.txt`)
+2. Clean digital PDF (`02-clean-digital.pdf`)
+3. Multi-column / table-like layout (`03-multicolumn.txt`)
+4. Scanned Persian placeholder (`04-persian-scan-placeholder.txt`)
+5. Failure/timeout probe (`05-timeout-probe.txt`)
 
-Docling remains behind a router until this set exists and Tika baseline
-scores are recorded.
+Manifest: `benchmarks/datasets/documents/golden_manifest.json`
+
+## Structural checks
+
+- required headings / tokens
+- Persian character presence where required
+- digit/table cell counts for layout fixtures
+- latency budget for the timeout probe
+
+## Runner
+
+~~~bash
+python3 benchmarks/runners/run_document_golden.py \
+  --out benchmarks/results/YYYYMMDD/documents/tika-golden-v1.json
+~~~
+
+## Decision gate (ADR-006)
+
+Keep Tika as default. Trial Docling only for fixture classes where the Tika
+baseline fails structural checks and Docling shows measured wins under the
+CPU standard pipeline.

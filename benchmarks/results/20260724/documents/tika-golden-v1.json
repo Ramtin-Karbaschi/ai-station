@@ -1,0 +1,72 @@
+{
+  "engine": "tika",
+  "suite_id": "document-golden-v1",
+  "generated_at": "2026-07-24T05:21:24.145748+00:00",
+  "endpoint": "http://127.0.0.1:9998",
+  "fixture_count": 5,
+  "pass_count": 5,
+  "fail_count": 0,
+  "fixtures": [
+    {
+      "id": "simple-office",
+      "class": "simple_office",
+      "ok": true,
+      "latency_ms": 98.1346510000094,
+      "missing_substrings": [],
+      "persian_ok": true,
+      "digit_runs": 2,
+      "digits_ok": true,
+      "latency_ok": true,
+      "excerpt": "AI Station Document Fixture \u2014 Simple Office Text  Heading One: Platform Scope This fixture is public-safe synthetic content for extraction baselines.  Heading Two: Required Tokens - loopback-binding - benchmark-first - pgvector-default  Tab"
+    },
+    {
+      "id": "clean-digital-pdf",
+      "class": "clean_digital_pdf",
+      "ok": true,
+      "latency_ms": 1922.6380329999984,
+      "missing_substrings": [],
+      "persian_ok": true,
+      "digit_runs": 0,
+      "digits_ok": true,
+      "latency_ok": true,
+      "excerpt": " Clean Digital PDF Fixture  Required heading: Platform Scope  Token: loopback-binding  Token: benchmark-first  Token: pgvector-default   "
+    },
+    {
+      "id": "multicolumn",
+      "class": "multicolumn_pdf",
+      "ok": true,
+      "latency_ms": 7.203688999993574,
+      "missing_substrings": [],
+      "persian_ok": true,
+      "digit_runs": 7,
+      "digits_ok": true,
+      "latency_ok": true,
+      "excerpt": "Multi-column layout fixture (public-safe)  LEFT COLUMN Platform Scope loopback-binding is required for gateways.  RIGHT COLUMN Benchmark First pgvector-default remains production retrieval.  TABLE | cell | value | | a1   | 10    | | a2   | "
+    },
+    {
+      "id": "persian-scan-placeholder",
+      "class": "scanned_persian",
+      "ok": true,
+      "latency_ms": 6.3065829999686684,
+      "missing_substrings": [],
+      "persian_ok": true,
+      "digit_runs": 0,
+      "digits_ok": true,
+      "latency_ok": true,
+      "excerpt": "\u0645\u062d\u062a\u0648\u0627\u06cc \u0622\u0632\u0645\u0627\u06cc\u0634\u06cc \u0627\u0645\u0646 \u0648 \u0639\u0645\u0648\u0645\u06cc \u0628\u0631\u0627\u06cc \u0645\u0633\u06cc\u0631 OCR \u0641\u0627\u0631\u0633\u06cc  \u0639\u0646\u0648\u0627\u0646 \u0644\u0627\u0632\u0645: Platform Scope \u062a\u0648\u06a9\u0646\u200c\u0647\u0627: - loopback-binding - benchmark-first - pgvector-default  \u0627\u06cc\u0646 \u0641\u0627\u06cc\u0644 \u0645\u062a\u0646\u06cc \u0627\u0633\u062a \u0648 \u0646\u0642\u0634 placeholder \u0628\u0631\u0627\u06cc \u0635\u0641\u062d\u0647\u0654 \u0627\u0633\u06a9\u0646\u200c\u0634\u062f\u0647\u0654 \u0641\u0627\u0631\u0633\u06cc \u0631\u0627 \u062f\u0627\u0631\u062f. \u0627\u0633\u062a\u062e\u0631\u0627\u062c\u200c\u06a9\u0646\u0646\u062f\u0647 \u0628\u0627\u06cc\u062f \u0646\u0648\u06cc\u0633\u0647\u200c\u0647\u0627"
+    },
+    {
+      "id": "timeout-probe",
+      "class": "failure_timeout",
+      "ok": true,
+      "latency_ms": 5.734173000007559,
+      "missing_substrings": [],
+      "persian_ok": true,
+      "digit_runs": 0,
+      "digits_ok": true,
+      "latency_ok": true,
+      "excerpt": "FAILURE_FIXTURE This file is intentionally tiny and should still extract quickly. If an extractor hangs forever on this fixture, treat it as a timeout failure. Required token: timeout-probe  "
+    }
+  ],
+  "decision_note": "Tika baseline only. Docling remains uninstalled until classes with measured wins are identified (ADR-006)."
+}
