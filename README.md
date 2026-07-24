@@ -20,6 +20,7 @@ document understanding, search, and speech — without sending prompts to a
 cloud API.
 
 [Install in minutes](#quick-start) ·
+[Download install pack](#download--install) ·
 [See the architecture](#architecture) ·
 [Read the docs](#documentation) ·
 [فارسی](docs/README_FA.md)
@@ -152,6 +153,30 @@ Application code and persistent data stay separated:
 | Free storage | ≥ 80 GiB |
 | Storage | SSD / NVMe |
 | CPU | Modern 8-core or better |
+
+## Download & install
+
+### Ready commands
+
+**Windows 11** (PowerShell, after NVIDIA + WSL2 + Docker Desktop are working):
+
+~~~powershell
+irm https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/windows/Install-AIStation.ps1 | iex
+~~~
+
+**Linux** (Ubuntu-class + NVIDIA + Docker):
+
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/linux/install-ai-station.sh | bash
+~~~
+
+**Or download the install pack** from
+[Releases](https://github.com/Ramtin-Karbaschi/ai-station/releases/latest)
+(`ai-station-install-pack.zip`), extract it, then run the script for your OS
+under `install/windows` or `install/linux`.
+
+Pack contents and notes: [`install/README.md`](install/README.md) ·
+multi-machine detail: [`docs/MULTI_MACHINE_DEPLOYMENT.md`](docs/MULTI_MACHINE_DEPLOYMENT.md)
 
 ## Quick start
 

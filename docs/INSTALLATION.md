@@ -64,11 +64,18 @@ The full model profile requires substantially more space than the Core profile
 because both the final model file and the resumable Hugging Face cache may
 exist simultaneously.
 
-## Clone the repository
+## Clone / bootstrap
 
 ~~~bash
+# Full clone (always works)
 git clone https://github.com/Ramtin-Karbaschi/ai-station.git
 cd ai-station
+./scripts/install.sh --validate-only
+sudo ./scripts/install.sh
+
+# Or download the GitHub install pack / one-liners:
+# https://github.com/Ramtin-Karbaschi/ai-station/releases/latest
+# See install/README.md and docs/MULTI_MACHINE_DEPLOYMENT.md
 ~~~
 
 ## Validate without modifying the system
