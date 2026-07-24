@@ -33,6 +33,13 @@ __pycache__/
 *.zip
 
 # BEGIN AI-STATION MANAGED RULES
+.*
+!.github/
+!.github/**
+!.env.example
+!.env.*.example
+!.gitignore
+!.dockerignore
 
 # Environment and secrets
 .env

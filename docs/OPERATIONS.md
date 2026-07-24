@@ -33,7 +33,8 @@ network:
 http://llm-gateway:4000/v1
 ~~~
 
-See [PLATFORM.md](PLATFORM.md) for the full multi-project contract.
+See [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
+See [SCRIPTS.md](SCRIPTS.md) for the canonical scripts map after cleanup.
 
 ## Command overview
 
@@ -202,3 +203,13 @@ sudo ./scripts/install.sh
 ./scripts/verify.sh
 ./scripts/release-audit.sh
 ~~~
+
+## Provider control plane
+
+~~~bash
+ai provider list
+ai provider start llama-cpp-general --dry-run
+ai provider doctor llama-cpp-coder
+~~~
+
+Host gateways bind to `127.0.0.1` via `scripts/install-systemd.sh`.

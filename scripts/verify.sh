@@ -22,10 +22,40 @@ fi
 
 check_url http://127.0.0.1:3000 "Open WebUI"
 check_url http://127.0.0.1:4000/health/liveliness "LiteLLM Gateway"
+check_url http://127.0.0.1:8888/health "Host Gateway"
 check_url http://127.0.0.1:8890/health "UI Gateway"
 check_url http://127.0.0.1:9998/tika "Apache Tika"
 check_url "http://127.0.0.1:8889/search?q=test&format=json" "SearXNG"
 check_url http://127.0.0.1:8090/v1/models "Embedding Server"
+
+# Host gateways must not listen on non-loopback addresses (risk R1).
+assert_loopback_listener() {
+  local port="$1"
+  local label="$2"
+  local listeners
+  listeners="$(ss -lntp 2>/dev/null | awk -v p=":${port}" '$4 ~ p {print $4}' || true)"
+  if [[ -z "$listeners" ]]; then
+    echo "FAIL: $label is not listening on port $port"
+    fail=1
+    return
+  fi
+  local line
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "$line" in
+      127.0.0.1:*|[::1]:*) ;;
+      *)
+        echo "FAIL: $label listens on non-loopback address: $line"
+        fail=1
+        return
+        ;;
+    esac
+  done <<<"$listeners"
+  echo "OK: $label loopback binding"
+}
+
+assert_loopback_listener 8888 "Host Gateway"
+assert_loopback_listener 8890 "UI Gateway"
 
 case "$active_profile" in
   general|"") check_url http://127.0.0.1:8082/v1/models "General Model Server" ;;

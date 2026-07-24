@@ -151,7 +151,7 @@ Wants=network-online.target docker.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/ai-station
-Environment=AI_STATION_UI_GATEWAY_HOST=0.0.0.0
+Environment=AI_STATION_UI_GATEWAY_HOST=127.0.0.1
 Environment=AI_STATION_UI_GATEWAY_PORT=8890
 Environment=AI_STATION_GATEWAY_UPSTREAM=http://127.0.0.1:8888/v1
 Environment=AI_STATION_TIKA_URL=http://127.0.0.1:9998

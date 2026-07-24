@@ -283,6 +283,7 @@ installer for unattended or organizational deployment.
 | [Installation](docs/INSTALLATION.md) | Beginner-friendly installation and upgrade |
 | [Architecture](docs/ARCHITECTURE.md) | Components, flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | Multi-project LiteLLM gateway and CLI |
+| [Scripts](docs/SCRIPTS.md) | Canonical scripts map after cleanup |
 | [Operations](docs/OPERATIONS.md) | Start, stop, status, logs and validation |
 | [Models](docs/MODELS.md) | Profiles, downloads and checksum policy |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common failure diagnosis |

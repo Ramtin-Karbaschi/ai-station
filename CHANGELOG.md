@@ -4,6 +4,26 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Phase 1 — Adaptive Inference Fabric control plane
+
+- bound host and UI gateways to `127.0.0.1` with checked-in systemd units;
+- added `config/providers.yaml`, admission dry-run, and `ai provider` CLI;
+- completed model manifest entries for reasoning, vision, and mmproj;
+- quarantined the unreferenced Qwen3-Coder-Next shard set under
+  `/srv/ai-station/quarantine` via `scripts/quarantine-model-path.sh`;
+- added inference benchmark harness and llama.cpp baseline results;
+- enabled tool-calling / JSON catalog flags with contract tests;
+- added Redis and SearXNG healthchecks; removed unused Caddy/Prometheus stubs;
+- scaffolded off-by-default SGLang experimental Compose profile.
+
+### Script hygiene
+
+- archived unreferenced duplicate scripts and local `ui_gateway.py.bak-*`
+  files to `_archive/scripts-cleanup-*`;
+- documented the canonical scripts map in `docs/SCRIPTS.md`;
+- fixed `scripts/ai` so `/usr/local/bin/ai` resolves its install root through
+  the symlink correctly.
+
 ### Windows launchers
 
 - fixed `AI Station.cmd` to open the **default browser** (preserves Open WebUI
@@ -13,7 +33,7 @@ All notable project changes should be recorded in this file.
 - `AI Station Admin.cmd` is now a compatibility alias to Manager;
 - restored `ai-station-user-start.sh` / `ai-station-user-stop.sh` used by
   Desktop `AI Station.cmd`;
-- synced Desktop launchers with `/opt/ai-station/AI Station/`;
+- synced Desktop launchers with the repository `AI Station/` directory;
 - prevented `finalize-runtime-for-github.sh` from archiving these entrypoints.
 
 ### Local GenAI platform

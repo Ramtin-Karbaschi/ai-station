@@ -1,0 +1,19 @@
+[Unit]
+Description=AI Station Gateway
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ai-station
+Environment=PYTHONPATH=/opt/ai-station
+Environment=AI_STATION_PROJECT_DIR=/opt/ai-station
+Environment=AI_STATION_MODEL_CATALOG=/opt/ai-station/config/model-catalog.json
+Environment=AI_STATION_PROVIDERS=/opt/ai-station/config/providers.yaml
+# Loopback-only: do not bind 0.0.0.0.
+ExecStart=/opt/ai-station/.venvs/gateway/bin/uvicorn apps.gateway.app.main:app --host 127.0.0.1 --port 8888
+Restart=unless-stopped
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

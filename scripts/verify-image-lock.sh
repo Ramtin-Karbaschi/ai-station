@@ -22,14 +22,16 @@ if [[ ! -f "$MANIFEST_FILE" ]]; then
 fi
 
 if ! grep -Eq \
-    '^COMPOSE_FILE=compose\.yml:compose\.hardening\.yaml:compose\.local-builds\.yaml:compose\.images\.lock\.yaml$' \
+    '^COMPOSE_FILE=compose\.yml:compose\.models\.yml:compose\.hardening\.yaml:compose\.local-builds\.yaml:compose\.images\.lock\.yaml$' \
     .env; then
     echo "FAIL: .env does not activate the image lock."
     exit 1
 fi
 
-docker compose config --quiet
-docker compose config --no-path-resolution --format json > /tmp/ai-station-locked-compose.json
+# Enable all profiles so profile-gated model services are also verified
+# against the image lock.
+docker compose --profile '*' config --quiet
+docker compose --profile '*' config --no-path-resolution --format json > /tmp/ai-station-locked-compose.json
 
 python3 - \
     "$ROOT" \
