@@ -1,7 +1,8 @@
-# ADR-002: Primary Interactive Engine — Retain llama.cpp, Trial SGLang
+# ADR-002: Primary Interactive Engine — Retain llama.cpp; Reject SGLang Promotion
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-23
+- Updated: 2026-07-24
 
 ## Context
 
@@ -28,39 +29,51 @@ for RTX 5090 Laptop (sm_120) under WSL2 2.7.10
   capture on Blackwell (community-verified, WSL issue #14452).
 - FP8 under WSL2 falls back to slow emulated paths (community benchmarks),
   so the trial must use AWQ/GPTQ Marlin INT4 artifacts.
-- No local benchmark exists yet for any engine; adoption without one would
-  violate the benchmark-first rule.
+- Phase 1 llama.cpp baseline exists at
+  `benchmarks/results/20260723/llama-cpp/general-qwen3.6.json`.
+- Phase 2/3 SGLang trial (2026-07-24):
+  - Image: `lmsysorg/sglang@sha256:920df39109c60429b0a23eaacfd2786fcf1595c12f3ca4fc6e153b2abe34865f`
+  - Weights: `cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit@00fcea2d3bcf5389b518d4fc082e5590e0ba4844` (SHA-256 verified)
+  - Result: **failed to serve** on 24 GiB VRAM. Weight load alone ~22.5 GiB;
+    hybrid mamba/linear-attention state cache then required ~5 GiB more
+    headroom. CPU offload (`--cpu-offload-gb 6`) hit a cuda/cpu device
+    mismatch under AWQ Marlin.
+  - Evidence file:
+    `benchmarks/results/20260724/sglang/general-qwen3.6-awq-oom.json`
 
 ## Decision
 
-Retain llama.cpp as production default. Trial SGLang in Phase 2 as an
-experimental, digest-pinned, localhost-only, off-by-default profile.
-Reject vLLM for now (source-build cost duplicates SGLang's role).
-Postpone TensorRT-LLM to Phase 6.
+Retain llama.cpp as the production primary interactive engine.
 
-Promotion threshold (Phase 3): >= 20% improvement in decode tokens/s at
-equal-or-better TTFT for the interactive chat workload, with no
-structured-output or tool-calling regression, no new critical reliability
-issue, and rollback verified. Quantization parity caveat: GGUF Q4_K_M vs
-AWQ INT4 is close but not exact; the benchmark report must quantify
-quality with the shared evaluation set before comparing speed.
+**Reject SGLang promotion** on this workstation for the incumbent
+Qwen3.6-35B-A3B MoE family: no healthy OpenAI endpoint could be stood up,
+so the >= 20% decode/TTFT promotion threshold cannot be evaluated and is
+not met. The experimental Compose profile may remain in-tree for future
+hardware or denser artifacts, but stays off-by-default and is not an
+optional production path.
+
+Continue to postpone vLLM (source-build cost) and TensorRT-LLM (Phase 6).
 
 ## Consequences
 
-- One new container and one new quantized artifact enter the manifest.
-- Admission controller must treat SGLang as heavy (mutually exclusive).
+- Production default unchanged.
+- Experimental SGLang profile + uninstall script remain available; weights
+  may be quarantined later with `./scripts/uninstall-sglang-experimental.sh --remove-weights`.
+- Revisit only if a same-family artifact loads with usable KV headroom on
+  this GPU, or hardware VRAM increases.
 
 ## Risks
 
-- Artifact availability for the exact incumbent model in AWQ/GPTQ form;
-  if unavailable, the comparison model must change on both sides.
+- Future denser AWQ/GPTQ builds or SGLang memory improvements could reopen
+  the comparison; any reopen requires a new benchmark JSON and ADR update.
 
 ## Rollback
 
-`docker compose --profile sglang-experimental down` plus removal of the
-profile; no default path depends on it at any point.
+Already rolled back: experimental container removed; `ai models use general`
+and embedder restored after the trial.
 
 ## Acceptance criteria
 
-- Benchmark JSON for both engines under `benchmarks/results/`.
-- Decision recorded here with data, changing status to Accepted.
+- Benchmark JSON for both engines under `benchmarks/results/` — met via
+  llama.cpp success JSON plus SGLang failure JSON with explicit OOM cause.
+- Decision recorded here with data — met (Accepted).
