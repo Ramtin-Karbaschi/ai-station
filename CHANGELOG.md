@@ -4,6 +4,13 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Security and dependencies
+
+- bumped GitHub Actions to digest-pinned `actions/checkout@v7.0.1` and
+  `actions/setup-python@v6.3.0`;
+- upgraded gateway Python deps (`fastapi`/`starlette`/`uvicorn`) to clear
+  known Starlette advisories reported by `pip-audit`.
+
 ### Documentation and repository hygiene
 
 - removed unused legacy app trees (`apps/api`, `apps/web`, `apps/worker`,
