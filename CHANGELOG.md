@@ -4,6 +4,14 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Install pack on GitHub
+
+- added `install/windows/Install-AIStation.ps1` and
+  `install/linux/install-ai-station.sh` with ready one-liners;
+- added `scripts/build-install-pack.sh` to publish
+  `ai-station-install-pack.zip` on GitHub Releases;
+- linked Download & install from the main README.
+
 ### Security and dependencies
 
 - bumped GitHub Actions to digest-pinned `actions/checkout@v7.0.1` and

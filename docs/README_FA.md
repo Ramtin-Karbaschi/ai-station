@@ -40,6 +40,26 @@
 
 ## نصب سریع
 
+دستورهای آماده (بعد از نصب NVIDIA / WSL یا Docker):
+
+**ویندوز (PowerShell):**
+
+~~~powershell
+irm https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/windows/Install-AIStation.ps1 | iex
+~~~
+
+**لینوکس:**
+
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/linux/install-ai-station.sh | bash
+~~~
+
+یا بستهٔ zip را از
+[Releases](https://github.com/Ramtin-Karbaschi/ai-station/releases/latest)
+دانلود کنید.
+
+### کلون کامل ریپازیتوری
+
 ~~~bash
 git clone https://github.com/Ramtin-Karbaschi/ai-station.git
 cd ai-station
