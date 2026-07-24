@@ -1,10 +1,11 @@
 # Technology Evaluation Matrix
 
 Date: 2026-07-23
-Status: Phase 0 research. No component in this matrix has been installed or
-benchmarked locally yet unless marked "running today". Cells that could not
-be verified from official sources say "not verified". Local benchmark
-columns say "requires benchmark" until the Phase 1 harness produces data.
+Updated: 2026-07-24
+Status: Phase 0–5 decisions recorded. Production stack marked "running
+today". SGLang local trial failed to serve (OOM). Retrieval/document
+baselines committed under `benchmarks/results/`. Remaining "requires
+benchmark" cells are for components not yet justified to install.
 
 Evidence sources are listed per candidate at the end of this document.
 
@@ -35,7 +36,7 @@ Evidence sources are listed per candidate at the end of this document.
 | pgvector | dense vectors; halfvec/bit quant; SQL filtering; hybrid via tsvector | n/a | SQL | Postgres stats | in-Postgres HNSW | high | active | filtered-search weaker than specialist engines at large scale | retrieval eval requires benchmark (Phase 4) | zero marginal (already required for app data) | none at current scale | production default | **retain** (ADR-005) |
 | Qdrant | dense + sparse + multivector, RRF fusion, payload-index filtering | scalar/product/binary | REST/gRPC | Prometheus metrics | Rust engine, low tail latency | high | very active | operational cost of a second stateful store; data-sync pipeline needed | requires benchmark vs pgvector on local corpus | medium | overlaps pgvector | optional profile candidate; adopt only on Phase 4 evidence | **postpone** (Phase 4 evaluation) |
 | Tika + Tesseract | 1000+ formats, fas+eng OCR | n/a | REST | none | JVM 3 GiB cap configured | high | stable | table/layout structure lost | golden-set eval requires benchmark (Phase 5) | zero marginal (running) | none as default | production default | **retain** (ADR-006) |
-| Docling | PDF layout, reading order, TableFormer tables, formula/chart, OCR engines incl. Tesseract | n/a | Python/CLI; JSON/Markdown out | none built-in | standard pipeline CPU-bound; VLM pipeline needs GPU | medium-high | very active (IBM-backed) | VLM table hallucination reports on dense numeric tables; slower than Tika | requires golden-set benchmark | medium (new container + model downloads) | complements Tika for complex PDFs only | trial behind document router (Phase 5) | **trial** (ADR-006) |
+| Docling | PDF layout, reading order, TableFormer tables, formula/chart, OCR engines incl. Tesseract | n/a | Python/CLI; JSON/Markdown out | none built-in | standard pipeline CPU-bound; VLM pipeline needs GPU | medium-high | very active (IBM-backed) | VLM table hallucination reports on dense numeric tables; slower than Tika | Tika golden baseline passed; Docling not installed | medium (new container + model downloads) | complements Tika for complex PDFs only | deferred behind document router | **defer** (ADR-006) |
 | Marker | PDF to Markdown, Surya layout | n/a | Python/CLI | none | GPU-accelerated optional | medium | active | GPL-3.0 licensing constraint for a MIT-licensed project; weights usage terms | requires golden-set benchmark | medium | overlaps Docling | fallback candidate only if Docling fails the golden set | **postpone** |
 
 ## Workload-class mapping (which engine for which job)

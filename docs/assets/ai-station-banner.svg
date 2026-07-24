@@ -67,7 +67,7 @@
         fill="#cbd5e1"
         font-family="Inter, Segoe UI, Arial, sans-serif"
         font-size="25">
-    Local-first AI workstation foundation
+    Your private AI workstation — local by design
   </text>
 
   <text x="72" y="247"
@@ -145,6 +145,6 @@
         fill="#64748b"
         font-family="Inter, Segoe UI, Arial, sans-serif"
         font-size="15">
-    Reproducible images • Immutable model revisions • SHA-256 verification
+    Digest-pinned images • SHA-256 models • Loopback-only by default
   </text>
 </svg>

@@ -29,8 +29,9 @@ optional VLM pipelines.
   tables — the standard (non-VLM) pipeline is the safer default.
 - Docling's VLM pipeline would compete for the GPU against the
   single-heavy-model policy; the CPU standard pipeline does not.
-- No golden extraction test set exists yet, so quality claims are
-  currently unmeasurable here.
+- Phase 5 golden fixtures now exist; Tika baseline scored 5/5 on the
+  public-safe set (`benchmarks/results/20260724/documents/tika-golden-v1.json`).
+  No failing fixture class yet justifies installing Docling.
 
 ## Decision
 
