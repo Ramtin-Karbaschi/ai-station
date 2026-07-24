@@ -1,0 +1,20 @@
+Multi-column layout fixture (public-safe)
+
+LEFT COLUMN
+Platform Scope
+loopback-binding is required for gateways.
+
+RIGHT COLUMN
+Benchmark First
+pgvector-default remains production retrieval.
+
+TABLE
+| cell | value |
+| a1   | 10    |
+| a2   | 20    |
+| b1   | 30    |
+
+Expected structural checks:
+- heading "Platform Scope"
+- tokens loopback-binding, benchmark-first, pgvector-default
+- at least 4 numeric table cells when a structure-aware extractor is used

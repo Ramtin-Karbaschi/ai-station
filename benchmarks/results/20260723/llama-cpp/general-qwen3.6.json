@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "engine": "llama.cpp",
+  "model": "ai-station-general",
+  "provider_id": "llama-cpp-general",
+  "endpoint": "http://127.0.0.1:8082/v1",
+  "quantization": "GGUF-Q4_K_M",
+  "started_at": "2026-07-23T19:01:14.948369+00:00",
+  "finished_at": "2026-07-23T19:02:15.715320+00:00",
+  "hardware_profile_ref": "config/hardware-profile.json",
+  "notes": [
+    "Baseline against the production general profile.",
+    "Requires llm-general to be healthy before running."
+  ],
+  "cases": [
+    {
+      "id": "short-prompt",
+      "ok": true,
+      "prompt_tokens": null,
+      "completion_tokens": 1,
+      "ttft_ms": 4472.629053000674,
+      "prompt_tokens_per_s": null,
+      "decode_tokens_per_s": 3.9876744809972187,
+      "e2e_ms": 4723.401779000596,
+      "peak_vram_mib": 23977,
+      "error": null
+    },
+    {
+      "id": "code-generation",
+      "ok": true,
+      "prompt_tokens": null,
+      "completion_tokens": 105,
+      "ttft_ms": 4457.280257000093,
+      "prompt_tokens_per_s": null,
+      "decode_tokens_per_s": 3.431776055453882,
+      "e2e_ms": 35053.6823249995,
+      "peak_vram_mib": 23978,
+      "error": null
+    },
+    {
+      "id": "json-schema-like",
+      "ok": true,
+      "prompt_tokens": null,
+      "completion_tokens": 13,
+      "ttft_ms": 4320.513777000087,
+      "prompt_tokens_per_s": null,
+      "decode_tokens_per_s": 3.4285949883688747,
+      "e2e_ms": 8112.154389000352,
+      "peak_vram_mib": 23978,
+      "error": null
+    },
+    {
+      "id": "context-8k-synthetic",
+      "ok": true,
+      "prompt_tokens": null,
+      "completion_tokens": 2,
+      "ttft_ms": 5999.675158000173,
+      "prompt_tokens_per_s": null,
+      "decode_tokens_per_s": 3.4745619415624844,
+      "e2e_ms": 6575.287288000254,
+      "peak_vram_mib": 23971,
+      "error": null
+    }
+  ]
+}

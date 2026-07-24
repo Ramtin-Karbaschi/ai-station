@@ -1,0 +1,12 @@
+engine: llama.cpp
+provider_id: llama-cpp-general
+endpoint: http://127.0.0.1:8082/v1
+model: ai-station-general
+quantization: GGUF-Q4_K_M
+dataset: benchmarks/datasets/public_safe_cases.json
+warmup_requests: 1
+concurrency: 1
+timeout_seconds: 180
+notes:
+  - Baseline against the production general profile.
+  - Requires llm-general to be healthy before running.
