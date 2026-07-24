@@ -7,7 +7,7 @@ release, or incident recovery.
 
 | Entry | Purpose |
 |---|---|
-| `scripts/ai` (`/usr/local/bin/ai`) | Platform CLI: start/stop/status/models/projects/logs/verify |
+| `scripts/ai` (`/usr/local/bin/ai`) | Platform CLI: start/stop/status/models/provider/projects/logs/verify |
 | `scripts/start.sh` / `stop.sh` / `status.sh` | Makefile wrappers → `ai` |
 | `scripts/ai-station-user-start.sh` / `user-stop.sh` | Windows `AI Station.cmd` |
 | `scripts/ai-station-manager-action.sh` | Windows Manager control panel |
@@ -31,18 +31,23 @@ Keep as-needed; not used by the Windows quick-start path:
 - `provision-whisper-*.sh`
 - `update-image-lock.sh`, `verify-image-lock.sh`, `verify-build-lock.sh`
 - `release-audit.sh`, `docs-audit.sh`, `verify-mermaid.sh`, `publish-github.sh`
+- `install-systemd.sh` (loopback-bound host/UI gateway units)
+
+## Experimental (off by default)
+
+- `provision-experimental-snapshot.py`
+- `uninstall-sglang-experimental.sh`
+- Compose overlay: `compose.sglang.experimental.yaml` (research only; not promoted)
 
 ## Incident / maintenance
 
 - `fix-openwebui-restart-loop.sh`, `fix-postgres-openwebui-password.sh`
 - `ai-station-safe-cleanup.sh`, `collect-ai-station-state.sh`
 - `build-tika-fa.sh`
-- `finalize-runtime-for-github.sh` (**destructive**, do not re-run casually)
+- `quarantine-model-path.sh`
 
-## Archived (removed from active tree)
+## Removed from the active tree
 
-Unreferenced duplicates were moved to `_archive/scripts-cleanup-*` (gitignored),
-including legacy download packs, parallel `*-ai-station` status/logs helpers,
-and local `ui_gateway.py.bak-*` files.
-
-Do not restore those unless you have a specific recovery need.
+One-shot destructive bootstrap helpers and unreferenced duplicates were
+removed or left only under local `_archive/` (gitignored). Do not restore
+them unless you have a specific recovery need.

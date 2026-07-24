@@ -242,7 +242,7 @@ model-load-time metric.
 | Models on disk | 7 sets, ~139 GiB | `/srv/ai-station/models` | manifest covers 4 of 7 | n/a | see above | SHA-256 (manifest subset) | re-provisionable only if in manifest | fix in Phase 1 |
 | Prometheus config | none active | `infra/prometheus` (unused) | n/a | n/a | n/a | n/a | no | remove or adopt in Phase 1 |
 | Caddy config | none active | `infra/caddy` (unused) | n/a | n/a | n/a | n/a | no | remove |
-| `apps/api`, `apps/worker`, `apps/ocr`, `apps/web` | legacy, unreferenced | not deployed | n/a | n/a | n/a | n/a | no | archive or remove |
+| `apps/api`, `apps/worker`, `apps/ocr`, `apps/web` | removed 2026-07-24 | not deployed | n/a | n/a | n/a | n/a | no | removed |
 
 Licenses: Open WebUI (BSD-3 with branding clause in recent versions),
 LiteLLM (MIT), llama.cpp (MIT), PostgreSQL (PostgreSQL License), pgvector
