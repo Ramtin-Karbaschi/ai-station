@@ -64,20 +64,24 @@ Candidate justified in [ADR-002](../adr/ADR-002-primary-interactive-engine.md).
 
 - Digest-pinned SGLang container, localhost-only, Compose profile
   `sglang-experimental`, never started by default.
-- AWQ or GPTQ Marlin artifact of the same model family as the incumbent
+- AWQ Marlin artifact of the same model family as the incumbent
   general model, manifest-pinned with SHA-256.
 - Health endpoint, Prometheus metrics, uninstall path, rollback note.
 - Admission controller treats it as a heavy provider (mutually exclusive
   with llama.cpp heavy profiles).
 
+**Status (2026-07-24):** profile provisioned; AWQ snapshot verified; image
+pulled. Serve attempts failed on 24 GiB (see Phase 3).
+
 ## Phase 3 — Benchmark and decision
 
 Run the harness against llama.cpp and SGLang with identical prompts,
 context ladders, sampling, and concurrency. Decision per ADR-002 rules:
-promote / retain-as-optional / reject / postpone. Threshold: >= 20%
-improvement in the primary interactive metric (decode t/s at TTFT parity)
-with no quality or reliability regression; quantization parity caveats
-must be recorded (GGUF Q4_K_M vs AWQ INT4 is not exact parity).
+promote / retain-as-optional / reject / postpone.
+
+**Status (2026-07-24):** **reject promotion**. Evidence:
+`benchmarks/results/20260724/sglang/general-qwen3.6-awq-oom.json` and
+updated ADR-002. Production remains llama.cpp.
 
 ## Phase 4 — Retrieval evaluation
 
@@ -86,12 +90,19 @@ ingestion time on pgvector; only if a measured gap matters for real
 workloads, trial Qdrant as an optional profile per
 [ADR-005](../adr/ADR-005-retrieval-engine.md).
 
+**Status (2026-07-24):** lexical public-safe baseline committed
+(`benchmarks/results/20260724/retrieval/lexical-public-safe-v1.json`).
+pgvector retained; Qdrant not installed.
+
 ## Phase 5 — Document router
 
 Golden extraction test set (non-sensitive fixtures incl. Persian scans);
 then trial Docling behind a router (Tika default, Docling for complex
 PDFs) per [ADR-006](../adr/ADR-006-document-router.md).
 
+**Status (2026-07-24):** golden fixtures + Tika baseline 5/5
+(`benchmarks/results/20260724/documents/tika-golden-v1.json`). Docling
+not installed.
 ## Phase 6 — NVIDIA optimization (conditional)
 
 TensorRT-LLM NGC container for one curated model, only after provider

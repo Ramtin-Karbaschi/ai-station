@@ -1,0 +1,58 @@
+{
+  "corpus_id": "public-safe-v1",
+  "notes": "Synthetic public-safe retrieval corpus. No private documents.",
+  "documents": [
+    {
+      "id": "doc-alpha-networking",
+      "title": "Loopback Binding Notes",
+      "text": "AI Station binds interactive gateways to 127.0.0.1 by default. Loopback reduces accidental LAN exposure on a workstation. Services that must stay local include the host gateway, UI gateway, and experimental inference profiles."
+    },
+    {
+      "id": "doc-beta-benchmarks",
+      "title": "Benchmark First Rule",
+      "text": "Never replace a working inference engine without an apples-to-apples local benchmark. Capture TTFT, end-to-end latency, and contract checks for tools and JSON. Community vendor numbers are directional only."
+    },
+    {
+      "id": "doc-gamma-retrieval",
+      "title": "pgvector Retention",
+      "text": "PostgreSQL with pgvector remains the default retrieval store for Open WebUI RAG. Specialist vector databases are only justified after measured gaps in Recall@K, MRR, nDCG, latency, or index size on a public-safe corpus."
+    },
+    {
+      "id": "doc-delta-documents",
+      "title": "Document Extraction Defaults",
+      "text": "Apache Tika with Tesseract remains the default document extractor. Complex multi-column PDFs and scanned Persian pages may later route to Docling after a golden-set comparison proves benefit."
+    },
+    {
+      "id": "doc-epsilon-vram",
+      "title": "Single Heavy GPU Provider",
+      "text": "On a single-GPU laptop, at most one heavy inference provider may be active. Admission control must stop conflicting heavy profiles before starting another. Embedding models also consume VRAM and may need temporary stop during experimental trials."
+    }
+  ],
+  "queries": [
+    {
+      "id": "q-loopback",
+      "text": "Why bind gateways to localhost loopback?",
+      "relevant_doc_ids": ["doc-alpha-networking"]
+    },
+    {
+      "id": "q-benchmark",
+      "text": "When can we replace the inference engine?",
+      "relevant_doc_ids": ["doc-beta-benchmarks"]
+    },
+    {
+      "id": "q-pgvector",
+      "text": "What is the default retrieval database?",
+      "relevant_doc_ids": ["doc-gamma-retrieval"]
+    },
+    {
+      "id": "q-tika",
+      "text": "Which tool extracts office documents by default?",
+      "relevant_doc_ids": ["doc-delta-documents"]
+    },
+    {
+      "id": "q-heavy",
+      "text": "How many heavy GPU providers can run at once?",
+      "relevant_doc_ids": ["doc-epsilon-vram"]
+    }
+  ]
+}
