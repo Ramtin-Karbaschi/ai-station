@@ -7,8 +7,9 @@ AI Station/AI Station.ps1
 AI Station/AI Station Admin.cmd
 AI Station/README.md
 README.md
+.env.example
+.env.models.example
 apps/gateway/app/main.py
-apps/ocr/app/main.py
 config/install-layout.env
 config/skills/local-ai-ops.md
 config/registry/models.yaml
@@ -36,7 +37,6 @@ scripts/sync-litellm-db-url.sh
 scripts/backup.sh
 scripts/build-tika-fa.sh
 scripts/collect-ai-station-state.sh
-scripts/finalize-runtime-for-github.sh
 scripts/fix-openwebui-restart-loop.sh
 scripts/fix-postgres-openwebui-password.sh
 scripts/install.sh

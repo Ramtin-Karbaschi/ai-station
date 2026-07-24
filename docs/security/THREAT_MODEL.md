@@ -1,8 +1,9 @@
 # AI Station Threat Model
 
 Date: 2026-07-23
-Status: initial version (Phase 0). Review at every phase gate and after
-any component adoption.
+Updated: 2026-07-24
+Status: Phase 0 baseline plus Phase 1 mitigations (loopback bind, SSRF
+guard). Review after any new public surface or engine adoption.
 
 Scope: single-user local workstation (Windows 11 + WSL2), no intended
 network exposure beyond the machine. Localhost binding is a mitigation,

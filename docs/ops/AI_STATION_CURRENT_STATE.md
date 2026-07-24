@@ -56,13 +56,26 @@ config/providers.yaml
 
 ## Document processing
 
-The verified extraction path is:
+Verified extraction path:
 
 - Apache Tika;
 - Tesseract;
 - Persian and English OCR.
 
-Docling remains a Phase 5 trial candidate behind a document router.
+Golden-set Tika baseline (Phase 5) passed structural checks. Docling remains
+**deferred** until a fixture class fails Tika with measured benefit (ADR-006).
+
+## Retrieval
+
+pgvector remains the production retrieval store. Lexical public-safe baseline
+exists under `benchmarks/results/`. Qdrant is not installed (ADR-005).
+
+## Inference engine decision
+
+llama.cpp is the production primary interactive engine. SGLang was trialled
+as an experimental profile and **rejected for promotion** on this 24 GiB
+workstation for the incumbent MoE AWQ artifact (ADR-002). The Compose
+overlay may remain in-tree for research only.
 
 ## Removed or unsupported default components
 
@@ -71,7 +84,8 @@ Docling remains a Phase 5 trial candidate behind a document router.
 - direct cloud model APIs;
 - multi-node inference;
 - direct public internet exposure;
-- unused Caddy/Prometheus stubs (removed in Phase 1).
+- unused Caddy/Prometheus stubs;
+- unused legacy app trees (`apps/api`, `apps/web`, `apps/worker`, `apps/ocr`).
 
 ## Storage
 

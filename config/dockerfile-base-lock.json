@@ -1,34 +1,6 @@
 {
   "dockerfiles": [
     {
-      "dockerfile": "apps/api/Dockerfile",
-      "line": 1,
-      "locked": "python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
-      "original": "python:3.12-slim",
-      "type": "registry-digest"
-    },
-    {
-      "dockerfile": "apps/ocr/Dockerfile",
-      "line": 1,
-      "locked": "python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
-      "original": "python:3.12-slim",
-      "type": "registry-digest"
-    },
-    {
-      "dockerfile": "apps/web/Dockerfile",
-      "line": 1,
-      "locked": "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10",
-      "original": "nginx:1.27-alpine",
-      "type": "registry-digest"
-    },
-    {
-      "dockerfile": "apps/worker/Dockerfile",
-      "line": 1,
-      "locked": "python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de",
-      "original": "python:3.12-slim",
-      "type": "registry-digest"
-    },
-    {
       "dockerfile": "infra/tika-fa/Dockerfile",
       "line": 1,
       "locked": "apache/tika@sha256:ecdd37e204308266b1f8e28569f8516ebd5b96d7a4518a71d3904710b20c03b3",
@@ -36,6 +8,6 @@
       "type": "registry-digest"
     }
   ],
-  "generated_at": "2026-07-18T18:49:24.409779+00:00",
+  "generated_at": "2026-07-24T06:50:14.916Z",
   "schema_version": 1
 }

@@ -132,7 +132,7 @@ for FILE in "${RELEASE_FILES[@]}"; do
     case "$FILE" in
         .env|*/.env|.env.*|*/.env.*)
             case "$FILE" in
-                .env.example|*/.env.example)
+                .env.example|*/.env.example|.env.*.example|*/.env.*.example)
                     ;;
                 *)
                     fail "Real environment file is eligible for commit: $FILE"

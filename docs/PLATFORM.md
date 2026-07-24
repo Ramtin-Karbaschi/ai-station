@@ -149,11 +149,19 @@ client = OpenAI(
 
 | File | Purpose |
 |---|---|
+| `config/providers.yaml` | Provider lifecycle, admission budgets, Compose overlays |
 | `config/registry/models.yaml` | Canonical aliases, profiles, files |
 | `config/registry/projects.yaml` | Project inventory (no secrets) |
 | `config/model-catalog.json` | Host gateway selectable models |
 | `config/model-manifest.json` | Provisioning checksums |
 | `config/gateway/litellm.yaml` | LiteLLM routes |
+
+Admission dry-run:
+
+~~~bash
+ai provider list
+ai provider start llama-cpp-general --dry-run
+~~~
 
 ## Path contract
 

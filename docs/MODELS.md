@@ -8,6 +8,13 @@ The authoritative model definition is:
 config/model-manifest.json
 ~~~
 
+Runtime catalog and provider lifecycle:
+
+~~~text
+config/model-catalog.json
+config/providers.yaml
+~~~
+
 ## Manifest fields
 
 Each model entry contains:
@@ -15,7 +22,7 @@ Each model entry contains:
 | Field | Meaning |
 |---|---|
 | `id` | Stable AI Station identifier |
-| `role` | General, coding, embedding or reranking role |
+| `role` | Operational role |
 | `repo_id` | Hugging Face repository |
 | `filename` | Exact upstream filename |
 | `revision` | Immutable source commit |
@@ -28,9 +35,9 @@ Each model entry contains:
 
 ### Core
 
-The Core profile provides the default operational models:
+Default operational models:
 
-- Qwen3.6 35B-A3B general model;
+- Qwen3.6 35B-A3B general (GGUF);
 - Qwen3 Embedding 0.6B.
 
 ~~~bash
@@ -40,15 +47,21 @@ The Core profile provides the default operational models:
 
 ### All
 
-The complete profile additionally provisions:
+Core plus selectable heavy and optional roles:
 
 - Qwen3 Coder 30B-A3B;
-- Qwen3 Reranker 0.6B.
+- DeepSeek-R1 Distill Qwen 32B (reasoning);
+- Qwen3-VL 32B + mmproj (vision);
+- Qwen3 Reranker 0.6B (optional CPU).
 
 ~~~bash
 ./scripts/provision-models.sh --profile all
 ./scripts/verify-models.sh --profile all
 ~~~
+
+Experimental SGLang AWQ shards may appear in the manifest under
+`experimental-sglang` for research. They are **not** part of production
+provisioning and are not promoted (see ADR-002).
 
 ## Resume behavior
 
@@ -72,19 +85,29 @@ Invalid existing files are quarantined rather than silently overwritten.
 ~~~text
 /srv/ai-station/models/general
 /srv/ai-station/models/coder
+/srv/ai-station/models/thinking
+/srv/ai-station/models/vision
 /srv/ai-station/models/embedding
 /srv/ai-station/models/reranker
-/srv/ai-station/models/ocr
-/srv/ai-station/models/vision
 /srv/ai-station/models/whisper
 ~~~
 
 ## VRAM policy
 
-The default general and coding models are heavy models. On a 24 GB GPU, avoid
-running multiple heavy models simultaneously.
+On a single 24 GB GPU, run **at most one** heavy profile at a time
+(`general`, `coder`, `reasoning`, or `vision`). Use:
 
-Stop an unused heavy model before starting another.
+~~~bash
+ai models use general
+ai models use coder
+ai models stop
+~~~
+
+Admission dry-run:
+
+~~~bash
+ai provider start llama-cpp-coder --dry-run
+~~~
 
 ## Adding or replacing a model
 
@@ -95,7 +118,7 @@ A model update is incomplete until all of these are updated:
 3. local destination;
 4. expected size;
 5. SHA-256 checksum;
-6. service command or runtime catalog;
+6. service command or runtime catalog / providers registry;
 7. documentation;
 8. release audit result.
 
