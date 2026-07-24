@@ -40,6 +40,7 @@ echo  17. Create project API key
 echo  18. Show project
 echo  19. Revoke project API key
 echo  20. Open projects folder
+echo  27. Show LiteLLM UI login
 echo.
 echo  --- Account ---
 echo  26. Reset Open WebUI password
@@ -82,6 +83,7 @@ if "%CHOICE%"=="23" goto DISK
 if "%CHOICE%"=="24" goto VSCODE
 if "%CHOICE%"=="25" goto GIT
 if "%CHOICE%"=="26" goto RESET_WEBUI_PASSWORD
+if "%CHOICE%"=="27" goto LITELLM_UI_CREDS
 if "%CHOICE%"=="0" exit /b 0
 goto MENU
 
@@ -247,5 +249,14 @@ echo The new password will be shown once in this window.
 echo.
 wsl.exe -d %WSL_DISTRO% --user root -- bash -lc "%ACTION% reset-webui-password"
 echo.
+pause
+goto MENU
+
+:LITELLM_UI_CREDS
+echo.
+wsl.exe -d %WSL_DISTRO% --user root -- bash -lc "%ACTION% litellm-ui-credentials"
+echo.
+echo Opening LiteLLM Admin UI...
+start "" "http://127.0.0.1:4000/ui"
 pause
 goto MENU

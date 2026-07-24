@@ -1,0 +1,79 @@
+# Experimental SGLang provider (Phase 2/3).
+# Off by default. Mutually exclusive with llama.cpp heavy profiles.
+#
+# Phase 3 decision (2026-07-24): rejected for promotion on this 24 GiB
+# workstation with Qwen3.6-35B-A3B AWQ MoE — weights ~22.5 GiB leave
+# insufficient hybrid mamba/KV headroom. Profile retained for research.
+#
+# Start (research only):
+#   ai models stop
+#   docker compose stop embedder
+#   ai provider start sglang-general-experimental
+#
+# Stop / uninstall:
+#   ./scripts/uninstall-sglang-experimental.sh
+#   ai models use general
+
+services:
+  sglang-experimental:
+    profiles: ["sglang-experimental"]
+    image: lmsysorg/sglang@sha256:920df39109c60429b0a23eaacfd2786fcf1595c12f3ca4fc6e153b2abe34865f
+    container_name: ai-station-sglang-experimental
+    restart: "no"
+    gpus: all
+    ipc: host
+    shm_size: "8gb"
+    environment:
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    command:
+      - python3
+      - -m
+      - sglang.launch_server
+      - --model-path
+      - /models/${SGLANG_MODEL_DIR:-experimental/qwen3.6-35b-a3b-awq-4bit}
+      - --served-model-name
+      - ai-station-sglang-general
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8100"
+      - --quantization
+      - awq_marlin
+      - --dtype
+      - float16
+      - --kv-cache-dtype
+      - auto
+      - --mem-fraction-static
+      - "${SGLANG_MEM_FRACTION:-0.92}"
+      - --context-length
+      - "${SGLANG_CONTEXT:-4096}"
+      - --max-running-requests
+      - "1"
+      - --cpu-offload-gb
+      - "${SGLANG_CPU_OFFLOAD_GB:-6}"
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - qwen
+      - --trust-remote-code
+      - --enable-metrics
+      - --disable-cuda-graph
+    volumes:
+      - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
+    ports:
+      - "127.0.0.1:${SGLANG_PORT:-8100}:8100"
+    networks:
+      - default
+      - ai-platform
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health')\" >/dev/null 2>&1 || python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/v1/models')\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 40
+      start_period: 300s

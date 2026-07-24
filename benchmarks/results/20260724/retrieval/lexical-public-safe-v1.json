@@ -1,0 +1,73 @@
+{
+  "engine": "lexical-baseline",
+  "corpus_id": "public-safe-v1",
+  "k": 3,
+  "document_count": 5,
+  "query_count": 5,
+  "metrics": {
+    "recall_at_k": 1.0,
+    "mrr": 0.9,
+    "ndcg": 0.9261859507142916,
+    "eval_wall_ms": 0.5572360000201115
+  },
+  "queries": [
+    {
+      "id": "q-loopback",
+      "top_ids": [
+        "doc-alpha-networking",
+        "doc-beta-benchmarks",
+        "doc-delta-documents"
+      ],
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "id": "q-benchmark",
+      "top_ids": [
+        "doc-beta-benchmarks",
+        "doc-alpha-networking",
+        "doc-delta-documents"
+      ],
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "id": "q-pgvector",
+      "top_ids": [
+        "doc-gamma-retrieval",
+        "doc-delta-documents",
+        "doc-alpha-networking"
+      ],
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0
+    },
+    {
+      "id": "q-tika",
+      "top_ids": [
+        "doc-alpha-networking",
+        "doc-delta-documents",
+        "doc-gamma-retrieval"
+      ],
+      "recall_at_k": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575
+    },
+    {
+      "id": "q-heavy",
+      "top_ids": [
+        "doc-epsilon-vram",
+        "doc-alpha-networking",
+        "doc-beta-benchmarks"
+      ],
+      "recall_at_k": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0
+    }
+  ],
+  "decision_note": "Lexical baseline only. pgvector remains production default per ADR-005 until an embedding-backed gap justifies Qdrant.",
+  "generated_at": "2026-07-24T05:21:17.971653+00:00",
+  "corpus_path": "benchmarks/datasets/retrieval/public_safe_v1.json"
+}

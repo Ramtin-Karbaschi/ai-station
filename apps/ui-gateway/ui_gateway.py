@@ -5,11 +5,12 @@ import mimetypes
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "0.0.0.0")
+HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "127.0.0.1")
 PORT = int(os.getenv("AI_STATION_UI_GATEWAY_PORT", "8890"))
 UPSTREAM = os.getenv("AI_STATION_GATEWAY_UPSTREAM", "http://127.0.0.1:8888/v1").rstrip("/")
 OPENWEBUI_URL = os.getenv("AI_STATION_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
@@ -97,8 +98,25 @@ def parse_data_url(url: str):
 
 
 def fetch_url_bytes(url: str, auth_header: str | None = None):
+    """Fetch attachment bytes. Only Open WebUI origin and data URLs are allowed."""
+    if url.startswith("data:"):
+        raise ValueError("data URLs must use parse_data_url")
+
     if url.startswith("/"):
         url = OPENWEBUI_URL + url
+
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"disallowed URL scheme: {parsed.scheme!r}")
+
+    allowed = urllib.parse.urlparse(OPENWEBUI_URL)
+    if (parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80)) != (
+        allowed.hostname,
+        allowed.port or (443 if allowed.scheme == "https" else 80),
+    ):
+        raise ValueError(
+            f"SSRF guard: fetches limited to Open WebUI origin ({OPENWEBUI_URL})"
+        )
 
     req = urllib.request.Request(url)
     if auth_header:

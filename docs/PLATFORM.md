@@ -53,7 +53,47 @@ ai status
 ai verify
 ```
 
-## Application integration
+## Use cases
+
+### 1) Document Q&A / decision support (RAG)
+
+LiteLLM only provides API keys and model routing. Document upload, OCR, and
+retrieval live in your application or in Open WebUI:
+
+- **Interactive / human:** Open WebUI at `http://127.0.0.1:3000` (upload docs,
+  chat with citations).
+- **Programmatic:** create a project key that allows `local-general` +
+  `local-embedding`, store chunks in your DB/pgvector, then call chat with
+  retrieved context.
+
+### 2) Automation agents (email triage, tools, workflows)
+
+Build the agent in your own project (Python/Node). Give it a dedicated LiteLLM
+virtual key with only the models it needs (usually `local-general` or
+`local-coder`). The agent code owns Gmail/IMAP credentials and tool actions;
+the gateway only serves model inference.
+
+Recommended pattern: one virtual key per use-case / project.
+
+```text
+docs-rag-api      -> models: local-general, local-embedding
+email-agent-api   -> models: local-general
+coder-agent-api   -> models: local-coder
+```
+
+## LiteLLM Admin UI login
+
+Open `http://127.0.0.1:4000/ui`
+
+Credentials are stored locally in:
+
+```text
+/opt/ai-station/secrets/litellm_ui_credentials.txt
+```
+
+Or from Windows Manager: option **27. Show LiteLLM UI login**.
+
+Default username is `admin`. This is separate from Open WebUI login.
 
 Host process:
 
