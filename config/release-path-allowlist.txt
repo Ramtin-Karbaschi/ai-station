@@ -18,6 +18,10 @@ config/gateway/litellm.yaml
 docs/ARCHITECTURE.md
 docs/INSTALLATION.md
 docs/MULTI_MACHINE_DEPLOYMENT.md
+install/README.md
+install/windows/Install-AIStation.ps1
+install/linux/install-ai-station.sh
+scripts/build-install-pack.sh
 docs/MODELS.md
 docs/OPERATIONS.md
 docs/PLATFORM.md

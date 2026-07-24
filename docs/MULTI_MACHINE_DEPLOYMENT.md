@@ -21,6 +21,11 @@ model download will always exist once.
 
 ## Supported path today (recommended)
 
+Prefer the GitHub downloadable bootstrap when you want copy-paste commands:
+
+- Release pack: https://github.com/Ramtin-Karbaschi/ai-station/releases/latest
+- Scripts in-repo: [`install/README.md`](../install/README.md)
+
 ### Windows 11 (primary)
 
 Do these **once** on the target PC (cannot be skipped by any installer):
