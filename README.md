@@ -268,6 +268,7 @@ security vulnerabilities through a public issue.
 | Document | Purpose |
 |---|---|
 | [Installation](docs/INSTALLATION.md) | Install and upgrade |
+| [Multi-machine deploy](docs/MULTI_MACHINE_DEPLOYMENT.md) | Clone this workstation onto another PC |
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |

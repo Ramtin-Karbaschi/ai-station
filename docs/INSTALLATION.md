@@ -2,6 +2,10 @@
 
 This guide describes the supported AI Station installation flow.
 
+See also [Multi-machine deployment](MULTI_MACHINE_DEPLOYMENT.md) for cloning
+this workstation onto another PC, and what a future Windows `.exe` bootstrap
+can (and cannot) automate.
+
 ## Supported installation layout
 
 ~~~text
