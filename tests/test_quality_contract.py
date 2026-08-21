@@ -27,6 +27,17 @@ class QualityGateContractTests(unittest.TestCase):
         self.assertIn("scripts/test.sh", release)
         self.assertIn("./scripts/test.sh", workflow)
         self.assertIn("AI_STATION_TEST_PYTHON: python", workflow)
+        self.assertIn("AI_STATION_PROJECT_DIR: ${{ github.workspace }}", workflow)
+        self.assertIn("test -f .env || cp .env.example .env", workflow)
+        lock = (ROOT / "scripts/verify-image-lock.sh").read_text(encoding="utf-8")
+        self.assertIn("--require-local", lock)
+        self.assertIn("AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL", lock)
+        installer = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
+        self.assertIn("verify-image-lock.sh --require-local", installer)
+        self.assertIn(
+            'export AI_STATION_PROJECT_DIR="${AI_STATION_PROJECT_DIR:-$ROOT}"',
+            runner,
+        )
 
     def test_runner_resolves_unqualified_python_command_names(self) -> None:
         import shutil
@@ -88,6 +99,14 @@ class QualityGateContractTests(unittest.TestCase):
         cli = (ROOT / "scripts/ai").read_text(encoding="utf-8")
         for text in (readme, cli):
             self.assertIn("http://127.0.0.1:4000/v1", text)
+
+    def test_live_adr_index_excludes_superseded_compaction_note(self) -> None:
+        index = (ROOT / "docs/adr/README.md").read_text(encoding="utf-8")
+        self.assertIn("ADR-009", index)
+        self.assertIn("ADR-013", index)
+        self.assertFalse(
+            (ROOT / "docs/adr/ADR-010-opencode-compaction-task-loss-fix.md").exists()
+        )
 
 
 if __name__ == "__main__":

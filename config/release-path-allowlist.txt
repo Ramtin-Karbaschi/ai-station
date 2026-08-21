@@ -11,6 +11,7 @@ README.md
 .env.example
 .env.models.example
 apps/gateway/app/main.py
+apps/gateway/app/paths.py
 config/install-layout.env
 config/registry/models.yaml
 config/registry/projects.yaml

@@ -16,7 +16,7 @@ The build agent has LSP, formatter, skills, edit, and Bash access inside its
 worktree, 40 iterations, coder context/output of 16384/4096, and no external
 directory access. Compaction uses only supported native OpenCode fields. The
 custom compaction agent and JavaScript continuation hook adopted during the
-initial incident response were removed; ADR-010 records that supersession.
+initial incident response were removed after they proved unstable.
 
 This amendment replaces conflicting operational details below while preserving
 the original investigation as historical evidence.

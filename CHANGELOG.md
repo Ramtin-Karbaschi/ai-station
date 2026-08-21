@@ -13,6 +13,16 @@ All notable project changes should be recorded in this file.
 - restored execute bits on `scripts/test.sh` and other operator entrypoints;
 - resolved `AI_STATION_TEST_PYTHON=python` from PATH so GitHub Actions
   offline-quality can find the setup-python interpreter;
+- pointed gateway tests at the checkout tree (`AI_STATION_PROJECT_DIR`) so
+  CI does not depend on `/opt/ai-station` existing on the runner;
+- pinned PyYAML in the gateway requirements so catalog and contract tests
+  do not rely on a transitive uvicorn extra;
+- kept image-lock CI on digest pins; local image bytes are required only
+  after `docker compose pull` via `--require-local`;
+- materialized `.env.example` in GitHub Actions so Compose validation does
+  not depend on a real secrets file;
+- replaced the superseded OpenCode compaction ADR with `docs/adr/README.md`
+  as the live decision index;
 - folded install, portability, and second-machine clone steps into
   `docs/INSTALLATION.md`; Linux and Windows+WSL now share one guide;
 - added `ai models add` for curated install and for registering a new

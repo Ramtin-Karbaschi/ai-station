@@ -5,6 +5,7 @@ import mimetypes
 import os
 import re
 import signal
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -14,12 +15,17 @@ from functools import lru_cache
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from apps.gateway.app.paths import PROJECT_DIR
+
 HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "127.0.0.1")
 PORT = int(os.getenv("AI_STATION_UI_GATEWAY_PORT", "8890"))
 UPSTREAM = os.getenv("AI_STATION_GATEWAY_UPSTREAM", "http://127.0.0.1:8888/v1").rstrip("/")
 OPENWEBUI_URL = os.getenv("AI_STATION_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
 TIKA_URL = os.getenv("AI_STATION_TIKA_URL", "http://127.0.0.1:9998").rstrip("/")
-PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
 CATALOG_PATH = Path(
     os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
 )

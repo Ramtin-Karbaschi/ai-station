@@ -8,6 +8,33 @@ TEMP_DIR="$(mktemp -d)"
 COMPOSE_JSON="$TEMP_DIR/locked-compose.json"
 trap 'rm -rf -- "$TEMP_DIR"' EXIT
 
+require_local="${AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL:-0}"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --require-local)
+            require_local=1
+            shift
+            ;;
+        -h|--help)
+            cat <<'EOF'
+Usage: ./scripts/verify-image-lock.sh [--require-local]
+
+Confirms Compose resolves every registry service to the digest in
+config/image-lock.json. --require-local (or
+AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL=1) also fails when those images are
+not present on this Docker engine. CI and make check stay pin-only;
+install/verify after pull use --require-local.
+EOF
+            exit 0
+            ;;
+        *)
+            echo "ERROR: unknown image-lock argument: $1" >&2
+            exit 2
+            ;;
+    esac
+done
+export AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL="$require_local"
+
 cd "$ROOT"
 
 echo "============================================================"
@@ -153,7 +180,11 @@ for service_name, lock_data in manifest["services"].items():
             )
             continue
 
-        if not image_exists(resolved_image):
+        require_local = os.environ.get(
+            "AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL", ""
+        ).strip() in {"1", "true", "yes"}
+
+        if require_local and not image_exists(resolved_image):
             configured = lock_data.get("configured_image")
 
             if configured and not image_exists(configured):

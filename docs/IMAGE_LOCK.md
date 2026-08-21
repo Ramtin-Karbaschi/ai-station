@@ -36,10 +36,14 @@ After an approved container update:
 
 ~~~bash
 ./scripts/update-image-lock.sh
-./scripts/verify-image-lock.sh
+./scripts/verify-image-lock.sh --require-local
 ./scripts/verify-build-lock.sh
 ./scripts/release-audit.sh
 ~~~
+
+Offline quality (`make check` and GitHub Actions) runs `verify-image-lock.sh`
+without `--require-local` so a clone can prove digest pins without downloading
+GPU images. After `docker compose pull`, use `--require-local`.
 
 Commit these files together when applicable:
 

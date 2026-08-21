@@ -19,7 +19,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
+from apps.gateway.app.paths import PROJECT_DIR
+
 PROVIDERS_PATH = Path(
     os.getenv("AI_STATION_PROVIDERS", str(PROJECT_DIR / "config/providers.yaml"))
 )

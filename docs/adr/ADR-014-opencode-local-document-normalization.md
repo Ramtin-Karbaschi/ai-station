@@ -1,6 +1,6 @@
 # ADR-014: Normalize OpenCode documents before local inference
 
-- Status: accepted
+- Status: Accepted
 - Date: 2026-08-21
 
 ## Context

@@ -104,8 +104,8 @@ remains the station default (ADR-008). The shared coder runtime ceiling is
 32768, while OpenCode deliberately advertises a verified 16384 client limit;
 the other profiles are 8192. The build agent has LSP,
 formatter, skills, edit/Bash access
-inside the worktree, and 40 iterations. Native compaction is enabled; ADR-010's
-custom hook is superseded.
+inside the worktree, and 40 iterations. Native compaction is enabled; the
+custom continuation hook is not part of the system.
 
 ~~~bash
 ai opencode install --create-user --own-project

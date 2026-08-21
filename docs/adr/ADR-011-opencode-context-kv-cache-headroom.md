@@ -5,10 +5,9 @@
 
 ## Context
 
-This is Track B of the OpenCode task-loss fix (see the sibling
-ADR-010 for Track A, the compaction/verbatim-request fix). Track A
-fixes the *behavioral* bug (lossy compaction silently dropping part of
-a multi-step request). Track B asks a separate, hardware question:
+This is the hardware track of the OpenCode task-loss work. The behavioral
+track (lossy native compaction dropping part of a multi-step request) is
+owned by ADR-009 and ADR-013. This ADR asks a separate question:
 does any real VRAM headroom exist to raise the OpenCode context ceiling
 above the current 8192-token default (`LLM_CODER_CONTEXT`,
 `LLM_ORNITH_CONTEXT`, etc. in `.env.models`, default `8192` in

@@ -355,6 +355,8 @@ echo "Pulling immutable registry images..."
 
 docker compose pull --ignore-buildable
 
+./scripts/verify-image-lock.sh --require-local
+
 echo
 echo "Building repository-controlled images..."
 

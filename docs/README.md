@@ -18,7 +18,7 @@ fact across multiple documents.
 | Diagnose a failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Find the correct script | [SCRIPTS.md](SCRIPTS.md) |
 | Review security boundaries | [THREAT_MODEL.md](security/THREAT_MODEL.md) |
-| Review architecture decisions | [ADRs](adr/) |
+| Review architecture decisions | [ADR index](adr/README.md) |
 
 ## Authority rules
 

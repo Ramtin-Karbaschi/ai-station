@@ -77,6 +77,8 @@ EOF
   exit 1
 fi
 
+export AI_STATION_PROJECT_DIR="${AI_STATION_PROJECT_DIR:-$ROOT}"
+
 echo "Python: $PYTHON ($("$PYTHON" --version 2>&1))"
 echo "Running offline unit and contract tests..."
 "$PYTHON" -m compileall -q apps benchmarks/runners scripts tests

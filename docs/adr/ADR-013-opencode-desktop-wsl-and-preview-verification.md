@@ -1,6 +1,6 @@
 # ADR-013: OpenCode Desktop uses the canonical WSL server
 
-- Status: accepted
+- Status: Accepted
 - Date: 2026-08-21
 
 ## Context

@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from apps.gateway.app.admission import get_provider, load_providers
+from apps.gateway.app.paths import PROJECT_DIR
 
-PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
 PROVIDERS_PATH = Path(
     os.getenv("AI_STATION_PROVIDERS", str(PROJECT_DIR / "config/providers.yaml"))
 )

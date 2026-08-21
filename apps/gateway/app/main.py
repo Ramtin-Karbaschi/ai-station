@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.gateway.app.admission import admit
+from apps.gateway.app.paths import PROJECT_DIR
 from apps.gateway.app.providers import (
     heavy_services,
     provider_for_catalog_model,
@@ -23,7 +24,6 @@ from apps.gateway.app.providers import (
     service_profiles,
 )
 
-PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
 CATALOG_PATH = Path(
     os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
 )
