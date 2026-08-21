@@ -41,7 +41,7 @@ After an approved container update:
 ./scripts/release-audit.sh
 ~~~
 
-Offline quality (`make check` and GitHub Actions) runs `verify-image-lock.sh`
+Offline quality (`make check`) runs `verify-image-lock.sh`
 without `--require-local` so a clone can prove digest pins without downloading
 GPU images. After `docker compose pull`, use `--require-local`.
 

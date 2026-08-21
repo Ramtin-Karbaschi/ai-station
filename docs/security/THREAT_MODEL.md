@@ -58,7 +58,7 @@ manifest discipline before promotion.
 ### T4 Poisoned container images
 
 Controls: digest pinning for all registry images; local Tika build from a
-digest-pinned base; GitHub Actions pinned to commit SHAs.
+digest-pinned base; quality gates stay local (`make check`).
 Gaps: digest refresh procedure trusts upstream tags at refresh time.
 Actions: review upstream release notes at each `update-image-lock.sh` run;
 keep the previous lock file in Git history for rollback.

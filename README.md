@@ -6,7 +6,6 @@
 
 <br>
 
-[![Quality gates](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml/badge.svg)](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0ea5e9.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-WSL2%20%7C%20Linux-0f766e.svg)
 ![Runtime](https://img.shields.io/badge/runtime-Docker%20Compose-2496ed.svg)

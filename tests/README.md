@@ -26,8 +26,7 @@ general llama.cpp server:
 ai test --live
 ~~~
 
-CI sets `AI_STATION_TEST_PYTHON=python` and `AI_STATION_PROJECT_DIR` to the
-checkout after installing the pinned gateway requirements. Local runs use
-`.venvs/gateway/bin/python` when present. The runner also exports
-`AI_STATION_PROJECT_DIR` to the repository root so gateway tests do not
-require `/opt/ai-station` on the machine.
+CI is the local runner: `./scripts/test.sh` after installing the pinned
+gateway requirements. Local runs use `.venvs/gateway/bin/python` when
+present. The runner also exports `AI_STATION_PROJECT_DIR` to the repository
+root so gateway tests do not require `/opt/ai-station` on the machine.

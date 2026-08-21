@@ -24,7 +24,7 @@ share of the local model's prompt budget. The station therefore vendors a
 ## Options considered
 
 1. Do not add Graphify; keep grep/Read as the only code-orientation path.
-2. Run upstream `graphify install --platform opencode` and
+2. Run upstream `graphify install --platform opencode` and other
    editor-specific installers unmodified (full skill + alwaysApply rule).
 3. Pin Graphify in an isolated venv, expose it through `ai graphify`,
    default to `--code-only` (no GPU), optional docs pass via LiteLLM
@@ -64,8 +64,6 @@ Adopt option 3.
   as default.
 - OpenCode: short `/graphify` command + plugin reminder. Do **not**
   deploy the upstream 700-line skill into the 8k system prompt.
-- Editor: a short local rule that prefers `ai graphify query|path|explain`
-  when `graph.json` exists.
 - Uninstall: `ai graphify uninstall` (venv); `--purge` also deletes
   runtime graphs. Does not stop GPU providers.
 
@@ -94,9 +92,8 @@ GPU via LiteLLM / admission (ADR-004).
 ai graphify uninstall --purge
 ~~~
 
-Remove `config/clients/opencode/commands/graphify.md`,
-`config/clients/opencode/plugins/graphify.js`, and
-the OpenCode graphify assets, then `ai opencode configure`.
+Remove `config/clients/opencode/commands/graphify.md` and
+`config/clients/opencode/plugins/graphify.js`, then `ai opencode configure`.
 
 ## Acceptance criteria
 

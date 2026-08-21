@@ -11,16 +11,16 @@ All notable project changes should be recorded in this file.
 - tracked the Postgres schema under `infra/postgres/` and described the host
   as Linux or Windows+WSL in the architecture diagram;
 - restored execute bits on `scripts/test.sh` and other operator entrypoints;
-- resolved `AI_STATION_TEST_PYTHON=python` from PATH so GitHub Actions
-  offline-quality can find the setup-python interpreter;
+- resolved `AI_STATION_TEST_PYTHON=python` from PATH so the test runner
+  can use an unqualified interpreter name;
 - pointed gateway tests at the checkout tree (`AI_STATION_PROJECT_DIR`) so
-  CI does not depend on `/opt/ai-station` existing on the runner;
+  clones do not depend on `/opt/ai-station` existing on the machine;
 - pinned PyYAML in the gateway requirements so catalog and contract tests
   do not rely on a transitive uvicorn extra;
-- kept image-lock CI on digest pins; local image bytes are required only
-  after `docker compose pull` via `--require-local`;
-- materialized `.env.example` in GitHub Actions so Compose validation does
-  not depend on a real secrets file;
+- kept image-lock quality gates on digest pins; local image bytes are
+  required only after `docker compose pull` via `--require-local`;
+- stopped publishing GitHub metadata directories; `make check` is the
+  offline quality gate;
 - replaced the superseded OpenCode compaction ADR with `docs/adr/README.md`
   as the live decision index;
 - folded install, portability, and second-machine clone steps into
@@ -36,7 +36,7 @@ All notable project changes should be recorded in this file.
 ### Production-readiness and operator safety
 
 - added the canonical `scripts/test.sh` runner, `ai test`, `make test`, and
-  `make check`; CI now validates Python contracts, Compose configuration,
+  `make check`; quality gates validate Python contracts, Compose configuration,
   manifests, documentation, and Windows PowerShell syntax;
 - added recoverable model catalog/install/verify/quarantine/restore workflows;
   destructive model removal remains unavailable and active/required models are
@@ -102,8 +102,6 @@ All notable project changes should be recorded in this file.
 
 ### Security and dependencies
 
-- bumped GitHub Actions to digest-pinned `actions/checkout@v7.0.1` and
-  `actions/setup-python@v6.3.0`;
 - upgraded gateway Python deps (`fastapi`/`starlette`/`uvicorn`) to clear
   known Starlette advisories reported by `pip-audit`.
 

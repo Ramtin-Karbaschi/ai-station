@@ -15,9 +15,6 @@ class QualityGateContractTests(unittest.TestCase):
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
         cli = (ROOT / "scripts/ai").read_text(encoding="utf-8")
         release = (ROOT / "scripts/release-audit.sh").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github/workflows/docs-quality.yml").read_text(
-            encoding="utf-8"
-        )
 
         self.assertIn("unittest discover", runner)
         self.assertIn(".venvs/gateway/bin/python", runner)
@@ -25,10 +22,6 @@ class QualityGateContractTests(unittest.TestCase):
         self.assertIn("check:", makefile)
         self.assertIn("test) cmd_test", cli)
         self.assertIn("scripts/test.sh", release)
-        self.assertIn("./scripts/test.sh", workflow)
-        self.assertIn("AI_STATION_TEST_PYTHON: python", workflow)
-        self.assertIn("AI_STATION_PROJECT_DIR: ${{ github.workspace }}", workflow)
-        self.assertIn("test -f .env || cp .env.example .env", workflow)
         lock = (ROOT / "scripts/verify-image-lock.sh").read_text(encoding="utf-8")
         self.assertIn("--require-local", lock)
         self.assertIn("AI_STATION_IMAGE_LOCK_REQUIRE_LOCAL", lock)
@@ -107,6 +100,42 @@ class QualityGateContractTests(unittest.TestCase):
         self.assertFalse(
             (ROOT / "docs/adr/ADR-010-opencode-compaction-task-loss-fix.md").exists()
         )
+
+    def test_github_metadata_is_untracked(self) -> None:
+        import subprocess
+
+        tracked = subprocess.check_output(
+            ["git", "ls-files", ".github"], cwd=ROOT, text=True
+        )
+        gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertEqual(tracked.strip(), "")
+        self.assertNotIn("!.github/", gitignore)
+        self.assertNotIn("!.github/**", gitignore)
+
+    def test_tracked_files_do_not_name_vendor_editor(self) -> None:
+        import subprocess
+
+        needle = bytes.fromhex("637572736f72").decode("ascii")
+        listed = subprocess.check_output(
+            ["git", "ls-files", "-z"], cwd=ROOT
+        )
+        for raw in listed.split(b"\0"):
+            if not raw:
+                continue
+            relative = raw.decode("utf-8")
+            path = ROOT / relative
+            if relative == ".gitignore" or not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for line_number, line in enumerate(text.splitlines(), start=1):
+                self.assertNotIn(
+                    needle,
+                    line.lower(),
+                    f"{relative}:{line_number}",
+                )
 
 
 if __name__ == "__main__":

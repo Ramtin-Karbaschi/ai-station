@@ -34,8 +34,6 @@ __pycache__/
 
 # BEGIN AI-STATION MANAGED RULES
 .*
-!.github/
-!.github/**
 !.env.example
 !.env.*.example
 !.gitignore
@@ -139,6 +137,7 @@ config/skills/*-workspace/
 /AGENTS.md
 /CLAUDE.md
 
+/.github/
 
 # Local generated manifests containing runtime details
 compose-resolved-sensitive.yaml

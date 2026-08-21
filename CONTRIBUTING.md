@@ -15,17 +15,15 @@ Use only these three branches:
 
 Promote `development` → `stage` → `main` after `make check` (and `ai verify`
 when runtime behavior changed). Do not create or use any other branch name.
-Historical remotes such as `architecture/*` or `release/*` are frozen; do
-not base new work on them.
 
-Do not commit editor folders, workstation agent files ***REMOVED***
-(`/AGENTS.md`), secrets, model binaries, or runtime state. The OpenCode client
+Do not commit editor folders, workstation agent files (`/AGENTS.md`),
+secrets, model binaries, or runtime state. The OpenCode client
 template `config/clients/opencode/AGENTS.md` is product configuration and
 belongs in Git.
 
 Commit messages are conventional and technical (`feat:`, `fix:`, `docs:`,
 `refactor:`, `test:`, `chore:`). Explain why in one or two sentences. Do not
-add AI generator footers.
+add generator footers or co-author trailers.
 
 ## Development loop
 

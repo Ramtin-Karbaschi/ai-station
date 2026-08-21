@@ -129,14 +129,12 @@ cmd_graphify_configure() {
   if [[ "$dry_run" -eq 1 ]]; then
     echo "DRY-RUN: would ensure pinned graphify venv"
     echo "DRY-RUN: would refresh OpenCode graphify command/plugin via ai opencode configure"
-    echo "DRY-RUN: would refresh OpenCode graphify command/plugin via ai opencode configure"
     return 0
   fi
   if [[ ! -x "$(ai_graphify_bin)" ]]; then
     cmd_graphify_install
   fi
   cmd_opencode_configure
-  echo "OK: OpenCode graphify command/plugin deployed with opencode configure"
   echo "OK: OpenCode graphify command/plugin deployed with opencode configure"
   echo "Restart the OpenCode WSL client to load the new command/plugin."
 }
