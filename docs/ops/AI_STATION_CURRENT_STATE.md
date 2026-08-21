@@ -112,8 +112,10 @@ Runtime:    /srv/ai-station/runtime
 ~~~
 
 The `ai` CLI is the single day-to-day control plane. Windows Manager invokes
-it by direct WSL argument passing. Curated model install/verify and
-recoverable quarantine/restore are available through `ai models`.
+it by direct WSL argument passing. Model add/install/verify and recoverable
+quarantine/restore are available through `ai models`.
+
+Live verification on 2026-08-21 passed with the `coder` profile active.
 
 ## Verified endpoints
 

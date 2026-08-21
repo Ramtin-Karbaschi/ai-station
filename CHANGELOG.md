@@ -8,6 +8,9 @@ All notable project changes should be recorded in this file.
 
 - documented a three-branch Git workflow (`development`, `stage`, `main`) and
   stopped treating extra branch names as part of the supported process;
+- tracked the Postgres schema under `infra/postgres/` and described the host
+  as Linux or Windows+WSL in the architecture diagram;
+- restored execute bits on `scripts/test.sh` and other operator entrypoints;
 - folded install, portability, and second-machine clone steps into
   `docs/INSTALLATION.md`; Linux and Windows+WSL now share one guide;
 - added `ai models add` for curated install and for registering a new

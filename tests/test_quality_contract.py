@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 
@@ -25,6 +26,18 @@ class QualityGateContractTests(unittest.TestCase):
         self.assertIn("test) cmd_test", cli)
         self.assertIn("scripts/test.sh", release)
         self.assertIn("./scripts/test.sh", workflow)
+
+    def test_operator_scripts_are_executable(self) -> None:
+        for relative in (
+            "scripts/test.sh",
+            "scripts/model_manager.py",
+            "scripts/install-opencode-wsl.sh",
+            "scripts/ensure-wsl-idle-timeout.sh",
+            "scripts/verify-startup-stability.sh",
+        ):
+            path = ROOT / relative
+            self.assertTrue(path.is_file(), relative)
+            self.assertTrue(os.access(path, os.X_OK), relative)
 
     def test_live_default_is_llama_cpp_not_an_internal_gateway(self) -> None:
         runner = (ROOT / "scripts/test.sh").read_text(encoding="utf-8")

@@ -17,7 +17,7 @@ See also [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
 
 ~~~mermaid
 flowchart TB
-    subgraph Host["Windows 11 / WSL2 host"]
+    subgraph Host["Linux or Windows 11 / WSL2 host"]
         Browser["Browser"]
         Apps["Application projects"]
         UIGateway["UI Gateway :8890"]
@@ -128,9 +128,10 @@ Runtime data must not be committed to Git.
 
 ## Runtime boundary
 
-Docker Compose is the only supported runtime for Windows 11 + WSL2. The client
-contract remains independent of container internals: applications call
-LiteLLM on `:4000/v1`, and llama.cpp remains the inference core.
+Docker Compose is the only supported runtime on native Linux and on
+Windows 11 + WSL2. The client contract remains independent of container
+internals: applications call LiteLLM on `:4000/v1`, and llama.cpp remains
+the inference core.
 
 ## Reproducibility controls
 

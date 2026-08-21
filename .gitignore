@@ -82,6 +82,7 @@ artifacts/
 *.db
 *.sqlite
 *.sqlite3
+!infra/postgres/*.sql
 
 # Python
 __pycache__/
