@@ -18,7 +18,7 @@ cp -a "$ROOT/install/linux/install-ai-station.sh" "$STAGE/install/linux/"
 chmod +x "$STAGE/install/linux/install-ai-station.sh"
 cp -a "$ROOT/AI Station/"*.cmd "$STAGE/AI Station/" 2>/dev/null || true
 cp -a "$ROOT/AI Station/README.md" "$STAGE/AI Station/" 2>/dev/null || true
-cp -a "$ROOT/docs/MULTI_MACHINE_DEPLOYMENT.md" "$STAGE/MULTI_MACHINE_DEPLOYMENT.md"
+cp -a "$ROOT/docs/INSTALLATION.md" "$STAGE/INSTALLATION.md"
 
 (
   cd "$OUT_DIR"

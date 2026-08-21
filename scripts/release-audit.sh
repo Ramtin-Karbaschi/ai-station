@@ -57,7 +57,7 @@ check_ignored() {
     local PATH_TO_CHECK="$1"
     local DESCRIPTION="$2"
 
-    if git check-ignore -q "$PATH_TO_CHECK"; then
+    if git -c safe.directory="$ROOT" check-ignore -q "$PATH_TO_CHECK"; then
         pass "$DESCRIPTION"
     else
         fail "$DESCRIPTION"
@@ -80,7 +80,7 @@ while IFS= read -r -d '' FILE; do
     [[ -f "$FILE" ]] || continue
     RELEASE_FILES+=("$FILE")
 done < <(
-    git ls-files \
+    git -c safe.directory="$ROOT" ls-files \
         --cached \
         --others \
         --exclude-standard \
@@ -247,6 +247,20 @@ else
 fi
 
 # END MODEL MANIFEST VALIDATION
+
+# BEGIN OFFLINE TEST VALIDATION
+
+if [[ -x scripts/test.sh ]]; then
+    if scripts/test.sh; then
+        pass "Offline unit and contract tests passed"
+    else
+        fail "Offline unit and contract tests failed"
+    fi
+else
+    fail "Test runner is missing"
+fi
+
+# END OFFLINE TEST VALIDATION
 
 # BEGIN DOCUMENTATION QUALITY VALIDATION
 

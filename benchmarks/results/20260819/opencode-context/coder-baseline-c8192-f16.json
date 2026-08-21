@@ -1,0 +1,34 @@
+{
+  "engine": "llama.cpp (server-cuda)",
+  "provider_id": "llm-coder",
+  "model": "Qwen3-Coder-30B-A3B-Instruct-Q4 (coder/qwen3-coder-30b-a3b-instruct-q4.gguf)",
+  "image_digest": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+  "image_version": "b9859 (revision 4fc4ec5541b243957ae5099edb67372f8f3b550e), built 2026-07-02",
+  "config": {
+    "context": 8192,
+    "cache_type_k": "f16 (default, unset)",
+    "cache_type_v": "f16 (default, unset)",
+    "ngl": 999,
+    "parallel": 1,
+    "flash_attn": "auto (default, unset)",
+    "launch_method": "normal managed profile: ./scripts/ai models use coder (live compose service llm-coder, unmodified .env.models)"
+  },
+  "generated_at": "2026-08-19T08:32:00+03:30",
+  "status": "healthy",
+  "ok": true,
+  "observed": {
+    "nvidia_smi_query": "memory.total,memory.used,memory.free --format=csv,noheader",
+    "memory_total_mib": 24463,
+    "memory_used_mib": 20677,
+    "memory_free_mib": 3461,
+    "healthcheck": "curl -fsS http://127.0.0.1:8083/v1/models -> 200 OK, n_ctx=8192, n_ctx_train=262144, n_params=30532122624"
+  },
+  "smoke_test": {
+    "method": "./scripts/ai opencode test --model coder (full path: OpenCode Windows config -> LiteLLM :4000 -> llm-coder :8083)",
+    "result": "OK: short coder chat content -> 'pong'; OK: tool-call probe -> get_time"
+  },
+  "notes": [
+    "This is the live default configuration already deployed (no override needed): -c 8192, f16 KV cache, no cache-type flags set.",
+    "Baseline VRAM free (3461 MiB) is higher than the ADR-004 507 MiB general-profile figure because the coder GGUF (qwen3-coder-30b-a3b-instruct-q4.gguf, ~17.6 GiB file) is smaller than the general/ornith weight files (~21-22 GiB)."
+  ]
+}

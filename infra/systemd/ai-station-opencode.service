@@ -1,0 +1,21 @@
+[Unit]
+Description=AI Station OpenCode WSL server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aidev
+Group=aidev
+WorkingDirectory=/opt/ai-station
+Environment=HOME=/home/aidev
+Environment=OPENCODE_EXPERIMENTAL_LSP_TOOL=true
+ExecStart=/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096 --log-level WARN
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

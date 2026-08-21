@@ -9,7 +9,8 @@
   "models": [
     {
       "id": "general-qwen3_6-35b-a3b",
-      "display_name": "General | Qwen3.6 35B A3B",
+      "display_name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "public_model_id": "Qwen3.6-35B-A3B-UD-Q4_K_M",
       "alias": "local-general",
       "role": "general",
       "family": "qwen",
@@ -29,7 +30,8 @@
     },
     {
       "id": "coder-qwen3-coder-30b-a3b",
-      "display_name": "Coder | Qwen3 Coder 30B A3B",
+      "display_name": "Qwen3-Coder-30B-A3B-Instruct-Q4",
+      "public_model_id": "Qwen3-Coder-30B-A3B-Instruct-Q4",
       "alias": "local-coder",
       "role": "coder",
       "family": "qwen",
@@ -49,7 +51,8 @@
     },
     {
       "id": "reasoning-deepseek-r1-32b",
-      "display_name": "Reasoning | DeepSeek-R1 Distill 32B",
+      "display_name": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
+      "public_model_id": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
       "alias": "local-reasoning",
       "role": "reasoning",
       "family": "deepseek",
@@ -69,7 +72,8 @@
     },
     {
       "id": "vision-qwen3-vl-32b",
-      "display_name": "Vision | Qwen3-VL 32B",
+      "display_name": "Qwen3-VL-32B-Instruct-Q4_K_M",
+      "public_model_id": "Qwen3-VL-32B-Instruct-Q4_K_M",
       "alias": "local-vision",
       "role": "vision",
       "family": "qwen",
@@ -87,8 +91,30 @@
       "manifest_id": "vision-qwen3-vl-32b-q4"
     },
     {
+      "id": "ornith-1_0-35b",
+      "display_name": "Ornith-1.0-35B-Q4_K_M",
+      "public_model_id": "Ornith-1.0-35B-Q4_K_M",
+      "alias": "local-ornith",
+      "role": "ornith",
+      "family": "qwen",
+      "kind": "chat",
+      "profile": "ornith",
+      "service": "llm-ornith",
+      "port": 8086,
+      "backend_model": "ai-station-ornith",
+      "base_url": "http://127.0.0.1:8086/v1",
+      "enabled": true,
+      "heavy": true,
+      "supports_vision": false,
+      "supports_tools": true,
+      "default_system_prefix": "/no_think",
+      "manifest_id": "ornith-1.0-35b-q4",
+      "supports_json_schema": true
+    },
+    {
       "id": "embedding-qwen3-0_6b",
-      "display_name": "Embedding | Qwen3 Embedding 0.6B",
+      "display_name": "Qwen3-Embedding-0.6B-Q8_0",
+      "public_model_id": "Qwen3-Embedding-0.6B-Q8_0",
       "alias": "local-embedding",
       "role": "embedding",
       "family": "qwen",
@@ -104,7 +130,8 @@
     },
     {
       "id": "reranker-qwen3-0_6b",
-      "display_name": "Reranker | Qwen3 Reranker 0.6B",
+      "display_name": "Qwen3-Reranker-0.6B-Q8_0",
+      "public_model_id": "Qwen3-Reranker-0.6B-Q8_0",
       "alias": "local-reranker",
       "role": "reranker",
       "family": "qwen",

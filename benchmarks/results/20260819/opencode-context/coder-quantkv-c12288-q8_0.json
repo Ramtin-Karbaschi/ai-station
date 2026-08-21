@@ -1,0 +1,42 @@
+{
+  "engine": "llama.cpp (server-cuda)",
+  "provider_id": "llm-coder (scratch benchmark container)",
+  "model": "Qwen3-Coder-30B-A3B-Instruct-Q4 (coder/qwen3-coder-30b-a3b-instruct-q4.gguf)",
+  "image_digest": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+  "image_version": "b9859 (revision 4fc4ec5541b243957ae5099edb67372f8f3b550e), built 2026-07-02",
+  "config": {
+    "context": 12288,
+    "cache_type_k": "q8_0",
+    "cache_type_v": "q8_0",
+    "ngl": 999,
+    "parallel": 1,
+    "flash_attn": "on (explicit)",
+    "launch_method": "scratch `docker run --rm`, pinned image digest, port 8093; normal llm-coder compose service stopped first; no live .env.models / compose.models.yml edits"
+  },
+  "generated_at": "2026-08-19T08:41:00+03:30",
+  "status": "healthy",
+  "ok": true,
+  "observed": {
+    "memory_total_mib": 24463,
+    "memory_used_mib": 20525,
+    "memory_free_mib": 3613,
+    "healthcheck": "curl -fsS http://127.0.0.1:8093/v1/models -> 200 OK, n_ctx=12288 confirmed in response meta",
+    "crash_or_oom": false
+  },
+  "comparison": {
+    "vs_coder_baseline_c8192_f16_free_mib": 3461,
+    "vs_coder_quantkv_c8192_q8_0_free_mib": 3815,
+    "delta_free_mib_vs_8192_quantkv": -202,
+    "note": "Raising context 8192->12288 (1.5x) with the same q8_0/q8_0 KV cache cost ~202 MiB of the extra headroom that quantization had freed, but still left 3613 MiB free -- well above the 1 GiB ADR-004 safety margin."
+  },
+  "smoke_test": {
+    "method": "direct curl to 127.0.0.1:8093/v1/chat/completions (see coder-quantkv-c8192-q8_0.json for rationale on not routing through LiteLLM for scratch configs)",
+    "short_chat_result": "content: 'pong'",
+    "tool_call_result": "tool_calls[0].function.name='get_time', arguments='{\"timezone\":\"UTC\"}' -- correct",
+    "multi_turn_result": "3rd-turn follow-up after a synthetic tool result ('2026-08-19T09:15:00Z') and 'now just say done' produced content: 'Done.' -- coherent, no truncation, no repeated/garbled output"
+  },
+  "notes": [
+    "No OOM, no container crash, no healthcheck failure at 12288 with quantized KV.",
+    "This single data point is not proof of long-run stability under real multi-hour OpenCode sessions; it is a short smoke test only."
+  ]
+}

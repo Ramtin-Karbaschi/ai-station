@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import codecs
 import json
 import re
 import time
@@ -17,8 +18,20 @@ PERSIAN_RE = re.compile(r"[\u0600-\u06FF]")
 DIGIT_RUN_RE = re.compile(r"\d+")
 
 
-def extract_tika(endpoint: str, path: Path, timeout: float) -> tuple[str, float]:
+def load_fixture_bytes(path: Path, decode_unicode_escapes: bool) -> bytes:
     data = path.read_bytes()
+    if decode_unicode_escapes:
+        return codecs.decode(data.decode("ascii"), "unicode_escape").encode("utf-8")
+    return data
+
+
+def extract_tika(
+    endpoint: str,
+    path: Path,
+    timeout: float,
+    decode_unicode_escapes: bool = False,
+) -> tuple[str, float]:
+    data = load_fixture_bytes(path, decode_unicode_escapes)
     req = urllib.request.Request(
         endpoint.rstrip("/") + "/tika",
         data=data,
@@ -84,7 +97,12 @@ def main() -> int:
     for fixture in manifest["fixtures"]:
         path = root / fixture["path"]
         try:
-            text, latency_ms = extract_tika(args.tika, path, args.timeout)
+            text, latency_ms = extract_tika(
+                args.tika,
+                path,
+                args.timeout,
+                bool(fixture.get("decode_unicode_escapes")),
+            )
             scored = score_fixture(fixture, text, latency_ms)
         except Exception as exc:  # noqa: BLE001 - record fixture failure
             scored = {

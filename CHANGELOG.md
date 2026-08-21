@@ -4,6 +4,79 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Operator simplification
+
+- documented a three-branch Git workflow (`development`, `stage`, `main`) and
+  stopped treating extra branch names as part of the supported process;
+- folded install, portability, and second-machine clone steps into
+  `docs/INSTALLATION.md`; Linux and Windows+WSL now share one guide;
+- added `ai models add` for curated install and for registering a new
+  Hugging Face GGUF with an immutable revision, size, and SHA-256;
+- extracted model CLI logic into `scripts/lib/ai-models.sh`;
+- regrouped the Windows Manager around Lifecycle, Models, Clients, and
+  Operations with sequential menu numbers and a first-class Add action;
+- removed completed research snapshots and the overlapping path-quarantine
+  script in favor of manifest-driven quarantine.
+
+### Production-readiness and operator safety
+
+- added the canonical `scripts/test.sh` runner, `ai test`, `make test`, and
+  `make check`; CI now validates Python contracts, Compose configuration,
+  manifests, documentation, and Windows PowerShell syntax;
+- added recoverable model catalog/install/verify/quarantine/restore workflows;
+  destructive model removal remains unavailable and active/required models are
+  protected by explicit policy gates;
+- replaced the command-string Windows manager with a typed PowerShell control
+  panel that passes validated arguments directly to WSL;
+- removed the abandoned alternate-runtime research path so Docker Compose is
+  the sole documented and tested production runtime;
+- refactored the canonical documentation map and current-state snapshot, and
+  added three project skills for operations, engineering, and client
+  integration;
+- corrected the OpenCode capability contract: DeepSeek reasoning supports chat
+  but is not advertised as tool-calling; coder, general, and Ornith retain
+  their verified tool capability.
+
+### Graphify code knowledge graph
+
+- **ADR-012 Accepted:** pinned `graphifyy==0.9.47` in an isolated venv
+  as an optional coding-assistant graph (not a pgvector replacement).
+  Day-to-day CLI: `ai graphify install|configure|extract|query|path|explain|uninstall`.
+  Default extract is `--code-only` (tree-sitter, no GPU). `--docs` uses
+  LiteLLM `http://127.0.0.1:4000/v1` only; install now includes the pinned
+  `openai` and `pdf` extras (LiteLLM client + local PDF parsing, not a
+  public cloud SDK). Graphs live under
+  `/srv/ai-station/runtime/graphify/` (gitignored). OpenCode gets a short
+  `/graphify` command plus a one-shot plugin reminder; the upstream
+  700-line skill is not installed so repository guidance stays concise. See
+  `docs/clients/GRAPHIFY.md`.
+
+### OpenCode WSL developer environment
+
+- amended ADR-009 so the verified client runs inside WSL as the dedicated
+  non-root user `aidev`; native Windows Desktop on a WSL UNC worktree is no
+  longer presented as the canonical development path;
+- added a reproducible OpenCode 1.18.19 runtime manifest and checksum-verifying
+  installer under `/usr/local/lib/ai-station/opencode/`;
+- added `ai opencode doctor`, `run`, and a live acceptance harness that
+  requires real tool use, a file edit, and a passing unit test;
+- added `ai opencode parity --live`, a multi-file development acceptance
+  contract, and an explicit matrix separating verified agentic parity from
+  proprietary editor-only product services;
+- pinned Pyright, Bash Language Server, Ruff, shfmt, ShellCheck, and the stable
+  OpenCode VS Code extension; installation now blocks high-severity npm
+  advisories;
+- enabled LSP, formatter, snapshots, project skills, 40 build iterations, and a
+  4096-token coder output budget while denying external-worktree access;
+- replaced custom compaction state machines with supported native
+  `auto`/`prune`/`reserved` configuration and marked ADR-010 superseded;
+- extracted the OpenCode subsystem from the main `scripts/ai` dispatcher into
+  `scripts/lib/ai-opencode.sh`;
+- updated Windows Manager option 29 to launch the WSL-native non-root developer
+  client and option 38 to repair/install/configure it;
+- retained the verified model contract: coder, general, and Ornith support
+  tools; DeepSeek reasoning is chat-only; all use LiteLLM `:4000/v1`.
+
 ### Install pack on GitHub
 
 - added `install/windows/Install-AIStation.ps1` and

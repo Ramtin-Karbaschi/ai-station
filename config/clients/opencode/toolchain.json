@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "apt_packages": [
+    "npm",
+    "shellcheck",
+    "shfmt"
+  ],
+  "npm_packages": {
+    "bash-language-server": "5.4.3",
+    "pyright": "1.1.413"
+  },
+  "npm_overrides": {
+    "minimatch": "9.0.7"
+  },
+  "python_packages": {
+    "ruff": "0.12.9"
+  },
+  "install_root": "/usr/local/lib/ai-station/opencode-toolchain",
+  "vscode_extension": "sst-dev.opencode@0.0.13"
+}

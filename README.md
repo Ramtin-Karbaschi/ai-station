@@ -6,7 +6,7 @@
 
 <br>
 
-[![Documentation](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml/badge.svg)](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml)
+[![Quality gates](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml/badge.svg)](https://github.com/Ramtin-Karbaschi/ai-station/actions/workflows/docs-quality.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0ea5e9.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-WSL2%20%7C%20Linux-0f766e.svg)
 ![Runtime](https://img.shields.io/badge/runtime-Docker%20Compose-2496ed.svg)
@@ -23,7 +23,6 @@ cloud API.
 [Download install pack](#download--install) ·
 [See the architecture](#architecture) ·
 [Read the docs](#documentation) ·
-[فارسی](docs/README_FA.md)
 
 </div>
 
@@ -32,7 +31,7 @@ cloud API.
 ## Overview
 
 AI Station is a production-oriented local AI foundation for
-**Windows 11 + WSL2 + NVIDIA GPUs**.
+**Linux and Windows 11 + WSL2** with **NVIDIA GPUs**.
 
 It combines a browser UI, OpenAI-compatible local inference, document
 extraction, Persian OCR, local web search, embeddings, vector storage, and
@@ -68,7 +67,7 @@ Priorities:
 
 | Area | Status |
 |---|---|
-| Primary platform | Windows 11 + WSL2 |
+| Primary platform | Linux, or Windows 11 + WSL2 |
 | GPU path | NVIDIA CUDA through Docker |
 | Main UI | Open WebUI |
 | Application API | LiteLLM `:4000` |
@@ -94,7 +93,7 @@ RELEASE AUDIT PASSED
 | Local chat interface | Open WebUI |
 | Multi-project GenAI API | LiteLLM gateway `:4000` + per-project virtual keys |
 | OpenAI-compatible inference | LiteLLM + host gateway + llama.cpp |
-| Model switching | `ai models use general\|coder\|reasoning\|vision` |
+| Model switching | User-selected canonical model names auto-switch the active heavy runtime; operators can still use `ai models use ...` manually |
 | GPU inference | NVIDIA CUDA container runtime |
 | Retrieval-augmented generation | Open WebUI RAG + local embeddings |
 | Vector persistence | PostgreSQL + pgvector |
@@ -115,7 +114,7 @@ flowchart LR
     W --> UI[UI Gateway<br/>127.0.0.1:8890]
     UI --> G[Host Gateway<br/>127.0.0.1:8888]
     G --> L[llama.cpp profile<br/>127.0.0.1:8082+]
-    API --> L
+    API --> G
 
     W --> E[Embedding<br/>127.0.0.1:8090]
     W --> T[Tika + OCR<br/>127.0.0.1:9998]
@@ -176,30 +175,34 @@ curl -fsSL https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/in
 under `install/windows` or `install/linux`.
 
 Pack contents and notes: [`install/README.md`](install/README.md) ·
-multi-machine detail: [`docs/MULTI_MACHINE_DEPLOYMENT.md`](docs/MULTI_MACHINE_DEPLOYMENT.md)
+full host and upgrade detail: [`docs/INSTALLATION.md`](docs/INSTALLATION.md)
 
 ## Quick start
 
-### 1. Clone
+After Docker and the NVIDIA driver work, install the station, then choose a
+model that fits this GPU. That is the only hardware decision.
+
+### Linux
 
 ~~~bash
 git clone https://github.com/Ramtin-Karbaschi/ai-station.git
 cd ai-station
-~~~
-
-### 2. Validate
-
-~~~bash
 ./scripts/install.sh --validate-only
-~~~
-
-### 3. Install
-
-~~~bash
 sudo ./scripts/install.sh
+ai models catalog
+make models-core
 ~~~
 
-### 4. Open your private console
+### Windows 11 + WSL2
+
+~~~powershell
+irm https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/windows/Install-AIStation.ps1 | iex
+~~~
+
+Use `AI Station/AI Station Manager.cmd` for start/stop, catalog, add, and
+remove. Model bytes stay in WSL under `/srv/ai-station`.
+
+### Open the console
 
 ~~~text
 http://127.0.0.1:3000
@@ -209,13 +212,14 @@ The first Open WebUI user becomes the local administrator.
 
 For application projects, create a key and point any OpenAI-compatible
 client at `http://127.0.0.1:4000/v1` — see [Platform](docs/PLATFORM.md).
+Hardware table: [Models](docs/MODELS.md).
 
 ## Model profiles
 
 | Profile | Roles | Purpose |
 |---|---|---|
 | `core` | General + embedding | Default operation |
-| `all` | Core + coder + reasoning + vision + reranker | Full workstation pack |
+| `all` | Core + coder + ornith + reasoning + vision + reranker | Full workstation pack |
 
 ~~~bash
 ./scripts/provision-models.sh --profile core
@@ -231,11 +235,13 @@ Binaries never live in Git. Checksums live in
 make help
 make start
 make status
+make test
+make check
 make verify
 make stop
 make audit
 
-ai models use general
+ai models use general  # optional operator override
 ai provider start llama-cpp-coder --dry-run
 ai projects create my-app
 ~~~
@@ -280,8 +286,8 @@ security vulnerabilities through a public issue.
 
 | Environment | Support |
 |---|---|
-| Windows 11 + WSL2 + NVIDIA | Validated primary |
-| Native Ubuntu + NVIDIA | Best effort |
+| Windows 11 + WSL2 + NVIDIA | Supported |
+| Native Ubuntu + NVIDIA | Supported |
 | Native Windows without WSL2 | Not supported |
 | CPU-only default profile | Not supported |
 | AMD GPU | Not validated |
@@ -292,16 +298,16 @@ security vulnerabilities through a public issue.
 
 | Document | Purpose |
 |---|---|
-| [Installation](docs/INSTALLATION.md) | Install and upgrade |
-| [Multi-machine deploy](docs/MULTI_MACHINE_DEPLOYMENT.md) | Clone this workstation onto another PC |
+| [Documentation map](docs/README.md) | Canonical ownership and navigation |
+| [Installation](docs/INSTALLATION.md) | Linux, Windows+WSL, upgrade, clone to another PC |
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
+| [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |
 | [Operations](docs/OPERATIONS.md) | Start, stop, verify |
-| [Models](docs/MODELS.md) | Profiles and checksums |
+| [Models](docs/MODELS.md) | Add, remove, profiles, hardware hints |
 | [Current state](docs/ops/AI_STATION_CURRENT_STATE.md) | Verified baseline |
 | [ADRs](docs/adr/) | Architecture decisions |
-| [راهنمای فارسی](docs/README_FA.md) | معرفی و شروع سریع |
 
 ## Scope
 

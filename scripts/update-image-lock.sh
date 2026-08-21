@@ -657,11 +657,11 @@ if ! grep -Eq \
 fi
 
 docker compose config --quiet
-docker compose config --no-path-resolution --format json > /tmp/ai-station-locked-compose.json
+docker compose config --no-path-resolution --format json > "$TEMP_DIR/final-locked-compose.json"
 
 python3 - \
     "$ROOT" \
-    /tmp/ai-station-locked-compose.json \
+    "$TEMP_DIR/final-locked-compose.json" \
     "$MANIFEST_FILE" <<'PY'
 from __future__ import annotations
 

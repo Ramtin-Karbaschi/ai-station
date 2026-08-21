@@ -13,6 +13,15 @@ VALIDATE_ONLY=false
 SKIP_PREFLIGHT=false
 SKIP_MODEL_CHECK=false
 FORCE=false
+INSTALL_COMPOSE_JSON=""
+INSTALL_VERIFY_LOG=""
+
+cleanup_install_temp() {
+    [[ -z "$INSTALL_COMPOSE_JSON" ]] || rm -f -- "$INSTALL_COMPOSE_JSON"
+    [[ -z "$INSTALL_VERIFY_LOG" ]] || rm -f -- "$INSTALL_VERIFY_LOG"
+}
+
+trap cleanup_install_temp EXIT
 
 usage() {
     cat <<'EOF'
@@ -208,6 +217,7 @@ mkdir -p \
     "$DATA_ROOT/logs" \
     "$DATA_ROOT/models/general" \
     "$DATA_ROOT/models/coder" \
+    "$DATA_ROOT/models/ornith" \
     "$DATA_ROOT/models/embedding" \
     "$DATA_ROOT/models/reranker" \
     "$DATA_ROOT/models/ocr" \
@@ -374,13 +384,15 @@ if [[ "$SKIP_MODEL_CHECK" != "true" ]]; then
     echo
     echo "Checking model bind mounts..."
 
+    INSTALL_COMPOSE_JSON="$(mktemp)"
+
     docker compose config \
         --no-path-resolution \
         --format json \
-        > /tmp/ai-station-install-compose.json
+        > "$INSTALL_COMPOSE_JSON"
 
     python3 - \
-        /tmp/ai-station-install-compose.json \
+        "$INSTALL_COMPOSE_JSON" \
         "$DATA_ROOT" <<'PY'
 from __future__ import annotations
 
@@ -470,9 +482,11 @@ if [[ "$START_SERVICES" == "true" ]]; then
     echo
     echo "Waiting for service health..."
 
+    INSTALL_VERIFY_LOG="$(mktemp)"
+
     for ATTEMPT in $(seq 1 90); do
-        if ./scripts/verify.sh >/tmp/ai-station-install-verify.log 2>&1; then
-            cat /tmp/ai-station-install-verify.log
+        if ./scripts/verify.sh >"$INSTALL_VERIFY_LOG" 2>&1; then
+            cat "$INSTALL_VERIFY_LOG"
             echo
             echo "AI STATION INSTALLATION PASSED"
             exit 0
@@ -485,7 +499,7 @@ if [[ "$START_SERVICES" == "true" ]]; then
     echo
     echo "ERROR: AI Station did not pass verification."
 
-    cat /tmp/ai-station-install-verify.log || true
+    cat "$INSTALL_VERIFY_LOG" || true
 
     docker compose ps
     exit 1

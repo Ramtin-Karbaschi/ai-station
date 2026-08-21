@@ -28,10 +28,13 @@ check_url http://127.0.0.1:9998/tika "Apache Tika"
 check_url "http://127.0.0.1:8889/search?q=test&format=json" "SearXNG"
 check_url http://127.0.0.1:8090/v1/models "Embedding Server"
 
-# Host gateways must not listen on non-loopback addresses (risk R1).
+# Gateways must stay on loopback. The host gateway may additionally expose its
+# TCP proxy on the exact docker0 bridge address so containers can reach the
+# loopback-bound application without opening a wildcard or LAN listener.
 assert_loopback_listener() {
   local port="$1"
   local label="$2"
+  local allowed_bridge_host="${3:-}"
   local listeners
   listeners="$(ss -lntp 2>/dev/null | awk -v p=":${port}" '$4 ~ p {print $4}' || true)"
   if [[ -z "$listeners" ]]; then
@@ -42,19 +45,22 @@ assert_loopback_listener() {
   local line
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
-    case "$line" in
-      127.0.0.1:*|[::1]:*) ;;
-      *)
-        echo "FAIL: $label listens on non-loopback address: $line"
-        fail=1
-        return
-        ;;
-    esac
+    if [[ "$line" == 127.0.0.1:* || "$line" == "[::1]:"* ]]; then
+      continue
+    fi
+    if [[ -n "$allowed_bridge_host" && "$line" == "$allowed_bridge_host:$port" ]]; then
+      continue
+    fi
+    echo "FAIL: $label listens on an unapproved address: $line"
+    fail=1
+    return
   done <<<"$listeners"
-  echo "OK: $label loopback binding"
+  echo "OK: $label approved binding"
 }
 
-assert_loopback_listener 8888 "Host Gateway"
+docker_bridge_host="$(ip -4 -o addr show docker0 2>/dev/null | awk '{split($4, addr, "/"); print addr[1]; exit}' || true)"
+assert_loopback_listener 4000 "LiteLLM Gateway"
+assert_loopback_listener 8888 "Host Gateway" "$docker_bridge_host"
 assert_loopback_listener 8890 "UI Gateway"
 
 case "$active_profile" in
@@ -62,6 +68,7 @@ case "$active_profile" in
   coder) check_url http://127.0.0.1:8083/v1/models "Coder Model Server" ;;
   reasoning) check_url http://127.0.0.1:8084/v1/models "Reasoning Model Server" ;;
   vision) check_url http://127.0.0.1:8085/v1/models "Vision Model Server" ;;
+  ornith) check_url http://127.0.0.1:8086/v1/models "Ornith Model Server" ;;
   *)
     echo "FAIL: unknown active profile '$active_profile'"
     fail=1

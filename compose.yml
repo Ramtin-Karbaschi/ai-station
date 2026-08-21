@@ -143,6 +143,8 @@ services:
       UI_USERNAME: "${UI_USERNAME:-admin}"
       UI_PASSWORD: "${UI_PASSWORD}"
       PROXY_BASE_URL: "http://127.0.0.1:${LITELLM_PORT:-4000}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./config/gateway/litellm.yaml:/app/config.yaml:ro
     command:
@@ -175,11 +177,11 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       tika:
         condition: service_healthy
       embedder:
-        condition: service_started
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -197,13 +199,14 @@ services:
 
       ENABLE_OPENAI_API: "True"
       ENABLE_OLLAMA_API: "False"
-      OPENAI_API_BASE_URLS: "http://host.docker.internal:8890/v1"
-      OPENAI_API_KEYS: "local-not-used"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["general-qwen3.6", "local-general", "local-coder", "local-reasoning", "local-vision"], "tags": [], "connection_type": "openai"}}'
+      OPENAI_API_BASE_URLS: "http://llm-gateway:4000/v1"
+      OPENAI_API_KEYS: "${LITELLM_MASTER_KEY}"
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.6-35B-A3B-UD-Q4_K_M", "Qwen3-Coder-30B-A3B-Instruct-Q4", "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M", "Qwen3-VL-32B-Instruct-Q4_K_M", "Ornith-1.0-35B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
 
       ENABLE_PERSISTENT_CONFIG: "False"
-      DEFAULT_MODELS: "general-qwen3.6"
-      DEFAULT_PINNED_MODELS: "general-qwen3.6"
+      ENABLE_EVALUATION_ARENA_MODELS: "False"
+      DEFAULT_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
+      DEFAULT_PINNED_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
       DEFAULT_MODEL_METADATA: '{"capabilities": {"vision": true, "file_upload": true, "file_context": true, "web_search": true, "image_generation": false, "code_interpreter": false}}'
       DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 8192, "max_tokens": 1024}'
 

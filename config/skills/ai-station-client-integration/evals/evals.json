@@ -1,0 +1,42 @@
+{
+  "skill_name": "ai-station-client-integration",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Give me a Python OpenAI SDK example for my inventory app to call the AI Station coder model, including how to create a restricted key.",
+      "expected_output": "A least-privilege project key workflow and SDK example using LiteLLM :4000/v1 with an environment key.",
+      "files": [],
+      "expectations": [
+        "Uses http://127.0.0.1:4000/v1",
+        "Creates a per-project allowlisted key",
+        "Loads the key from an environment variable",
+        "Does not use internal ports or a GGUF path"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Set up OpenCode from Windows for all of my local AI Station coding models and prove it can actually edit and test code.",
+      "expected_output": "Uses the WSL-native non-root runtime, doctor and acceptance, keeps one provider, and distinguishes DeepSeek non-tool capability.",
+      "files": [],
+      "expectations": [
+        "Uses ai opencode configure rather than hand-editing the key",
+        "Runs OpenCode inside WSL as the non-root developer user",
+        "Uses doctor and the edit-and-test acceptance harness",
+        "Keeps one ai-station provider and all picker models visible",
+        "Does not claim DeepSeek tool support"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Three internal apps need different AI Station models and limits. Should they share the LiteLLM master key?",
+      "expected_output": "Rejects master-key sharing and recommends isolated project virtual keys, allowlists, limits, and independent revocation.",
+      "files": [],
+      "expectations": [
+        "Rejects sharing the master key",
+        "Uses one virtual key per app",
+        "Uses model allowlists and rate/token limits",
+        "Mentions independent revocation and secret redaction"
+      ]
+    }
+  ]
+}

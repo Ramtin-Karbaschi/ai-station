@@ -10,6 +10,8 @@ SHELL := /usr/bin/env bash
 	restart \
 	status \
 	logs \
+	test \
+	check \
 	verify \
 	models-core \
 	models-all \
@@ -30,6 +32,8 @@ help:
 		'  make restart        Restart AI Station' \
 		'  make status         Show service and endpoint status' \
 		'  make logs           Follow LiteLLM gateway logs' \
+		'  make test           Run offline unit and contract tests' \
+		'  make check          Run all offline quality gates' \
 		'  make verify         Verify the active runtime' \
 		'  make models-core    Provision the Core model profile' \
 		'  make models-all     Provision the complete model profile' \
@@ -51,21 +55,33 @@ build:
 	docker compose build
 
 start:
-	./scripts/start.sh
+	./scripts/ai start
 
 stop:
-	./scripts/stop.sh
+	./scripts/ai stop
 
-restart: stop start
+restart:
+	./scripts/ai restart
 
 status:
-	./scripts/status.sh
+	./scripts/ai status
 
 logs:
 	./scripts/ai logs gateway
 
+test:
+	./scripts/ai test
+
+check:
+	./scripts/test.sh
+	docker compose config --quiet
+	./scripts/verify-model-manifest.sh
+	./scripts/verify-image-lock.sh
+	./scripts/verify-build-lock.sh
+	./scripts/docs-audit.sh
+
 verify:
-	./scripts/verify.sh
+	./scripts/ai verify
 
 models-core:
 	./scripts/provision-models.sh --profile core

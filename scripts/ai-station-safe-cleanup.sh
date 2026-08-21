@@ -58,7 +58,7 @@ find /opt/ai-station \
 
 echo
 echo "=== Cleaning interrupted Hugging Face partial downloads ==="
-# فقط partial/incomplete؛ مدل‌های کامل را حذف نمی‌کند.
+# Remove partial or incomplete downloads only; preserve complete model files.
 for d in \
   /root/.cache/huggingface \
   /srv/ai-station \

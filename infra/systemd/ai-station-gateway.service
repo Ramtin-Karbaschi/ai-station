@@ -10,8 +10,12 @@ Environment=PYTHONPATH=/opt/ai-station
 Environment=AI_STATION_PROJECT_DIR=/opt/ai-station
 Environment=AI_STATION_MODEL_CATALOG=/opt/ai-station/config/model-catalog.json
 Environment=AI_STATION_PROVIDERS=/opt/ai-station/config/providers.yaml
-# Loopback-only: do not bind 0.0.0.0.
-ExecStart=/opt/ai-station/.venvs/gateway/bin/uvicorn apps.gateway.app.main:app --host 127.0.0.1 --port 8888
+Environment=AI_STATION_GATEWAY_HOST=127.0.0.1
+Environment=AI_STATION_GATEWAY_PORT=8888
+Environment=AI_STATION_GATEWAY_UVICORN=/opt/ai-station/.venvs/gateway/bin/uvicorn
+# Keep the API bound to loopback, but mirror it onto Docker's bridge gateway
+# so containers can reach it via host.docker.internal without exposing 0.0.0.0.
+ExecStart=/usr/bin/python3 /opt/ai-station/apps/gateway/host_gateway_runner.py
 Restart=unless-stopped
 RestartSec=3
 

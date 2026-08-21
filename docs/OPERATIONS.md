@@ -13,13 +13,19 @@ The preferred control plane is the `ai` CLI:
 ~~~bash
 ai status
 ai start --profile general
+ai restart
 ai models use coder
-ai models active
-ai projects create my-app --models local-general,local-embedding
+ai models catalog
+ai models add coder-qwen3-30b-a3b-q4
+ai projects create my-app --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0
 ai projects list
+ai opencode configure
+ai opencode test
 ai verify
+ai verify --stability 45
 ~~~
 
+Windows Desktop and Manager call this same `scripts/ai` entrypoint.
 Application projects must call:
 
 ~~~text
@@ -33,6 +39,10 @@ network:
 http://llm-gateway:4000/v1
 ~~~
 
+Projects should request canonical public model names at that endpoint. Heavy
+chat and vision names are accepted by LiteLLM, then routed through the host
+gateway, which auto-switches the matching heavy runtime when needed.
+
 See [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
 See [SCRIPTS.md](SCRIPTS.md) for the canonical scripts map after cleanup.
 
@@ -45,28 +55,22 @@ make help
 ## Start
 
 ~~~bash
-make start
+ai start
+# or: ai start --profile general
 ~~~
 
-or:
+`make start` and `./scripts/start.sh` are thin wrappers around the same CLI.
 
-~~~bash
-./scripts/start.sh
-~~~
-
-The start flow waits for the main local endpoints before reporting readiness.
+The start flow restores the last heavy profile when `--profile` is omitted,
+then waits for the main local endpoints before reporting readiness.
 
 ## Status
 
 ~~~bash
-make status
+ai status
 ~~~
 
-or:
-
-~~~bash
-./scripts/status.sh
-~~~
+`make status` wraps the same command.
 
 The status command displays:
 
@@ -109,20 +113,19 @@ journalctl -u ai-station-ui-gateway -n 200 --no-pager
 ## Stop
 
 ~~~bash
-make stop
+ai stop
 ~~~
 
-or:
-
-~~~bash
-./scripts/stop.sh
-~~~
+`make stop` / `./scripts/stop.sh` wrap the same command.
 
 ## Restart
 
 ~~~bash
-make restart
+ai restart
+# preserves last heavy profile (or pass --profile ...)
 ~~~
+
+`make restart` wraps the same command.
 
 ## Validate Compose
 

@@ -51,6 +51,8 @@ fi
 # Update via psycopg in a one-shot python on the host using local TCP to published postgres.
 # Prefer in-container psql with a temp SQL file to avoid shell $ expansion on bcrypt hash.
 TMP_SQL="$(mktemp)"
+SIGNIN_RESULT="$(mktemp)"
+trap 'rm -f -- "$TMP_SQL" "$SIGNIN_RESULT"' EXIT
 EMAIL="$EMAIL" HASH="$HASH" TMP_SQL="$TMP_SQL" python3 - <<'PY'
 from pathlib import Path
 import os
@@ -70,8 +72,9 @@ PY
 rm -f "$TMP_SQL"
 
 HTTP_CODE="$(
-  EMAIL="$EMAIL" NEW_PASSWORD="$NEW_PASSWORD" python3 - <<'PY'
+  EMAIL="$EMAIL" NEW_PASSWORD="$NEW_PASSWORD" SIGNIN_RESULT="$SIGNIN_RESULT" python3 - <<'PY'
 import json, os, urllib.error, urllib.request
+result_path = os.environ["SIGNIN_RESULT"]
 payload = json.dumps({
     "email": os.environ["EMAIL"],
     "password": os.environ["NEW_PASSWORD"],
@@ -84,13 +87,13 @@ req = urllib.request.Request(
 )
 try:
     with urllib.request.urlopen(req, timeout=20) as resp:
-        open("/tmp/ai-station-signin.json", "wb").write(resp.read())
+        open(result_path, "wb").write(resp.read())
         print(resp.status)
 except urllib.error.HTTPError as e:
-    open("/tmp/ai-station-signin.json", "wb").write(e.read())
+    open(result_path, "wb").write(e.read())
     print(e.code)
 except Exception as e:
-    open("/tmp/ai-station-signin.json", "w", encoding="utf-8").write(repr(e))
+    open(result_path, "w", encoding="utf-8").write(repr(e))
     print("000")
 PY
 )"
@@ -98,7 +101,7 @@ PY
 if [[ "$HTTP_CODE" != "200" ]]; then
   echo "ERROR: password updated in DB but sign-in probe failed (HTTP ${HTTP_CODE})."
   echo "Response:"
-  cat /tmp/ai-station-signin.json 2>/dev/null || true
+  cat "$SIGNIN_RESULT" 2>/dev/null || true
   exit 1
 fi
 

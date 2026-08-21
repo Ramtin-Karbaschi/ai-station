@@ -7,7 +7,7 @@ AI_STATION_DATA="${AI_STATION_DATA:-/srv/ai-station}"
 AI_STATE_DIR="${AI_STATE_DIR:-$AI_STATION_DATA/runtime}"
 AI_ACTIVE_PROFILE_FILE="${AI_ACTIVE_PROFILE_FILE:-$AI_STATE_DIR/active-heavy-profile}"
 
-HEAVY_PROFILES=(general coder reasoning vision)
+HEAVY_PROFILES=(general coder reasoning vision ornith)
 OPTIONAL_PROFILES=(reranker)
 
 ai_root() {
@@ -59,6 +59,55 @@ ai_wait_url() {
   return 1
 }
 
+ai_compose_container_id() {
+  local service="$1"
+  ai_compose ps -q "$service" 2>/dev/null | tr -d '[:space:]'
+}
+
+ai_wait_compose_service() {
+  local service="$1"
+  local desired="${2:-running}"
+  local attempts="${3:-180}"
+  local i cid state health
+
+  for ((i = 1; i <= attempts; i++)); do
+    cid="$(ai_compose_container_id "$service")"
+    if [[ -n "$cid" ]]; then
+      state="$(
+        docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null || true
+      )"
+      health="$(
+        docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$cid" 2>/dev/null || true
+      )"
+      case "$desired" in
+        running)
+          if [[ "$state" == "running" ]]; then
+            echo "OK: compose service running ($service)"
+            return 0
+          fi
+          ;;
+        healthy)
+          if [[ "$state" == "running" && "$health" == "healthy" ]]; then
+            echo "OK: compose service healthy ($service)"
+            return 0
+          fi
+          ;;
+        *)
+          echo "ERROR: unknown desired compose state '$desired'" >&2
+          return 1
+          ;;
+      esac
+    fi
+    sleep 2
+  done
+
+  echo "ERROR: compose service not ${desired}: ${service}" >&2
+  if [[ -n "$cid" ]]; then
+    docker inspect -f 'state={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' "$cid" 2>/dev/null >&2 || true
+  fi
+  return 1
+}
+
 ai_ensure_network() {
   if ! docker network inspect ai-platform >/dev/null 2>&1; then
     docker network create ai-platform >/dev/null
@@ -66,8 +115,69 @@ ai_ensure_network() {
   fi
 }
 
+ai_ensure_docker() {
+  systemctl start docker >/dev/null 2>&1 || true
+  if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker daemon is not reachable from WSL." >&2
+    echo "Start Docker Desktop on Windows, then retry." >&2
+    return 1
+  fi
+}
+
+ai_last_or_default_profile() {
+  local profile
+  profile="$(ai_active_heavy_profile 2>/dev/null || true)"
+  profile="$(tr -d '[:space:]' <<<"$profile")"
+  case "$profile" in
+    general|coder|reasoning|vision|ornith) printf '%s\n' "$profile" ;;
+    *) printf '%s\n' "general" ;;
+  esac
+}
+
 ai_ensure_state_dir() {
   mkdir -p "$AI_STATE_DIR"
+}
+
+# Serialize start/stop/restart so concurrent Manager/Desktop actions cannot
+# tear down postgres/redis while another start is still bringing the stack up.
+AI_LIFECYCLE_LOCK_FILE="${AI_LIFECYCLE_LOCK_FILE:-$AI_STATE_DIR/lifecycle.lock}"
+
+ai_lifecycle_lock() {
+  local action="${1:-lifecycle}"
+  ai_ensure_state_dir
+  exec {AI_LIFECYCLE_LOCK_FD}>"$AI_LIFECYCLE_LOCK_FILE"
+  if ! flock -n "$AI_LIFECYCLE_LOCK_FD"; then
+    local holder
+    holder="$(head -n 1 "$AI_LIFECYCLE_LOCK_FILE" 2>/dev/null || true)"
+    echo "ERROR: another AI Station ${action} is already in progress." >&2
+    if [[ -n "$holder" ]]; then
+      echo "  lock holder: $holder" >&2
+    fi
+    echo "Close other Manager/Desktop start-stop windows and retry." >&2
+    exit 4
+  fi
+  printf '%s action=%s pid=%s ppid=%s parent=%s\n' \
+    "$(date -Is)" \
+    "$action" \
+    "$$" \
+    "$PPID" \
+    "$(tr '\0' ' ' </proc/${PPID}/cmdline 2>/dev/null | sed 's/ *$//')" \
+    >"$AI_LIFECYCLE_LOCK_FILE" || true
+}
+
+ai_ensure_host_gateway() {
+  local unit="$1"
+  local url="$2"
+  local label="$3"
+
+  if systemctl is-active --quiet "$unit" \
+    && curl -fsS --max-time 3 "$url" >/dev/null 2>&1; then
+    echo "OK: $label already healthy"
+    return 0
+  fi
+
+  systemctl restart "$unit" >/dev/null 2>&1 || true
+  ai_wait_url "$url" "$label" 60
 }
 
 ai_active_heavy_profile() {
@@ -106,6 +216,7 @@ ai_profile_service() {
     coder) echo "llm-coder" ;;
     reasoning) echo "llm-reasoning" ;;
     vision) echo "llm-vision" ;;
+    ornith) echo "llm-ornith" ;;
     reranker) echo "reranker" ;;
     *) return 1 ;;
   esac
@@ -117,6 +228,7 @@ ai_profile_port() {
     coder) echo "8083" ;;
     reasoning) echo "8084" ;;
     vision) echo "8085" ;;
+    ornith) echo "8086" ;;
     reranker) echo "8091" ;;
     *) return 1 ;;
   esac
@@ -128,6 +240,7 @@ ai_profile_alias() {
     coder) echo "local-coder" ;;
     reasoning) echo "local-reasoning" ;;
     vision) echo "local-vision" ;;
+    ornith) echo "local-ornith" ;;
     reranker) echo "local-reranker" ;;
     *) return 1 ;;
   esac
@@ -143,6 +256,25 @@ ai_is_heavy_profile() {
 
 ai_vram_free_mib() {
   nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ' || echo "0"
+}
+
+# Diagnostic-only cross-check: warns (does not change any decision) when the
+# active-heavy marker says a heavy profile is loaded but the probed free VRAM
+# is implausibly close to the full GPU total. See docs/TROUBLESHOOTING.md,
+# "nvidia-smi VRAM free looks wrong after heavy container churn".
+ai_vram_probe_warning() {
+  local active="$1"
+  local free_vram_mib="$2"
+  [[ -n "$active" ]] || return 0
+  PYTHONPATH="$AI_STATION_ROOT" python3 - "$active" "$free_vram_mib" <<'PY' 2>/dev/null || true
+import sys
+from apps.gateway.app.admission import load_hardware, vram_probe_looks_stale
+active = sys.argv[1]
+free_vram_mib = int(sys.argv[2]) if sys.argv[2].isdigit() else 0
+warning = vram_probe_looks_stale(free_vram_mib, [active], load_hardware())
+if warning:
+    print(warning)
+PY
 }
 
 ai_yaml_get_projects() {

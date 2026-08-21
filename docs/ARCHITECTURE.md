@@ -47,7 +47,7 @@ flowchart TB
     UIGateway --> Gateway
     Gateway --> LLM
     Apps --> LiteLLM
-    LiteLLM --> LLM
+    LiteLLM --> Gateway
     LiteLLM --> Embedder
 
     WebUI --> Embedder
@@ -70,16 +70,20 @@ flowchart TB
 
 1. A project sends an OpenAI-compatible request to LiteLLM on `:4000`.
 2. LiteLLM authenticates the project virtual key and enforces model allowlists.
-3. The request is routed to the active llama.cpp profile (`local-general`,
-   `local-coder`, `local-reasoning`, or `local-vision`).
-4. Only one heavy profile is loaded on the GPU at a time.
+3. The project requests a canonical public model name from LiteLLM, such as
+   `Qwen3.6-35B-A3B-UD-Q4_K_M` or `Qwen3-Coder-30B-A3B-Instruct-Q4`.
+4. LiteLLM forwards heavy chat and vision requests to the host gateway, which
+   auto-switches the matching heavy runtime when needed.
+5. Only one heavy profile is loaded on the GPU at a time.
 
 ### Human chat (Open WebUI)
 
 1. The user sends a request through Open WebUI.
 2. Open WebUI calls the UI Gateway for OCR-aware attachment handling.
 3. The host gateway exposes the OpenAI-compatible endpoint used by the UI path.
-4. The gateway sends the request to the active llama.cpp server.
+4. The gateway selects the requested canonical public model name and routes it
+   to the matching llama.cpp runtime, auto-switching heavy profiles when
+   needed.
 
 ### Retrieval-augmented generation
 
@@ -105,7 +109,7 @@ flowchart TB
 | Applications to LiteLLM | Localhost `:4000` or Docker network `ai-platform` |
 | Open WebUI to UI gateway | Docker host gateway |
 | Container-to-container | Compose network + external `ai-platform` |
-| Host service exposure | `127.0.0.1` only |
+| Host service exposure | Application listeners use `127.0.0.1`; the host gateway may mirror onto the exact private `docker0` address for container access, never a wildcard or LAN bind |
 | Model storage | Read-only bind mount where possible |
 | Secrets | Local `.env`, `secrets/`, and `projects/*.env` |
 | Internet | Required only for provisioning and optional web search |
@@ -121,6 +125,12 @@ Persistent information is divided into:
 - `/opt/ai-station` for version-controlled application files.
 
 Runtime data must not be committed to Git.
+
+## Runtime boundary
+
+Docker Compose is the only supported runtime for Windows 11 + WSL2. The client
+contract remains independent of container internals: applications call
+LiteLLM on `:4000/v1`, and llama.cpp remains the inference core.
 
 ## Reproducibility controls
 

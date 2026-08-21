@@ -1,5 +1,6 @@
 # AI Station Model Registry — canonical runtime aliases and profiles.
-# Application code must use aliases (local-*), never raw filenames.
+# Internal runtime wiring uses aliases (local-*); user-facing names live in
+# config/model-catalog.json and are mirrored here for operational clarity.
 
 version: 1
 runtime_policy:
@@ -9,6 +10,7 @@ runtime_policy:
     - coder
     - reasoning
     - vision
+    - ornith
   always_on:
     - embedder
     - llm-gateway
@@ -19,6 +21,7 @@ models:
   local-general:
     alias: local-general
     catalog_id: general-qwen3_6-35b-a3b
+    public_name: Qwen3.6-35B-A3B-UD-Q4_K_M
     role: general
     kind: chat
     heavy: true
@@ -35,6 +38,7 @@ models:
   local-coder:
     alias: local-coder
     catalog_id: coder-qwen3-coder-30b-a3b
+    public_name: Qwen3-Coder-30B-A3B-Instruct-Q4
     role: coder
     kind: chat
     heavy: true
@@ -51,6 +55,7 @@ models:
   local-reasoning:
     alias: local-reasoning
     catalog_id: reasoning-deepseek-r1-32b
+    public_name: DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
     role: reasoning
     kind: chat
     heavy: true
@@ -68,6 +73,7 @@ models:
   local-vision:
     alias: local-vision
     catalog_id: vision-qwen3-vl-32b
+    public_name: Qwen3-VL-32B-Instruct-Q4_K_M
     role: vision
     kind: vision
     heavy: true
@@ -82,9 +88,28 @@ models:
     status: production
     manifest_id: vision-qwen3-vl-32b-q4
 
+  local-ornith:
+    alias: local-ornith
+    catalog_id: ornith-1_0-35b
+    public_name: Ornith-1.0-35B-Q4_K_M
+    role: ornith
+    kind: chat
+    heavy: true
+    profile: ornith
+    service: llm-ornith
+    port: 8086
+    backend_model: ai-station-ornith
+    runtime: llama-cpp
+    file: ornith/ornith-1.0-35b-q4_k_m.gguf
+    context_size: 8192
+    status: optional
+    manifest_id: ornith-1.0-35b-q4
+    note: Optional heavy profile; does not replace the coder profile. Switch with ai models use ornith.
+
   local-embedding:
     alias: local-embedding
     catalog_id: embedding-qwen3-0_6b
+    public_name: Qwen3-Embedding-0.6B-Q8_0
     role: embedding
     kind: embedding
     heavy: false
@@ -101,6 +126,7 @@ models:
   local-reranker:
     alias: local-reranker
     catalog_id: reranker-qwen3-0_6b
+    public_name: Qwen3-Reranker-0.6B-Q8_0
     role: reranker
     kind: reranker
     heavy: false

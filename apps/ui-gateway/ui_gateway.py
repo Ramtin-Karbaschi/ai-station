@@ -4,10 +4,14 @@ import json
 import mimetypes
 import os
 import re
+import signal
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from functools import lru_cache
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "127.0.0.1")
@@ -15,23 +19,10 @@ PORT = int(os.getenv("AI_STATION_UI_GATEWAY_PORT", "8890"))
 UPSTREAM = os.getenv("AI_STATION_GATEWAY_UPSTREAM", "http://127.0.0.1:8888/v1").rstrip("/")
 OPENWEBUI_URL = os.getenv("AI_STATION_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
 TIKA_URL = os.getenv("AI_STATION_TIKA_URL", "http://127.0.0.1:9998").rstrip("/")
-
-# Open WebUI model ids -> gateway catalog ids
-MODEL_MAP = {
-    "general-qwen3.6": "general-qwen3_6-35b-a3b",
-    "local-general": "general-qwen3_6-35b-a3b",
-    "local-coder": "coder-qwen3-coder-30b-a3b",
-    "local-reasoning": "reasoning-deepseek-r1-32b",
-    "local-vision": "vision-qwen3-vl-32b",
-}
-
-MODEL_NAMES = {
-    "general-qwen3.6": "General | Qwen3.6 35B A3B",
-    "local-general": "Local General",
-    "local-coder": "Local Coder",
-    "local-reasoning": "Local Reasoning",
-    "local-vision": "Local Vision",
-}
+PROJECT_DIR = Path(os.getenv("AI_STATION_PROJECT_DIR", "/opt/ai-station"))
+CATALOG_PATH = Path(
+    os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
+)
 
 MODEL_CAPABILITIES = {
     "vision": True,
@@ -42,6 +33,41 @@ MODEL_CAPABILITIES = {
     "code_interpreter": False,
     "terminal": False,
 }
+
+
+@lru_cache(maxsize=1)
+def load_catalog():
+    with CATALOG_PATH.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def public_models():
+    return [
+        model
+        for model in load_catalog().get("models", [])
+        if model.get("enabled") is True and model.get("kind") in {"chat", "vision"}
+    ]
+
+
+def public_model_id(model: dict) -> str:
+    return str(model.get("public_model_id") or model["id"])
+
+
+def available_models() -> list[str]:
+    return [public_model_id(model) for model in public_models()]
+
+
+def resolve_model(requested_model: str | None):
+    if not requested_model:
+        return None
+    for model in public_models():
+        if requested_model in {
+            public_model_id(model),
+            str(model.get("id")),
+            str(model.get("alias") or ""),
+        }:
+            return model
+    return None
 
 
 def guess_ext(mime: str) -> str:
@@ -239,7 +265,7 @@ class Handler(BaseHTTPRequestHandler):
                     "service": "ai-station-ui-gateway",
                     "upstream": UPSTREAM,
                     "tika": TIKA_URL,
-                    "models": list(MODEL_MAP.keys()),
+                    "models": available_models(),
                 },
             )
             return
@@ -251,11 +277,11 @@ class Handler(BaseHTTPRequestHandler):
                     "object": "list",
                     "data": [
                         {
-                            "id": model_id,
+                            "id": public_model_id(model),
                             "object": "model",
                             "created": 0,
                             "owned_by": "ai-station",
-                            "name": MODEL_NAMES[model_id],
+                            "name": model.get("display_name"),
                             "info": {
                                 "meta": {
                                     "capabilities": MODEL_CAPABILITIES,
@@ -267,7 +293,7 @@ class Handler(BaseHTTPRequestHandler):
                             },
                             "meta": {"capabilities": MODEL_CAPABILITIES},
                         }
-                        for model_id in MODEL_MAP
+                        for model in public_models()
                     ],
                 },
             )
@@ -290,18 +316,18 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         requested_model = body.get("model")
-        mapped_model = MODEL_MAP.get(requested_model)
+        mapped_model = resolve_model(requested_model)
         if not mapped_model:
             self._send_json(
-                400,
+                404,
                 {
-                    "error": f"Model '{requested_model}' is not exposed by AI Station UI Gateway.",
-                    "available_models": list(MODEL_MAP.keys()),
+                    "error": f"Unknown model '{requested_model}'.",
+                    "valid_model_names": available_models(),
                 },
             )
             return
 
-        body["model"] = mapped_model
+        body["model"] = mapped_model["id"]
 
         if isinstance(body.get("messages"), list):
             body["messages"] = sanitize_messages(
@@ -342,6 +368,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    def _handle_signal(signum, _frame):
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGTERM, _handle_signal)
+    signal.signal(signal.SIGINT, _handle_signal)
+
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"AI Station UI Gateway listening on http://{HOST}:{PORT}", flush=True)
     print(f"Upstream: {UPSTREAM}", flush=True)

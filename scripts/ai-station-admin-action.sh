@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-# Compatibility shim — Admin menu now uses the unified manager action script.
+# Compatibility shim — Admin menu uses the unified CLI.
 set -Eeuo pipefail
-exec /opt/ai-station/scripts/ai-station-manager-action.sh "$@"
+exec /opt/ai-station/scripts/ai "$@"

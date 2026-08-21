@@ -152,6 +152,42 @@ providers:
     fallback_provider: llama-cpp-general
     lifecycle_command: "ai models use vision"
 
+  llama-cpp-ornith:
+    id: llama-cpp-ornith
+    engine: llama.cpp
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-ornith
+    profile: ornith
+    port: 8086
+    endpoint: http://127.0.0.1:8086/v1
+    health_endpoint: http://127.0.0.1:8086/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - ornith-1_0-35b
+    model_aliases:
+      - local-ornith
+    capabilities:
+      - chat
+      - tools
+      - json_schema
+      - code
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 21000
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 22000
+    kv_cache_mib_per_1k_context: 180
+    default_context: 8192
+    max_context: 32768
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use ornith"
+
   llama-cpp-embedder:
     id: llama-cpp-embedder
     engine: llama.cpp

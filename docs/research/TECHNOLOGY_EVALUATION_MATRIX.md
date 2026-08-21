@@ -1,11 +1,18 @@
 # Technology Evaluation Matrix
 
 Date: 2026-07-23
-Updated: 2026-07-24
+Updated: 2026-07-24, 2026-08-19
 Status: Phase 0–5 decisions recorded. Production stack marked "running
 today". SGLang local trial failed to serve (OOM). Retrieval/document
 baselines committed under `benchmarks/results/`. Remaining "requires
 benchmark" cells are for components not yet justified to install.
+2026-08-19 addendum: llama.cpp quantized KV cache researched as the one
+realistic VRAM lever for the original OpenCode 8K context ceiling (see the new
+subsection below); local benchmark evidence and the resulting decision
+are recorded in `docs/adr/ADR-011-opencode-context-kv-cache-headroom.md`.
+Second 2026-08-19 addendum: Graphify (`graphifyy` 0.9.47) adopted as an
+optional code knowledge graph (ADR-012); not a retrieval replacement.
+The verified coder client now uses a conservative 16384-token context.
 
 Evidence sources are listed per candidate at the end of this document.
 
@@ -55,6 +62,37 @@ Evidence sources are listed per candidate at the end of this document.
 | Batch reasoning | not served | postpone |
 | Very large MoE experimentation | not possible (hardware) | rejected on this hardware |
 
+## 2026-08-19 addendum: llama.cpp quantized KV cache (context-headroom lever)
+
+Researched as the only realistic lever to shrink per-token KV cache VRAM
+cost on this hardware without touching model weights, `-ngl`, or
+`--parallel` (Track B of the OpenCode task-loss fix; see
+`docs/adr/ADR-004-resource-admission-control.md` for the 507 MiB
+headroom baseline this is evaluated against).
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Flag names | `-ctk/--cache-type-k` and `-ctv/--cache-type-v`, allowed values `f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1`, default `f16` for both | official `tools/server/README.md` (upstream master) | fetched 2026-08-19 | confirmed against upstream docs |
+| Pinned image support | **Confirmed directly**: ran `docker run --rm --gpus all ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289 --help` on this host and both flags are present with the same allowed values and default `f16` | this repo's own pinned image (`compose.images.lock.yaml`), OCI label `org.opencontainers.image.version=b9859`, revision `4fc4ec5541b243957ae5099edb67372f8f3b550e`, built 2026-07-02 | verified locally 2026-08-19 | primary source (the actual pinned binary, not a doc) |
+| Expected VRAM savings | `q8_0/q8_0`: ~50% smaller KV cache than `f16` (halves both K and V); `q4_0/q4_0`: ~75% smaller, but community-measured KV-buffer savings on real hardware were less extreme than the naive 4x figure once quantization metadata overhead is counted (one corrected community benchmark measured -47% for q8_0 and -72% for q4_0 vs. f16 KV buffer size on a 30B-A3B MoE model) | `tools/server/README.md`; ggml-org/llama.cpp Discussion #20969 ("TurboQuant", corrected 2026-04-01 measurement) | discussion updated 2026-04-01; read 2026-08-19 | community-measured, not from this hardware — treated as directional only per this repo's policy |
+| Quality caveat | `q8_0/q8_0` is reported as "practically lossless" for most tasks by multiple independent sources; `q4_0/q4_0` is usable but shows measurable coding-quality loss (one source cites ~92% of f16 quality for q4 on code generation vs. ~98% for q8) and "factual drift" risk on long conversations. No official llama.cpp perplexity table specific to GQA or MoE architectures was found; the K cache (not V) is repeatedly flagged as the more quality-sensitive of the two in community writeups. **Unknown**: no upstream, first-party benchmark exists quantifying quality loss specifically for Qwen3-Coder-30B-A3B (MoE) or the Ornith 35B model used by this station — this repo's own tool-calling smoke test (see benchmark below) is the only first-party evidence for those two models | Medium "Optimize your GPU KV cache for llama.cpp" article (secondary, cites unverifiable footnote numbers); arXiv 2601.14277 (quantization survey, Llama-3.1-8B, not GQA/MoE-specific) | read 2026-08-19 | secondary/directional; kept as "requires benchmark" per policy, hence Task 2 below |
+| GPU offload caveat | **Important operational caveat, confirmed via upstream issue tracker**: *asymmetric* K/V type combinations (e.g. K=q8_0, V=q4_0) require the build flag `-DGGML_CUDA_FA_ALL_QUANTS=ON`; without it, flash attention silently falls back to a CPU path and prompt processing throughput can collapse by an order of magnitude (one report: 30.6 tok/s vs. 883 tok/s prompt-eval, i.e. ~29x slower, for the exact same prompt only differing in whether the flag was compiled in). *Symmetric* combinations (K=V, e.g. `q8_0/q8_0` or `q4_0/q4_0`) use the default-compiled flash-attention quantized kernels and do not hit this fallback. Unknown whether the pinned `ghcr.io/ggml-org/llama.cpp:server-cuda` image was built with `GGML_CUDA_FA_ALL_QUANTS=ON`; not tested because the benchmark below only used symmetric types, which sidesteps the question | ggml-org/llama.cpp Issue #20866 ("Asymmetric K/V cache quantization types cannot be offloaded to GPU"), closed 2026-03-24, confirmed again by a third party on 2026-06-11 | read 2026-08-19 | confirmed via upstream issue tracker; mitigated by only testing symmetric types |
+| Flash attention | `--flash-attn` (`-fa`) accepts `on\|off\|auto`, default `auto` in the pinned image; quantized KV cache generally requires flash attention to be active to get the VRAM savings and avoid the CPU-fallback caveat above | confirmed via pinned image `--help` | verified locally 2026-08-19 | primary source |
+| Throughput cost | Community DGX Spark benchmark (Nemotron 30B-A3B, an MoE model of similar scale to `coder`/`ornith`) found symmetric `q8_0` KV cache has negligible generation-speed cost at short/medium context (+0.7% at ~6K, i.e. within noise) but measurable degradation at very long context (-11.9% at ~24K, -36.8% at ~110K) due to per-token dequantization overhead; prompt-processing throughput was reportedly unaffected by cache type at all context lengths tested | ggml-org/llama.cpp Discussion #20969 (corrected data) | corrected 2026-04-01; read 2026-08-19 | community-measured; directionally consistent with this repo's own 8K/12K/16K measurements below, not a substitute for them |
+
+**Conclusion of research (not yet a decision):** `--cache-type-k q8_0
+--cache-type-v q8_0` (symmetric, matching the default-compiled kernels)
+is the only lever worth benchmarking on this hardware — it is supported
+by the exact pinned image, requires no rebuild, and is reported as
+near-lossless. `q4_0/q4_0` is a second, more aggressive candidate but
+with a real (if disputed) coding-quality risk. Asymmetric combinations
+are excluded from the benchmark because of the confirmed CPU-fallback
+risk on an image not verified to have `GGML_CUDA_FA_ALL_QUANTS=ON`.
+Whether the VRAM saved is *enough* to safely raise context above 8192
+on this specific 24 GiB GPU with these specific ~21-22 GB model files is
+an empirical question, answered only by the local benchmark and ADR
+below — it is not assumed here.
+
 ## Evidence sources
 
 | Candidate | Primary sources consulted (2026-07-23) |
@@ -66,6 +104,20 @@ Evidence sources are listed per candidate at the end of this document.
 | KTransformers | official repo and kt-kernel README (kvcache-ai); kt-kernel 0.6.3.post1 on PyPI (2026-06-25); SOSP'25 paper |
 | pgvector / Qdrant | 2026 comparison literature with recall-pinned benchmarks; Qdrant official docs (hybrid, sparse, RRF) |
 | Docling | official docs (pipelines, model catalog); independent table-extraction comparison (Docling vs Marker) |
+| llama.cpp quantized KV cache (2026-08-19) | official `tools/server/README.md` (upstream master, fetched 2026-08-19); pinned image `--help` output run directly on this host; ggml-org/llama.cpp Discussion #20969 ("TurboQuant", corrected 2026-04-01); ggml-org/llama.cpp Issue #20866 (asymmetric K/V CPU-fallback, closed 2026-03-24); arXiv 2601.14277 (quantization quality survey); this repo's own local benchmark under `benchmarks/results/20260819/opencode-context/` |
 
 Community reports are treated as directional only; nothing is adopted
 without a local benchmark under this repository's harness.
+
+## 2026-08-19 addendum: Graphify (code knowledge graph)
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Package | Official PyPI name is `graphifyy` (double-y); CLI is `graphify`. Other `graphify*` PyPI names are unaffiliated. | upstream README; PyPI `graphifyy` | 0.9.47, fetched 2026-08-19 | confirmed |
+| License | Apache-2.0 on GitHub | Graphify-Labs/graphify | 2026-08-19 | confirmed |
+| Code path | Tree-sitter AST, no LLM, no API key; `--code-only` skips docs/PDFs/images | upstream README | 0.9.47 | confirmed locally on a 1-file fixture |
+| Docs path | `--backend openai` honors `OPENAI_BASE_URL` / `OPENAI_MODEL` (LiteLLM-compatible) | upstream README env table | 0.9.47 | documented; station default is `:4000` |
+| Overlap | Not a vector store. Does not replace pgvector (ADR-005). | upstream README; ADR-012 | 2026-08-19 | decision |
+| Classification | optional_profile (coding assistants) | ADR-012 | 2026-08-19 | decision |
+
+Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1 EXTRACTED edge; `query`/`explain` worked with no GPU. Community LOCOMO numbers are directional only and are **not** used to promote Graphify over pgvector.

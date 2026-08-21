@@ -1,0 +1,13 @@
+{
+  "package": "graphifyy",
+  "cli": "graphify",
+  "version": "0.9.47",
+  "wheel_sha256": "2a8b13ccd53d507d16dcc12aebe488517c369afa547938464474fd3e772938ab",
+  "license": "Apache-2.0",
+  "requires_python": ">=3.10",
+  "source": "https://github.com/Graphify-Labs/graphify",
+  "pypi": "https://pypi.org/project/graphifyy/0.9.47/",
+  "classification": "optional_profile",
+  "verified": "2026-08-19",
+  "notes": "Code-only extract is offline (tree-sitter). Docs pass uses LiteLLM :4000 via --backend openai and the pinned openai+pdf extras, never a public cloud default."
+}

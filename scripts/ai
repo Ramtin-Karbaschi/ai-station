@@ -9,36 +9,114 @@ AI_STATION_ROOT="$ROOT"
 
 usage() {
   cat <<'EOF'
-AI Station platform CLI
+AI Station platform CLI (single day-to-day entrypoint)
 
 Usage:
   ai status
   ai health
-  ai start [--profile general|coder|reasoning|vision]
+  ai start [--profile general|coder|reasoning|vision|ornith]
   ai stop
-  ai models list
-  ai models active
-  ai models use <general|coder|reasoning|vision>
-  ai models stop
-  ai models start-reranker
-  ai models stop-reranker
-  ai provider list
-  ai provider status
-  ai provider inspect <id>
-  ai provider start <id> [--dry-run] [--context N]
-  ai provider stop <id>
-  ai provider doctor <id>
-  ai projects list
-  ai projects create <id> [--models local-general,local-embedding] [--rpm N] [--tpm N]
-  ai projects revoke <id>
-  ai projects show <id>
-  ai logs [gateway|general|coder|reasoning|vision|embedder|webui]
+  ai restart [--profile general|coder|reasoning|vision|ornith]
+  ai models list|active|use <profile> [--dry-run]|stop|start-reranker|stop-reranker
+  ai models catalog [--json]
+  ai models add|install|verify|remove|restore ...
+  ai provider list|status|inspect|start|stop|doctor ...
+  ai projects list|create|revoke|show ...
+  ai opencode install|configure|doctor|parity|run|acceptance ...
+  ai opencode use general|coder|reasoning|ornith
+  ai opencode test [--model general|coder|reasoning|ornith]
+  ai graphify install|configure|status|extract|query|path|explain|uninstall
+  ai test [--live] [--endpoint URL] [--model NAME]
+  ai logs [gateway|general|coder|reasoning|vision|ornith|embedder|webui]
+  ai logs snapshot [all|gateway|webui|tika|general]
   ai gateway url
-  ai verify
+  ai verify [--stability [seconds]]
+  ai backup
+  ai disk
+  ai git
+  ai vscode
+  ai api-info
+  ai litellm-ui-credentials
+  ai reset-webui-password [email] [password]
+
+Windows Manager / Desktop call this same script (compat verbs accepted):
+  model-use, models-list, stop-heavy-models, projects-*, logs-all, ...
+
+Default start profile: last active heavy profile, else general.
 
 Application endpoint (OpenAI-compatible):
   http://127.0.0.1:4000/v1
 EOF
+}
+
+public_name_for_profile() {
+  case "$1" in
+    general) echo "Qwen3.6-35B-A3B-UD-Q4_K_M" ;;
+    coder) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
+    reasoning) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
+    vision) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
+    ornith) echo "Ornith-1.0-35B-Q4_K_M" ;;
+    reranker) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
+    *) return 1 ;;
+  esac
+}
+
+public_name_for_model_id() {
+  case "$1" in
+    local-general|Qwen3.6-35B-A3B-UD-Q4_K_M) echo "Qwen3.6-35B-A3B-UD-Q4_K_M" ;;
+    local-coder|Qwen3-Coder-30B-A3B-Instruct-Q4) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
+    local-reasoning|DeepSeek-R1-Distill-Qwen-32B-Q4_K_M) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
+    local-vision|Qwen3-VL-32B-Instruct-Q4_K_M) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
+    local-ornith|Ornith-1.0-35B-Q4_K_M) echo "Ornith-1.0-35B-Q4_K_M" ;;
+    local-embedding|Qwen3-Embedding-0.6B-Q8_0) echo "Qwen3-Embedding-0.6B-Q8_0" ;;
+    local-reranker|Qwen3-Reranker-0.6B-Q8_0) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# LiteLLM only accepts catalog public ids (Ornith-1.0-35B-Q4_K_M), not
+# llama.cpp aliases like local-ornith. After /v1/models is up, retry chat
+# until ready. HTTP 400 for an unknown model is a config error, not a load delay.
+ai_litellm_warmup_chat() {
+  local profile="$1"
+  local public_name key tmp code body attempt
+  local max_attempts=8
+  public_name="$(public_name_for_profile "$profile")" || {
+    echo "ERROR: no public model id for profile '${profile}'" >&2
+    return 1
+  }
+  key="$(ai_master_key)"
+  if [[ -z "$key" ]]; then
+    echo "WARNING: skipping LiteLLM warm-up (no master key)"
+    return 0
+  fi
+
+  tmp="$(mktemp)"
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    code="$(
+      curl -sS -o "$tmp" -w "%{http_code}" --max-time 90 \
+        -H "Authorization: Bearer ${key}" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"${public_name}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}" \
+        "http://127.0.0.1:4000/v1/chat/completions" || true
+    )"
+    if [[ "$code" == "200" ]]; then
+      echo "OK: warm-up (${public_name})"
+      rm -f "$tmp"
+      return 0
+    fi
+    body="$(tr -d '\0' <"$tmp" 2>/dev/null | head -c 400 || true)"
+    if [[ "$code" == "400" ]] && grep -qiE 'invalid model|model_not_found|LLM Provider NOT provided' <<<"$body"; then
+      echo "ERROR: LiteLLM warm-up HTTP 400 for '${public_name}' (unknown model id, not a load delay): ${body}" >&2
+      rm -f "$tmp"
+      return 1
+    fi
+    echo "warm-up ${public_name} attempt ${attempt}/${max_attempts}: HTTP ${code:-000} (waiting for chat-ready)"
+    sleep 5
+  done
+  echo "WARNING: warm-up request failed after ${max_attempts} attempts for ${public_name} (runtime may still be loading)"
+  rm -f "$tmp"
+  return 0
 }
 
 cmd_status() {
@@ -46,8 +124,13 @@ cmd_status() {
   echo "Root:     $AI_STATION_ROOT"
   echo "Models:   $AI_STATION_DATA/models"
   echo "Network:  ai-platform"
-  echo "Active:   $(ai_active_heavy_profile || true)"
-  echo "VRAM free: $(ai_vram_free_mib) MiB"
+  local active_profile vram_free_now vram_warning
+  active_profile="$(ai_active_heavy_profile || true)"
+  vram_free_now="$(ai_vram_free_mib)"
+  echo "Active:   $active_profile"
+  echo "VRAM free: $vram_free_now MiB"
+  vram_warning="$(ai_vram_probe_warning "$active_profile" "$vram_free_now")"
+  [[ -n "$vram_warning" ]] && echo "$vram_warning"
   echo
   echo "=== Containers ==="
   docker ps --filter "label=com.docker.compose.project=ai-station" \
@@ -97,7 +180,7 @@ cmd_health() {
 }
 
 cmd_start() {
-  local profile="general"
+  local profile=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --profile)
@@ -111,54 +194,65 @@ cmd_start() {
     esac
   done
 
+  if [[ -z "$profile" ]]; then
+    profile="$(ai_last_or_default_profile)"
+  fi
+
   if ! ai_is_heavy_profile "$profile"; then
-    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision)" >&2
+    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith)" >&2
     exit 2
   fi
 
-  systemctl start docker >/dev/null 2>&1 || true
+  ai_lifecycle_lock "start"
+  ai_ensure_docker
+
+  # Prevent Windows from idle-shutting the WSL2 VM (kills Docker + all containers).
+  "$ROOT/scripts/ensure-wsl-idle-timeout.sh" >/dev/null 2>&1 || true
+
   ai_ensure_network
-  systemctl restart ai-station-gateway >/dev/null 2>&1 || true
-  systemctl restart ai-station-ui-gateway >/dev/null 2>&1 || true
 
   ai_compose up -d postgres redis searxng tika embedder
+  ai_wait_compose_service postgres healthy 120
+  ai_wait_compose_service redis healthy 60
+  ai_wait_compose_service tika healthy 90
+  ai_wait_compose_service embedder healthy 180
+
   "$ROOT/scripts/sync-litellm-db-url.sh"
   "$ROOT/scripts/ensure-litellm-db.sh"
-  ai_compose up -d llm-gateway open-webui
+
+  ai_compose up -d llm-gateway
+  ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 120
+
+  # Bring host-side gateways up after Docker upstreams are ready; skip restart
+  # when already healthy to avoid needless flaps during overlapping starts.
+  ai_ensure_host_gateway ai-station-gateway "http://127.0.0.1:8888/health" "Host Gateway"
+  ai_ensure_host_gateway ai-station-ui-gateway "http://127.0.0.1:8890/health" "UI Gateway"
+
+  # Start the model before Open WebUI so the UI does not open onto a cold backend.
   ai_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
   ai_set_active_heavy_profile "$profile"
-
-  ai_wait_url "http://127.0.0.1:8890/health" "UI Gateway" 60
-  ai_wait_url "http://127.0.0.1:8888/health" "Host Gateway" 60
-  ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180
-  ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 120
   ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300
+
+  ai_compose up -d open-webui
+
+  ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180
   ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 180
 
-  # Warm-up via gateway alias
-  local key alias
-  key="$(ai_master_key)"
-  alias="$(ai_profile_alias "$profile")"
-  if [[ -n "$key" ]]; then
-    curl -fsS --max-time 120 \
-      -H "Authorization: Bearer ${key}" \
-      -H "Content-Type: application/json" \
-      -d "{\"model\":\"${alias}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}" \
-      "http://127.0.0.1:4000/v1/chat/completions" >/dev/null \
-      && echo "OK: warm-up (${alias})" \
-      || echo "WARNING: warm-up request failed (runtime may still be loading)"
-  fi
+  # Warm-up via LiteLLM public model id until chat-ready.
+  ai_litellm_warmup_chat "$profile"
 
   echo
   echo "AI Station ready."
   echo "  UI:      http://127.0.0.1:3000"
   echo "  Gateway: http://127.0.0.1:4000/v1"
-  echo "  Model:   ${alias} (profile=${profile})"
+  echo "  Model:   $(public_name_for_profile "$profile") (profile=${profile})"
 }
 
 cmd_stop() {
-  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile reranker \
-    stop llm-general llm-coder llm-reasoning llm-vision reranker 2>/dev/null || true
+  ai_lifecycle_lock "stop"
+  ai_ensure_docker || true
+  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile reranker \
+    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith reranker 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
   systemctl stop ai-station-ui-gateway 2>/dev/null || true
   systemctl stop ai-station-gateway 2>/dev/null || true
@@ -166,115 +260,173 @@ cmd_stop() {
   echo "AI Station stopped."
 }
 
-cmd_models_list() {
-  python3 - <<'PY'
-from pathlib import Path
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
-path = Path("/opt/ai-station/config/registry/models.yaml")
-if yaml is None:
-    print(path.read_text(encoding="utf-8"))
-else:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    print(f"{'ALIAS':<18} {'PROFILE':<12} {'PORT':<6} {'HEAVY':<6} {'STATUS'}")
-    for alias, meta in (data.get("models") or {}).items():
-        print(
-            f"{alias:<18} {str(meta.get('profile','')):<12} "
-            f"{str(meta.get('port','')):<6} {str(meta.get('heavy','')):<6} "
-            f"{meta.get('status','')}"
-        )
-PY
-}
-
-cmd_models_active() {
-  local active
-  active="$(ai_active_heavy_profile || true)"
-  if [[ -z "$active" ]]; then
-    echo "No heavy model profile is active."
-    return 0
+cmd_restart() {
+  local profile=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --profile)
+        profile="$2"
+        shift 2
+        ;;
+      *)
+        echo "Unknown argument: $1" >&2
+        exit 2
+        ;;
+    esac
+  done
+  if [[ -z "$profile" ]]; then
+    profile="$(ai_last_or_default_profile)"
   fi
-  echo "profile: $active"
-  echo "service: $(ai_profile_service "$active")"
-  echo "alias:   $(ai_profile_alias "$active")"
-  echo "port:    $(ai_profile_port "$active")"
-  echo "vram_free_mib: $(ai_vram_free_mib)"
-}
-
-cmd_models_use() {
-  local profile="${1:-}"
-  if [[ -z "$profile" ]] || ! ai_is_heavy_profile "$profile"; then
-    echo "Usage: ai models use <general|coder|reasoning|vision>" >&2
+  if ! ai_is_heavy_profile "$profile"; then
+    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith)" >&2
     exit 2
   fi
 
-  local current service port alias other
-  current="$(ai_active_heavy_profile || true)"
-  service="$(ai_profile_service "$profile")"
-  port="$(ai_profile_port "$profile")"
-  alias="$(ai_profile_alias "$profile")"
+  echo "Restarting AI Station (profile=${profile})..."
+  # Sequential child processes keep the lifecycle lock exclusive per phase.
+  "$ROOT/scripts/ai" stop || true
+  exec "$ROOT/scripts/ai" start --profile "$profile"
+}
 
-  echo "Switching heavy model profile -> ${profile}"
-  if [[ -n "$current" && "$current" != "$profile" ]]; then
-    echo "Stopping previous profile: $current"
-    ai_compose --profile "$current" stop "$(ai_profile_service "$current")" || true
-    # Wait for VRAM to free
-    local i free
-    for ((i = 1; i <= 60; i++)); do
-      free="$(ai_vram_free_mib)"
-      if [[ "$free" =~ ^[0-9]+$ ]] && ((free >= 8000)); then
-        echo "VRAM free: ${free} MiB"
-        break
-      fi
-      sleep 2
-    done
+cmd_logs_snapshot() {
+  local target="${1:-all}"
+  case "$target" in
+    all|logs-all|"")
+      echo "=== LiteLLM gateway (last 80 lines) ==="
+      docker logs --tail 80 ai-station-llm-gateway 2>&1 || true
+      echo
+      echo "=== Open WebUI (last 80 lines) ==="
+      docker logs --tail 80 ai-station-open-webui-1 2>&1 || true
+      echo
+      echo "=== Host gateway journal (last 60 lines) ==="
+      journalctl -u ai-station-gateway -n 60 --no-pager 2>&1 || true
+      echo
+      echo "=== UI gateway journal (last 40 lines) ==="
+      journalctl -u ai-station-ui-gateway -n 40 --no-pager 2>&1 || true
+      ;;
+    gateway|logs-gateway)
+      echo "=== LiteLLM gateway (last 120 lines) ==="
+      docker logs --tail 120 ai-station-llm-gateway 2>&1 || true
+      echo
+      journalctl -u ai-station-gateway -n 80 --no-pager || true
+      echo
+      journalctl -u ai-station-ui-gateway -n 40 --no-pager || true
+      ;;
+    webui|logs-webui)
+      docker logs --tail 120 ai-station-open-webui-1 2>&1 || true
+      ;;
+    tika|ocr|logs-tika|logs-ocr)
+      docker logs --tail 120 ai-station-tika 2>&1 || true
+      ;;
+    general|logs-general)
+      docker logs --tail 120 ai-station-llm-general 2>&1 \
+        || docker logs --tail 120 ai-station-llm-general-1 2>&1 \
+        || true
+      ;;
+    *)
+      echo "Unknown snapshot target: $target" >&2
+      exit 2
+      ;;
+  esac
+}
+
+cmd_backup() {
+  ai_ensure_docker
+  "$ROOT/scripts/backup.sh"
+}
+
+cmd_disk() {
+  echo "=== Filesystem ==="
+  df -hT / /srv 2>/dev/null || df -hT /
+  echo
+  echo "=== Models ==="
+  du -sh /srv/ai-station/models/* 2>/dev/null | sort -h || true
+  echo
+  echo "=== Docker ==="
+  docker system df || true
+}
+
+cmd_git() {
+  git -C "$ROOT" status -sb
+  echo
+  git -C "$ROOT" log -5 --oneline
+}
+
+cmd_vscode() {
+  if command -v code >/dev/null 2>&1; then
+    code "$ROOT"
+  else
+    echo "VS Code CLI (code) is not installed inside WSL."
+    echo "Open from Windows: \\\\wsl.localhost\\Ubuntu\\opt\\ai-station"
   fi
+}
 
-  # Ensure no other heavy services are still up
-  for other in "${HEAVY_PROFILES[@]}"; do
-    if [[ "$other" != "$profile" ]]; then
-      ai_compose --profile "$other" stop "$(ai_profile_service "$other")" 2>/dev/null || true
-    fi
-  done
+cmd_api_info() {
+  cat <<EOF
+AI Station Application API
+==========================
+Base URL (host):   http://127.0.0.1:4000/v1
+Base URL (Docker): http://llm-gateway:4000/v1
+Docker network:    ai-platform (external)
+Admin / health:    http://127.0.0.1:4000/health/liveliness
+LiteLLM UI:        http://127.0.0.1:4000/ui
 
-  ai_compose --profile "$profile" up -d "$service"
-  ai_set_active_heavy_profile "$profile"
-  ai_wait_url "http://127.0.0.1:${port}/v1/models" "Model $profile" 300
+Canonical public model names:
+  Qwen3.6-35B-A3B-UD-Q4_K_M
+  Qwen3-Coder-30B-A3B-Instruct-Q4
+  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
+  Qwen3-VL-32B-Instruct-Q4_K_M
+  Ornith-1.0-35B-Q4_K_M
+  Qwen3-Embedding-0.6B-Q8_0
+  Qwen3-Reranker-0.6B-Q8_0
 
-  local key
-  key="$(ai_master_key)"
-  if [[ -n "$key" ]]; then
-    curl -fsS --max-time 180 \
-      -H "Authorization: Bearer ${key}" \
-      -H "Content-Type: application/json" \
-      -d "{\"model\":\"${alias}\",\"messages\":[{\"role\":\"user\",\"content\":\"ready check\"}],\"max_tokens\":8}" \
-      "http://127.0.0.1:4000/v1/chat/completions" >/dev/null \
-      && echo "OK: gateway route ${alias}" \
-      || echo "WARNING: gateway warm-up failed"
+Heavy chat and vision requests go through LiteLLM to the host gateway, which
+auto-switches the matching heavy runtime when needed.
+
+Create a project key:
+  ai projects create <id> --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0
+
+Python example:
+  from openai import OpenAI
+  client = OpenAI(base_url="http://127.0.0.1:4000/v1", api_key="...")
+EOF
+  echo
+  cmd_litellm_ui_credentials
+  echo
+  cmd_projects_list
+}
+
+cmd_litellm_ui_credentials() {
+  if [[ -f "$ROOT/secrets/litellm_ui_credentials.txt" ]]; then
+    echo "=== LiteLLM Admin UI login ==="
+    cat "$ROOT/secrets/litellm_ui_credentials.txt"
+  else
+    echo "No secrets/litellm_ui_credentials.txt found."
+    echo "Default: username=admin , password=value of LITELLM_MASTER_KEY in .env"
   fi
-
-  echo "Active model: ${alias} (profile=${profile}, port=${port})"
 }
 
-cmd_models_stop() {
-  local p
-  for p in "${HEAVY_PROFILES[@]}"; do
-    ai_compose --profile "$p" stop "$(ai_profile_service "$p")" 2>/dev/null || true
-  done
-  ai_set_active_heavy_profile ""
-  echo "All heavy model profiles stopped."
+cmd_reset_webui_password() {
+  ai_ensure_docker
+  "$ROOT/scripts/reset-openwebui-password.sh" "${1:-}" "${2:-}"
 }
 
-cmd_models_start_reranker() {
-  ai_compose --profile reranker up -d reranker
-  ai_wait_url "http://127.0.0.1:8091/v1/models" "Reranker" 120
-}
-
-cmd_models_stop_reranker() {
-  ai_compose --profile reranker stop reranker 2>/dev/null || true
-  echo "Reranker stopped."
+cmd_projects_show_with_paths() {
+  local project_id="${1:-}"
+  if [[ -z "$project_id" ]]; then
+    echo "Usage: ai projects show <project-id>" >&2
+    exit 2
+  fi
+  cmd_projects_show "$project_id"
+  echo
+  local env_file="$ROOT/projects/${project_id}.env"
+  if [[ -f "$env_file" ]]; then
+    echo "=== Credentials file (secrets redacted) ==="
+    sed -E 's/(LLM_API_KEY=).*/\1***REDACTED***/' "$env_file"
+    echo
+    echo "Full secret file (WSL): $env_file"
+    echo "Windows path: \\\\wsl.localhost\\Ubuntu\\opt\\ai-station\\projects\\${project_id}.env"
+  fi
 }
 
 cmd_provider_list() {
@@ -291,8 +443,13 @@ PY
 }
 
 cmd_provider_status() {
-  echo "Active heavy profile: $(ai_active_heavy_profile || true)"
-  echo "VRAM free MiB:        $(ai_vram_free_mib)"
+  local active_profile vram_free_now vram_warning
+  active_profile="$(ai_active_heavy_profile || true)"
+  vram_free_now="$(ai_vram_free_mib)"
+  echo "Active heavy profile: $active_profile"
+  echo "VRAM free MiB:        $vram_free_now"
+  vram_warning="$(ai_vram_probe_warning "$active_profile" "$vram_free_now")"
+  [[ -n "$vram_warning" ]] && echo "$vram_warning"
   cmd_provider_list
 }
 
@@ -480,14 +637,20 @@ except ImportError:
     print("PyYAML required for project registry listing.")
     raise SystemExit(1)
 
-data = yaml.safe_load(Path("/opt/ai-station/config/registry/projects.yaml").read_text(encoding="utf-8")) or {}
+root = Path("/opt/ai-station")
+data = yaml.safe_load((root / "config/registry/projects.yaml").read_text(encoding="utf-8")) or {}
+model_registry = yaml.safe_load((root / "config/registry/models.yaml").read_text(encoding="utf-8")) or {}
+public_names = {
+    alias: meta.get("public_name", alias)
+    for alias, meta in (model_registry.get("models") or {}).items()
+}
 projects = data.get("projects") or []
 if not projects:
     print("No projects registered.")
 else:
     print(f"{'ID':<28} {'MODELS':<40} {'STATUS'}")
     for p in projects:
-        models = ",".join(p.get("models") or [])
+        models = ",".join(public_names.get(model, model) for model in (p.get("models") or []))
         print(f"{p.get('id',''):<28} {models:<40} {p.get('status','')}")
 PY
 }
@@ -501,7 +664,7 @@ cmd_projects_create() {
     exit 2
   fi
 
-  local models="local-general,local-embedding"
+  local models="Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0"
   local rpm=60
   local tpm=100000
   while [[ $# -gt 0 ]]; do
@@ -583,7 +746,7 @@ if "defaults" not in data:
         "base_url_host": "http://127.0.0.1:4000/v1",
         "base_url_docker": "http://llm-gateway:4000/v1",
         "docker_network": "ai-platform",
-        "default_model": "local-general",
+        "default_model": "Qwen3.6-35B-A3B-UD-Q4_K_M",
         "timeout_seconds": 120,
     }
 registry_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
@@ -597,7 +760,7 @@ env_path.write_text(
             "LLM_BASE_URL=http://127.0.0.1:4000/v1",
             "LLM_BASE_URL_DOCKER=http://llm-gateway:4000/v1",
             f"LLM_API_KEY={api_key}",
-            f"LLM_MODEL={(models_csv.split(',')[0] or 'local-general').strip()}",
+            f"LLM_MODEL={(models_csv.split(',')[0] or 'Qwen3.6-35B-A3B-UD-Q4_K_M').strip()}",
             "LLM_TIMEOUT_SECONDS=120",
             "LLM_DOCKER_NETWORK=ai-platform",
             "",
@@ -675,10 +838,20 @@ import sys
 from pathlib import Path
 import yaml
 project_id = sys.argv[1]
-data = yaml.safe_load(Path("/opt/ai-station/config/registry/projects.yaml").read_text(encoding="utf-8")) or {}
+root = Path("/opt/ai-station")
+data = yaml.safe_load((root / "config/registry/projects.yaml").read_text(encoding="utf-8")) or {}
+model_registry = yaml.safe_load((root / "config/registry/models.yaml").read_text(encoding="utf-8")) or {}
+public_names = {
+    alias: meta.get("public_name", alias)
+    for alias, meta in (model_registry.get("models") or {}).items()
+}
 for p in data.get("projects") or []:
     if p.get("id") == project_id:
-        print(yaml.safe_dump(p, sort_keys=False))
+        rendered = dict(p)
+        rendered["models"] = [
+            public_names.get(model, model) for model in (p.get("models") or [])
+        ]
+        print(yaml.safe_dump(rendered, sort_keys=False))
         env = Path(f"/opt/ai-station/projects/{project_id}.env")
         print(f"env_file: {env} ({'present' if env.exists() else 'missing'})")
         raise SystemExit(0)
@@ -689,12 +862,22 @@ PY
 
 cmd_logs() {
   local target="${1:-gateway}"
+  if [[ "$target" == "snapshot" ]]; then
+    shift || true
+    cmd_logs_snapshot "${1:-all}"
+    return
+  fi
+  if [[ "$target" == "all" || "$target" == "logs-all" ]]; then
+    cmd_logs_snapshot all
+    return
+  fi
   case "$target" in
     gateway) ai_compose logs -f --tail=200 llm-gateway ;;
     general) ai_compose --profile general logs -f --tail=200 llm-general ;;
     coder) ai_compose --profile coder logs -f --tail=200 llm-coder ;;
     reasoning) ai_compose --profile reasoning logs -f --tail=200 llm-reasoning ;;
     vision) ai_compose --profile vision logs -f --tail=200 llm-vision ;;
+    ornith) ai_compose --profile ornith logs -f --tail=200 llm-ornith ;;
     embedder) ai_compose logs -f --tail=200 embedder ;;
     webui) ai_compose logs -f --tail=200 open-webui ;;
     *) echo "Unknown log target: $target" >&2; exit 2 ;;
@@ -705,32 +888,73 @@ cmd_gateway_url() {
   echo "http://127.0.0.1:4000/v1"
 }
 
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-models.sh"
+
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-opencode.sh"
+
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-graphify.sh"
+
 cmd_verify() {
+  ai_ensure_docker || true
+  if [[ "${1:-}" == "--stability" ]]; then
+    shift || true
+    "$ROOT/scripts/verify-startup-stability.sh" "${1:-45}"
+    return
+  fi
   "$ROOT/scripts/verify.sh"
+  echo
+  curl -fsS --max-time 5 http://127.0.0.1:4000/health/liveliness || true
+  echo
+  curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null | python3 -m json.tool || true
+  curl -fsS --max-time 5 http://127.0.0.1:8890/health 2>/dev/null | python3 -m json.tool || true
+}
+
+cmd_test() {
+  "$ROOT/scripts/test.sh" "$@"
 }
 
 main() {
   local cmd="${1:-}"
   shift || true
+
+  # Compat verbs used by Windows Manager.cmd (single public CLI).
+  case "$cmd" in
+    model-use) cmd="models"; set -- use "$@" ;;
+    models-list) cmd="models"; set -- list-active ;;
+    stop-heavy-models) cmd="models"; set -- stop ;;
+    projects-list) cmd="projects"; set -- list ;;
+    projects-create)
+      local pid="${1:-}" models="${2:-Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0}"
+      shift || true
+      shift || true
+      cmd="projects"
+      set -- create "$pid" --models "$models" "$@"
+      ;;
+    projects-show) cmd="projects"; set -- show-paths "$@" ;;
+    projects-revoke) cmd="projects"; set -- revoke "$@" ;;
+    reset-webui-password) cmd="reset-webui-password" ;;
+    litellm-ui-credentials) cmd="litellm-ui-credentials" ;;
+    api-info) cmd="api-info" ;;
+    opencode-configure) cmd="opencode"; set -- configure "$@" ;;
+    opencode-test) cmd="opencode"; set -- test "$@" ;;
+    logs-all) cmd="logs"; set -- snapshot all ;;
+    logs-gateway) cmd="logs"; set -- snapshot gateway ;;
+    logs-webui) cmd="logs"; set -- snapshot webui ;;
+    logs-tika|logs-ocr) cmd="logs"; set -- snapshot tika ;;
+    logs-general) cmd="logs"; set -- snapshot general ;;
+  esac
+
   case "$cmd" in
     ""|-h|--help|help) usage ;;
     status) cmd_status "$@" ;;
     health) cmd_health "$@" ;;
     start) cmd_start "$@" ;;
     stop) cmd_stop "$@" ;;
-    models)
-      local sub="${1:-}"
-      shift || true
-      case "$sub" in
-        list) cmd_models_list ;;
-        active) cmd_models_active ;;
-        use) cmd_models_use "$@" ;;
-        stop) cmd_models_stop ;;
-        start-reranker) cmd_models_start_reranker ;;
-        stop-reranker) cmd_models_stop_reranker ;;
-        *) echo "Unknown models command: $sub" >&2; usage; exit 2 ;;
-      esac
-      ;;
+    restart) cmd_restart "$@" ;;
+    models) cmd_models "$@" ;;
     provider|providers)
       local sub="${1:-}"
       shift || true
@@ -752,12 +976,23 @@ main() {
         create) cmd_projects_create "$@" ;;
         revoke) cmd_projects_revoke "$@" ;;
         show) cmd_projects_show "$@" ;;
+        show-paths) cmd_projects_show_with_paths "$@" ;;
         *) echo "Unknown projects command: $sub" >&2; usage; exit 2 ;;
       esac
       ;;
+    opencode) cmd_opencode "$@" ;;
+    graphify) cmd_graphify "$@" ;;
+    test) cmd_test "$@" ;;
     logs) cmd_logs "$@" ;;
     gateway) cmd_gateway_url ;;
-    verify) cmd_verify ;;
+    verify) cmd_verify "$@" ;;
+    backup) cmd_backup "$@" ;;
+    disk) cmd_disk "$@" ;;
+    git) cmd_git "$@" ;;
+    vscode) cmd_vscode "$@" ;;
+    api-info) cmd_api_info "$@" ;;
+    litellm-ui-credentials) cmd_litellm_ui_credentials "$@" ;;
+    reset-webui-password) cmd_reset_webui_password "$@" ;;
     *) echo "Unknown command: $cmd" >&2; usage; exit 2 ;;
   esac
 }

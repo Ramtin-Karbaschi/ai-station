@@ -4,6 +4,7 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_ROOT="/srv/ai-station"
 PROFILE="core"
+MODEL_IDS=()
 
 while (( $# > 0 )); do
     case "$1" in
@@ -15,8 +16,12 @@ while (( $# > 0 )); do
             DATA_ROOT="$2"
             shift 2
             ;;
+        --id)
+            MODEL_IDS+=("$2")
+            shift 2
+            ;;
         --help|-h)
-            echo "Usage: verify-models.sh [--profile core|all] [--data-root PATH]"
+            echo "Usage: verify-models.sh [--profile PROFILE] [--id MODEL_ID] [--data-root PATH]"
             exit 0
             ;;
         *)
@@ -35,9 +40,14 @@ if [[ ! -x "$VENV/bin/python" ]]; then
     exit 1
 fi
 
-exec "$VENV/bin/python" \
-    "$ROOT/scripts/model_provision.py" \
-    --manifest "$ROOT/config/model-manifest.json" \
-    --data-root "$DATA_ROOT" \
-    --profile "$PROFILE" \
+ARGS=(
+    --manifest "$ROOT/config/model-manifest.json"
+    --data-root "$DATA_ROOT"
+    --profile "$PROFILE"
     --verify-only
+)
+for MODEL_ID in "${MODEL_IDS[@]}"; do
+    ARGS+=(--id "$MODEL_ID")
+done
+
+exec "$VENV/bin/python" "$ROOT/scripts/model_provision.py" "${ARGS[@]}"

@@ -1,14 +1,14 @@
 # AI Station Threat Model
 
 Date: 2026-07-23
-Updated: 2026-07-24
-Status: Phase 0 baseline plus Phase 1 mitigations (loopback bind, SSRF
-guard). Review after any new public surface or engine adoption.
+Updated: 2026-08-21
+Status: implemented controls plus residual risks. Review after any new public
+surface, runtime engine, model capability, or agent tool adoption.
 
-Scope: single-user local workstation (Windows 11 + WSL2), no intended
-network exposure beyond the machine. Localhost binding is a mitigation,
-not a security boundary: any process on the host, and the Windows side of
-the WSL NAT, can reach loopback services.
+Scope: single-user local workstation (Windows 11 + WSL2). Project-managed
+services remain loopback-only.
+Localhost binding is a mitigation, not a security boundary: any process on the
+host, and the Windows side of the WSL NAT, can reach loopback services.
 
 ## Trust zones
 
@@ -18,7 +18,7 @@ the WSL NAT, can reach loopback services.
 | Z2 Containers | Compose services on `ai-station_default` / `ai-platform` | semi-trusted (pinned images, but upstream code) |
 | Z3 Host services | gateway, UI gateway (systemd, run as root) | trusted code, elevated privilege |
 | Z4 Data | `/srv/ai-station`, Docker volumes, secrets | protected |
-| Z5 Internet | search upstreams, model/image registries | untrusted |
+| Z5 Internet | search upstreams and model/image registries | untrusted/external |
 
 ## Threats, current controls, gaps
 
@@ -38,10 +38,11 @@ tighten UI-gateway extraction timeout; include Tika in lock-refresh cadence.
 
 Path: web search results (SearXNG) or RAG chunks carry instructions that
 steer the model, potentially triggering tool calls once tools are enabled.
-Controls: search result count capped at 3; RAG top-k 3; tools currently
-disabled everywhere.
-Gaps: when tool calling is enabled (Phase 1), injected content can invoke
-tools. Actions: treat retrieved text as untrusted in system prompts;
+Controls: search result count capped at 3; RAG top-k 3; application API keys
+have explicit model allowlists. OpenCode agent tools run in the user's project
+context, not inside the inference service.
+Gaps: agentic coder/general/Ornith models can act on injected instructions when
+the client grants tools. Actions: treat retrieved text as untrusted in prompts;
 require explicit user confirmation for state-changing tools; log tool-call
 provenance.
 
@@ -50,9 +51,9 @@ provenance.
 Path: poisoned GGUF/AWQ artifact or hijacked HF repo.
 Controls: immutable HF revisions + SHA-256 in
 `config/model-manifest.json`; verification script.
-Gaps: 3 of 7 deployed model sets are outside the manifest and therefore
-unverifiable (audit finding D2). Actions: Phase 1 manifest completion; new
-engine artifacts (AWQ/GPTQ) must enter the same manifest discipline.
+Current state: all catalogued model artifacts use immutable revisions and
+SHA-256 metadata. New engine artifacts (AWQ/GPTQ/GGUF) must enter the same
+manifest discipline before promotion.
 
 ### T4 Poisoned container images
 
@@ -68,20 +69,20 @@ Path: the UI gateway fetches URLs found in chat payloads
 (`fetch_url_bytes`) and SearXNG performs outbound queries. A crafted
 message can point fetches at internal services (Postgres admin surfaces,
 metadata endpoints, other loopback ports).
-Controls: none specific today.
-Actions (Phase 1): restrict UI-gateway fetches to the Open WebUI origin
-and data URLs; deny non-HTTP schemes and RFC1918/loopback targets except
-the explicit Open WebUI host; keep SearXNG outbound-only with its own
-container network.
+Controls: UI-gateway fetches are restricted to the explicit Open WebUI origin;
+non-HTTP schemes and arbitrary RFC1918/loopback targets are denied. SearXNG is
+kept behind the local container/loopback boundary.
+Residual risk: an allowed upstream may redirect or return hostile content;
+retain bounded timeouts and treat fetched bytes as untrusted.
 
 ### T6 Exposed inference endpoints
 
-Finding: gateway (8888) and UI gateway (8890) listen on `0.0.0.0`
-(risk R1). Depending on WSL networking mode these are reachable from the
-Windows host and possibly the LAN, unauthenticated.
-Actions: bind to `127.0.0.1` (Phase 1); add a `verify.sh` assertion that
-no AI Station listener is non-loopback; document that LiteLLM virtual keys
-are the only authenticated API surface.
+Current state: application listeners bind to `127.0.0.1`. The host gateway has
+one deliberate TCP mirror on the exact private `docker0` address so containers
+can reach the loopback application; wildcard and LAN binds fail verification.
+LiteLLM virtual keys on `:4000` are the authenticated application surface;
+`:8888` remains an internal routing endpoint and must never be configured as a
+client API.
 
 ### T7 Arbitrary file access / path traversal
 
@@ -95,18 +96,22 @@ catalog schema on load.
 
 ### T8 Command execution by agents
 
-Not currently possible (no tools, no code interpreter). When enabled,
-follow T2 actions plus an allowlisted tool registry; never expose shell
-tools to models by default.
+OpenCode can execute developer tools under the user's authority. The inference
+runtime itself receives tool schemas but has no direct shell privilege.
+Controls belong at the client/agent boundary: project-scoped working directory,
+review of destructive operations, minimal connector permissions, and no secret
+material in prompts. Never expose an unaudited shell tool through the shared
+LiteLLM application API by default.
 
 ### T9 Secret leakage in logs
 
 Controls: release audit greps for key patterns; secrets in files with
-restrictive modes; LiteLLM salt/master keys via environment.
-Gaps: gateway logs upstream error bodies (`response.text[:500]`) which may
-echo request content; journald retains host-gateway logs indefinitely.
-Actions: scrub Authorization headers in gateway logging; set journald
-retention for the two units.
+restrictive modes; LiteLLM salt/master keys via environment. Gateway contract
+telemetry records endpoint shape, counts, status, latency-relevant state, and a
+normalized error category, never message bodies or raw upstream errors.
+Residual risk: journald retains host-gateway logs according to host policy.
+Actions: keep Authorization headers and prompt bodies out of telemetry; set a
+bounded journald retention policy if this workstation becomes multi-user.
 
 ### T10 Unsafe model download paths
 
@@ -117,6 +122,5 @@ Gaps: interrupted-download and checksum-mismatch scenarios lack tests
 
 ## Non-goals
 
-Multi-user isolation, internet-facing hardening, and DoS resistance are
-out of scope for a single-operator workstation and are documented as such
-in the README support matrix.
+Multi-user isolation, general-purpose internet-facing hosting, and strong DoS
+resistance are out of scope.

@@ -18,6 +18,8 @@ root = pathlib.Path(sys.argv[1]).resolve()
 result = subprocess.run(
     [
         "git",
+        "-c",
+        f"safe.directory={root}",
         "ls-files",
         "--cached",
         "--others",

@@ -130,6 +130,15 @@ release-output/
 *.old-*
 *.orig
 
+# Ignore both a generated directory and the runtime symlink created by Graphify.
+/graphify-out
+config/skills/*-workspace/
+
+# Editor and agent instruction files stay local. Do not commit them.
+/AGENTS.md
+/CLAUDE.md
+
+
 # Local generated manifests containing runtime details
 compose-resolved-sensitive.yaml
 

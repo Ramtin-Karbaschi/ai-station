@@ -24,6 +24,32 @@ Write-Host "AI Station Windows bootstrap" -ForegroundColor Cyan
 Write-Host "Distro: $WslDistro"
 Write-Host ""
 
+Write-Host "0) Ensuring WSL2 stays alive (vmIdleTimeout=-1)..."
+$WslConfig = Join-Path $env:USERPROFILE ".wslconfig"
+$block = @"
+[wsl2]
+vmIdleTimeout=-1
+"@
+if (Test-Path $WslConfig) {
+  $raw = Get-Content -Raw -Path $WslConfig
+  if ($raw -notmatch '(?m)^\s*vmIdleTimeout\s*=\s*-1\s*$') {
+    if ($raw -match '(?m)^\s*\[wsl2\]\s*$') {
+      $raw = $raw -replace '(?m)^\s*vmIdleTimeout\s*=.*\r?\n', ''
+      $raw = $raw -replace '(?m)^(\s*\[wsl2\]\s*\r?\n)', "`$1vmIdleTimeout=-1`r`n"
+    } else {
+      $raw = $raw.TrimEnd() + "`r`n`r`n" + $block + "`r`n"
+    }
+    Set-Content -Path $WslConfig -Value $raw -NoNewline
+    Write-Host "Updated $WslConfig (vmIdleTimeout=-1). Run 'wsl --shutdown' once after install."
+  } else {
+    Write-Host "OK: vmIdleTimeout=-1 already in $WslConfig"
+  }
+} else {
+  Set-Content -Path $WslConfig -Value ($block + "`r`n")
+  Write-Host "Created $WslConfig"
+}
+
+Write-Host ""
 Write-Host "1) Checking WSL prerequisites..."
 wsl.exe -d $WslDistro -- bash -lc "set -e; command -v git; command -v docker; command -v nvidia-smi; nvidia-smi -L | head -1; docker compose version | head -1"
 

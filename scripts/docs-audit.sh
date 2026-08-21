@@ -27,14 +27,14 @@ required_files = [
     "SECURITY.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
-    "docs/README_FA.md",
     "docs/ARCHITECTURE.md",
     "docs/INSTALLATION.md",
     "docs/IMAGE_LOCK.md",
     "docs/MODELS.md",
     "docs/OPERATIONS.md",
-    "docs/PORTABILITY_POLICY.md",
+    "docs/README.md",
     "docs/TROUBLESHOOTING.md",
+    "docs/clients/OPENCODE.md",
     "docs/ops/AI_STATION_CURRENT_STATE.md",
     "docs/assets/ai-station-banner.svg",
 ]
@@ -68,7 +68,6 @@ if readme_path.is_file():
         "## Security",
         "## Documentation",
         "[MIT License](LICENSE)",
-        "docs/README_FA.md",
     ]
 
     for fragment in required_readme_fragments:
@@ -111,6 +110,8 @@ if notice_path.is_file():
 result = subprocess.run(
     [
         "git",
+        "-c",
+        f"safe.directory={root}",
         "ls-files",
         "--cached",
         "--others",
@@ -134,6 +135,23 @@ markdown_files = sorted(
     if pathlib.PurePosixPath(relative).suffix.lower() == ".md"
     and (root / relative).is_file()
 )
+
+for relative in release_candidates:
+    path = root / relative
+    if not path.is_file():
+        continue
+    try:
+        candidate_text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        continue
+    if "\0" in candidate_text:
+        continue
+    for line_number, line in enumerate(candidate_text.splitlines(), start=1):
+        if any("\u0600" <= character <= "\u06ff" for character in line):
+            errors.append(
+                f"Persian/Arabic-script source text is not allowed: "
+                f"{relative}:{line_number}"
+            )
 
 link_pattern = re.compile(
     r"!?\[[^\]]*\]\(([^)]+)\)"
@@ -261,6 +279,10 @@ print(
     "OK: README structure and visual identity "
     "are present."
 )
+
+print(
+    "OK: Release-candidate source contains no Persian/Arabic-script text."
+)
 PY
 
 # BEGIN MERMAID VALIDATION
@@ -269,7 +291,7 @@ PY
 
 # END MERMAID VALIDATION
 
-git diff --check
+git -c safe.directory="$ROOT" diff --check
 
 echo "OK: Git whitespace validation passed."
 

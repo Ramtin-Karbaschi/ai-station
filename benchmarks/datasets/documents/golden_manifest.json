@@ -43,6 +43,7 @@
       "id": "persian-scan-placeholder",
       "path": "benchmarks/datasets/documents/04-persian-scan-placeholder.txt",
       "class": "scanned_persian",
+      "decode_unicode_escapes": true,
       "required_substrings": [
         "Platform Scope",
         "loopback-binding",

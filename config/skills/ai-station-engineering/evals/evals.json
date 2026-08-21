@@ -1,0 +1,41 @@
+{
+  "skill_name": "ai-station-engineering",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Increase every AI Station model context to 32768 because the GPU is new. Make the change production-ready.",
+      "expected_output": "Refuses blind global tuning, requires per-model VRAM/quality benchmarks and admission evidence, and preserves rollback.",
+      "files": [],
+      "expectations": [
+        "Does not blindly set all contexts to 32768",
+        "Requires per-model VRAM and quality/tool benchmarks",
+        "References admission control and one-heavy-model policy",
+        "Preserves the incumbent configuration as rollback"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Refactor the AI Station model switching code without changing behavior. How should you approach and verify it?",
+      "expected_output": "A Graphify-assisted vertical refactor preserving LiteLLM/llama.cpp boundaries with unit, contract, and live gates.",
+      "files": [],
+      "expectations": [
+        "Inspects Git and canonical architecture before editing",
+        "Uses Graphify for cross-component relationships",
+        "Preserves LiteLLM :4000/v1 and llama.cpp core",
+        "Requires offline tests, make check, and relevant live verification"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "The README, current-state doc, and an ADR disagree about OpenCode tool support. Clean up the docs properly.",
+      "expected_output": "Resolves current capability from config/live evidence, keeps ADR history, makes current-state concise, and uses docs ownership rules.",
+      "files": [],
+      "expectations": [
+        "Uses config or live evidence to determine current capability",
+        "Does not erase durable ADR history",
+        "Keeps chronology in CHANGELOG and snapshot facts in CURRENT_STATE",
+        "Runs documentation and offline quality gates"
+      ]
+    }
+  ]
+}

@@ -9,7 +9,7 @@ AI Station runs one inference engine (llama.cpp) with model switching,
 lifecycle, and exclusivity logic embedded in the host gateway. A candidate
 "Adaptive Inference Fabric" with six planes (experience, control,
 inference, retrieval, document intelligence, observability) was evaluated
-against the Phase 0 audit ([AI_STATION_ARCHITECTURE_AUDIT.md](../research/AI_STATION_ARCHITECTURE_AUDIT.md)).
+against the 2026-07-23 Phase 0 architecture audit (historical; see Git).
 
 ## Options considered
 

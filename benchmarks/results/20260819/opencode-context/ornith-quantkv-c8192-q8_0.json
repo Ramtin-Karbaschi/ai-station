@@ -1,0 +1,44 @@
+{
+  "engine": "llama.cpp (server-cuda)",
+  "provider_id": "llm-ornith (scratch benchmark container)",
+  "model": "Ornith-1.0-35B-Q4_K_M (ornith/ornith-1.0-35b-q4_k_m.gguf)",
+  "image_digest": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+  "image_version": "b9859 (revision 4fc4ec5541b243957ae5099edb67372f8f3b550e), built 2026-07-02",
+  "config": {
+    "context": 8192,
+    "cache_type_k": "q8_0",
+    "cache_type_v": "q8_0",
+    "ngl": 999,
+    "parallel": 1,
+    "flash_attn": "on (explicit)",
+    "reasoning": "off / reasoning-budget 0 (matches the normal llm-ornith compose command)",
+    "launch_method": "scratch `docker run --rm`, pinned image digest, port 8096; normal llm-ornith compose service stopped first (docker compose --profile ornith stop llm-ornith); no live .env.models / compose.models.yml edits"
+  },
+  "generated_at": "2026-08-19T08:58:00+03:30",
+  "status": "healthy",
+  "ok": true,
+  "observed": {
+    "memory_total_mib": 24463,
+    "memory_used_mib": 23435,
+    "memory_free_mib": 703,
+    "measurement_note": "sampled 3 times over ~10s (695, 700, 703 MiB free) to check for transient allocation noise; stable within a ~10 MiB band",
+    "healthcheck": "curl -fsS http://127.0.0.1:8096/v1/models -> 200 OK, n_ctx=8192 confirmed in response meta",
+    "confirmed_cli_args": "docker inspect Config.Cmd verified: --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on alongside -c 8192, matching the normal ornith launch flags otherwise (--reasoning off --reasoning-budget 0)"
+  },
+  "comparison_to_baseline": {
+    "baseline_file": "ornith-baseline-c8192-f16.json",
+    "baseline_free_mib": 761,
+    "quantkv_free_mib": 703,
+    "delta_free_mib": -58,
+    "note": "NEGATIVE RESULT: quantizing the KV cache to q8_0/q8_0 did NOT free meaningful VRAM for ornith at 8192 context -- free VRAM was actually ~58 MiB LOWER than the f16 baseline (within measurement noise of roughly flat, not a real gain). This is the opposite of the coder result (+354 MiB) and is explained by: (1) the KV cache itself at only 8192 tokens is a very small fraction of this ~21.2 GiB model's VRAM footprint, so halving it saves very little in absolute MiB, and (2) explicitly forcing --flash-attn on (required to get any benefit from quantized KV, per the CPU-fallback caveat in docs/research/TECHNOLOGY_EVALUATION_MATRIX.md) adds its own CUDA compute-buffer overhead that appears to roughly cancel out the small KV saving for this specific model/context combination."
+  },
+  "smoke_test": {
+    "method": "direct curl to 127.0.0.1:8096/v1/chat/completions",
+    "short_chat_result": "content: 'pong'",
+    "tool_call_result": "tool_calls[0].function.name='get_time', arguments='{\"timezone\":\"UTC\"}' -- correct, no regression"
+  },
+  "notes": [
+    "Because this configuration did not free meaningfully more than the ADR-004 507 MiB reference headroom (it did not free anything at all), the benchmark plan's own stated condition for proceeding to a raised context (12288/16384) was not met for ornith. Elevated-context testing was therefore NOT attempted for ornith -- attempting it would mean starting from less headroom than the already-documented-insufficient 507 MiB case, which is expected to OOM and was not worth the additional live-GPU disruption to demonstrate.",
+    "This is a valid, expected 'no safe increase' finding for the ornith profile specifically, consistent with the task's own stated expectation given ADR-004's evidence on this hardware."
+  ]
+}

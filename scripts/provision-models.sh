@@ -4,6 +4,7 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_ROOT="/srv/ai-station"
 PROFILE="core"
+MODEL_IDS=()
 HF_HUB_VERSION="1.24.0"
 
 usage() {
@@ -13,6 +14,7 @@ Usage:
 
 Options:
   --profile core|all
+  --id MODEL_ID              Install one manifest model (repeatable)
   --data-root PATH
   --help
 
@@ -26,6 +28,10 @@ while (( $# > 0 )); do
     case "$1" in
         --profile)
             PROFILE="$2"
+            shift 2
+            ;;
+        --id)
+            MODEL_IDS+=("$2")
             shift 2
             ;;
         --data-root)
@@ -43,11 +49,6 @@ while (( $# > 0 )); do
             ;;
     esac
 done
-
-if [[ "$PROFILE" != "core" && "$PROFILE" != "all" ]]; then
-    echo "ERROR: Profile must be core or all."
-    exit 2
-fi
 
 MANIFEST="$ROOT/config/model-manifest.json"
 PYTHON_SCRIPT="$ROOT/scripts/model_provision.py"
@@ -95,8 +96,13 @@ fi
     --upgrade \
     "huggingface_hub==${HF_HUB_VERSION}"
 
-exec "$VENV/bin/python" \
-    "$PYTHON_SCRIPT" \
-    --manifest "$MANIFEST" \
-    --data-root "$DATA_ROOT" \
+ARGS=(
+    --manifest "$MANIFEST"
+    --data-root "$DATA_ROOT"
     --profile "$PROFILE"
+)
+for MODEL_ID in "${MODEL_IDS[@]}"; do
+    ARGS+=(--id "$MODEL_ID")
+done
+
+exec "$VENV/bin/python" "$PYTHON_SCRIPT" "${ARGS[@]}"

@@ -4,6 +4,9 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCK_FILE="$ROOT/compose.images.lock.yaml"
 MANIFEST_FILE="$ROOT/config/image-lock.json"
+TEMP_DIR="$(mktemp -d)"
+COMPOSE_JSON="$TEMP_DIR/locked-compose.json"
+trap 'rm -rf -- "$TEMP_DIR"' EXIT
 
 cd "$ROOT"
 
@@ -31,11 +34,11 @@ fi
 # Enable all profiles so profile-gated model services are also verified
 # against the image lock.
 docker compose --profile '*' config --quiet
-docker compose --profile '*' config --no-path-resolution --format json > /tmp/ai-station-locked-compose.json
+docker compose --profile '*' config --no-path-resolution --format json > "$COMPOSE_JSON"
 
 python3 - \
     "$ROOT" \
-    /tmp/ai-station-locked-compose.json \
+    "$COMPOSE_JSON" \
     "$MANIFEST_FILE" <<'PY'
 from __future__ import annotations
 

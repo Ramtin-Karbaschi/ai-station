@@ -59,6 +59,8 @@ echo "=== Inspect PostgreSQL roles ==="
 # Local unix-socket access inside the official Postgres container commonly allows catalog inspection
 # even when TCP password auth is failing. We use this only to find the real superuser.
 ROLE_REPORT="$REPORT/roles.txt"
+SUPERUSER_CANDIDATE="$(mktemp)"
+trap 'rm -f -- "$SUPERUSER_CANDIDATE"' EXIT
 
 for candidate in postgres ai_station openwebui; do
   echo "--- candidate: $candidate ---" | tee -a "$ROLE_REPORT"
@@ -72,8 +74,8 @@ SUPERUSER="$(
   for candidate in postgres ai_station openwebui; do
     if docker exec -i ai-station-postgres-1 sh -lc \
       "psql -U '$candidate' -d postgres -tAc \"SELECT rolname FROM pg_roles WHERE rolname=current_user AND rolsuper IS TRUE;\"" \
-      2>/dev/null | grep -E '^(postgres|ai_station|openwebui)$' >/tmp/ai-station-superuser-candidate 2>/dev/null; then
-        cat /tmp/ai-station-superuser-candidate
+      2>/dev/null | grep -E '^(postgres|ai_station|openwebui)$' >"$SUPERUSER_CANDIDATE" 2>/dev/null; then
+        cat "$SUPERUSER_CANDIDATE"
         exit 0
     fi
   done

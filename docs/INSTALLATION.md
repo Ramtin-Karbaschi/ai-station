@@ -1,37 +1,64 @@
 # Installation Guide
 
-This guide describes the supported AI Station installation flow.
+AI Station installs the application into `/opt/ai-station` and stores models,
+caches, and backups under `/srv/ai-station`. The remaining operator decision
+is which local model fits the available GPU.
 
-See also [Multi-machine deployment](MULTI_MACHINE_DEPLOYMENT.md) for cloning
-this workstation onto another PC, and what a future Windows `.exe` bootstrap
-can (and cannot) automate.
+Supported hosts:
 
-## Supported installation layout
+- Native Linux (Ubuntu-class + NVIDIA + Docker Engine)
+- Windows 11 + WSL2 Ubuntu + Docker Desktop + NVIDIA Windows driver
+
+Native Windows without WSL is not supported. macOS is out of scope until an
+ADR and local CUDA-alternative benchmarks exist.
+
+## Installation contract
+
+This is a canonical-path install, not an arbitrary-path layout:
 
 ~~~text
-/opt/ai-station
-/srv/ai-station
+/opt/ai-station     application, configuration, scripts
+/srv/ai-station     models, caches, backups, runtime data
 ~~~
 
-The repository may initially be cloned elsewhere. The installer deploys the
-application into `/opt/ai-station` and stores models, caches and backups under
-`/srv/ai-station`.
+A clone may start in any temporary directory. The installer deploys into
+those two roots, preserves `.env`, and keeps model bytes out of Git.
 
-## Before installation
+Compose stays repository-relative:
 
-The installer does not install or configure the Windows NVIDIA driver,
-WSL2 or Docker Desktop.
+~~~text
+COMPOSE_FILE=compose.yml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
+~~~
 
-Complete these host-level prerequisites first:
+References to `/opt/ai-station` are allowed only in files listed in
+`config/release-path-allowlist.txt`.
 
-1. Install or enable WSL2.
-2. Install an Ubuntu-based WSL distribution.
-3. Install Docker Desktop or Docker Engine.
-4. Enable Docker integration for the WSL distribution.
-5. Install a compatible Windows NVIDIA driver.
-6. Confirm the GPU is visible inside WSL.
+Never commit `.env`, secrets, model binaries, databases, backups, caches,
+or generated logs.
 
-Verify:
+## Host prerequisites
+
+The installer does **not** install NVIDIA drivers, WSL, or Docker.
+
+### Linux
+
+1. NVIDIA driver with `nvidia-smi` working.
+2. Docker Engine and Compose v2.
+3. NVIDIA Container Toolkit.
+4. Git, Python 3, OpenSSL, curl, rsync, Bash.
+
+~~~bash
+nvidia-smi
+docker version
+docker compose version
+~~~
+
+### Windows 11 + WSL2
+
+1. NVIDIA Windows driver.
+2. WSL2 with an Ubuntu distribution.
+3. Docker Desktop with WSL integration.
+4. Confirm the GPU is visible **inside WSL**.
 
 ~~~bash
 wsl.exe --status
@@ -40,43 +67,56 @@ docker compose version
 nvidia-smi
 ~~~
 
-## Required tools
+Set `%UserProfile%\.wslconfig` so WSL does not idle-stop the stack:
 
-The installation expects:
+~~~ini
+[wsl2]
+vmIdleTimeout=-1
+~~~
 
-- Bash;
-- Git;
-- Docker;
-- Docker Compose v2;
-- Python 3;
-- OpenSSL;
-- curl;
-- rsync;
-- `nvidia-smi`.
+`scripts/ai start` and `scripts/ensure-wsl-idle-timeout.sh` apply this
+idempotently. After editing `.wslconfig`, run `wsl --shutdown` once from
+PowerShell, then start AI Station again.
 
-Missing basic Ubuntu packages may be installed automatically by the installer.
+## Storage
 
-## Storage requirements
+Preflight requires at least 80 GiB free. The full model profile needs more
+because the Hugging Face cache and the final GGUF may exist together.
 
-The configured preflight requires at least 80 GiB of free storage.
+Recommended baseline: ~24 GB VRAM, 64 GB RAM, NVMe storage. Smaller GPUs
+can still run the station; choose a smaller GGUF in [MODELS.md](MODELS.md).
 
-The full model profile requires substantially more space than the Core profile
-because both the final model file and the resumable Hugging Face cache may
-exist simultaneously.
+## Quick start
 
-## Clone / bootstrap
+### Linux
 
 ~~~bash
-# Full clone (always works)
 git clone https://github.com/Ramtin-Karbaschi/ai-station.git
 cd ai-station
 ./scripts/install.sh --validate-only
 sudo ./scripts/install.sh
-
-# Or download the GitHub install pack / one-liners:
-# https://github.com/Ramtin-Karbaschi/ai-station/releases/latest
-# See install/README.md and docs/MULTI_MACHINE_DEPLOYMENT.md
 ~~~
+
+Then choose models for this machine:
+
+~~~bash
+ai models catalog
+make models-core
+# or: ai models install <manifest-id>
+~~~
+
+### Windows 11
+
+From PowerShell, after NVIDIA + WSL2 + Docker Desktop work:
+
+~~~powershell
+irm https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/windows/Install-AIStation.ps1 | iex
+~~~
+
+Day-to-day management: `AI Station/AI Station Manager.cmd`.
+Open WebUI: `http://127.0.0.1:3000`. Apps: `http://127.0.0.1:4000/v1`.
+
+Pack and bootstrap notes: [install/README.md](../install/README.md).
 
 ## Validate without modifying the system
 
@@ -84,7 +124,7 @@ sudo ./scripts/install.sh
 ./scripts/install.sh --validate-only
 ~~~
 
-Do not continue until the preflight reports:
+Do not continue until preflight reports:
 
 ~~~text
 Errors:   0
@@ -92,13 +132,7 @@ Warnings: 0
 INSTALLATION PREFLIGHT PASSED
 ~~~
 
-## Install
-
-~~~bash
-sudo ./scripts/install.sh
-~~~
-
-The installer performs these stages:
+## What the installer does
 
 1. validates the host;
 2. verifies container and Dockerfile locks;
@@ -112,22 +146,17 @@ The installer performs these stages:
 10. starts the stack;
 11. waits for health checks.
 
-## Prepare without starting services
+Prepare without starting services:
 
 ~~~bash
 sudo ./scripts/install.sh --prepare-only
 ~~~
 
-## Infrastructure-only testing
-
-The following option skips model checks:
+Skip model checks only for infrastructure troubleshooting:
 
 ~~~bash
 sudo ./scripts/install.sh --skip-model-check
 ~~~
-
-Use it only for infrastructure troubleshooting. A normal runtime cannot pass
-the final verification without the required local models.
 
 ## Verify after installation
 
@@ -136,50 +165,46 @@ cd /opt/ai-station
 ./scripts/verify.sh
 ~~~
 
-Expected services include:
-
-- Open WebUI;
-- UI Gateway;
-- Apache Tika;
-- SearXNG;
-- embedding server;
-- general model server;
-- Persian OCR;
-- local Whisper large-v3.
-
-## Install the complete model profile
-
-~~~bash
-cd /opt/ai-station
-./scripts/provision-models.sh --profile all
-./scripts/verify-models.sh --profile all
-~~~
-
 ## Upgrade
 
-From the installation directory:
-
 ~~~bash
 cd /opt/ai-station
+git checkout development   # or stage / main, matching this machine
 git pull --ff-only
 sudo ./scripts/install.sh
 ~~~
 
 When an existing application directory is replaced, the installer creates a
-timestamped backup under:
+timestamped backup under `/srv/ai-station/backups`. The local `.env` file is
+preserved.
+
+## Clone this workstation onto another PC
+
+1. Complete host prerequisites on the target.
+2. Install with `install.sh` or the Windows bootstrap.
+3. Optionally rsync `/srv/ai-station/models` to skip re-download; then
+   `ai models verify <id>` or `./scripts/verify-models.sh --profile core`.
+4. Generate fresh secrets on the new host unless you deliberately migrate
+   them. Never copy a real `.env` into Git.
+
+Acceptance on every new machine:
 
 ~~~text
-/srv/ai-station/backups
+./scripts/install.sh --validate-only
+sudo ./scripts/install.sh
+./scripts/verify.sh
+curl -fsS http://127.0.0.1:3000 >/dev/null
+curl -fsS http://127.0.0.1:4000/health/liveliness >/dev/null
 ~~~
 
-The local `.env` file is preserved.
+There is no supported single `.exe` that installs drivers, WSL, Docker, and
+models. A future orchestrator can only check those prerequisites and then
+run this installer.
 
 ## Clean-machine acceptance
 
-Before using the project for unattended deployment:
-
-1. test installation on a disposable WSL distribution;
-2. verify all host gateway services;
-3. confirm a full restart survives `wsl --shutdown`;
-4. test backup restoration;
-5. record the tested Git commit and model manifest checksums.
+1. Test installation on a disposable WSL distribution or Linux VM.
+2. Verify host gateway services.
+3. On Windows, confirm a full restart survives `wsl --shutdown`.
+4. Test backup restoration.
+5. Record the tested Git commit and model manifest checksums.

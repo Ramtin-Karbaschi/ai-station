@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "version": "1.18.19",
+  "asset": "opencode-linux-x64.tar.gz",
+  "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.19/opencode-linux-x64.tar.gz",
+  "sha256": "7bb35487c55f9957f5d91ae60be6fa49fc8f74629c210c1719ed75fdbf7e2bd9",
+  "install_root": "/usr/local/lib/ai-station/opencode",
+  "developer_user": "aidev"
+}

@@ -158,6 +158,44 @@ def probe_free_vram_mib() -> int:
         return 0
 
 
+def vram_probe_looks_stale(
+    free_vram_mib: int,
+    active_heavy: list[str],
+    hardware: dict[str, Any],
+    *,
+    stale_fraction: float = 0.90,
+) -> str | None:
+    """Return a warning string if a heavy profile is marked active but the
+    probed free VRAM is implausibly close to the full GPU total.
+
+    This is a diagnostic-only cross-check (see docs/TROUBLESHOOTING.md,
+    "nvidia-smi VRAM free looks wrong after heavy container churn"): it does
+    not change any admission decision and does not raise. `admit()` already
+    enforces the one-heavy-GPU invariant via the `active_heavy` marker file,
+    not this number, so a stale probe is a visibility problem, not a safety
+    one. Returns None when nothing looks stale or when the GPU total is
+    unknown/non-positive (nothing to compare against).
+    """
+    if not active_heavy:
+        return None
+    gpu_total = hardware.get("gpu", {}).get("vram_total_mib")
+    try:
+        gpu_total = int(gpu_total)
+    except (TypeError, ValueError):
+        return None
+    if gpu_total <= 0:
+        return None
+    if free_vram_mib >= gpu_total * stale_fraction:
+        return (
+            "WARNING: VRAM probe looks stale/unreliable - active_heavy="
+            f"{', '.join(active_heavy)} but free_vram_mib={free_vram_mib} is "
+            f">={stale_fraction:.0%} of gpu_total_mib={gpu_total}. "
+            "See docs/TROUBLESHOOTING.md "
+            "('nvidia-smi VRAM free looks wrong after heavy container churn')."
+        )
+    return None
+
+
 def probe_free_ram_mib() -> int:
     try:
         meminfo = Path("/proc/meminfo").read_text(encoding="utf-8")

@@ -35,6 +35,21 @@
       "size_bytes": 17665334432
     },
     {
+      "destination": "models/ornith/ornith-1.0-35b-q4_k_m.gguf",
+      "filename": "ornith-1.0-35b-Q4_K_M.gguf",
+      "id": "ornith-1.0-35b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "deepreinforce-ai/Ornith-1.0-35B-GGUF",
+      "required_for_runtime": false,
+      "revision": "013ba12322a9bcb7392736432ab5db9751e439f5",
+      "revision_is_immutable": true,
+      "role": "agentic_coding",
+      "sha256": "ff25291b2599fb927a835e624d2b3540106af61761c3fa57ac4264046dbec002",
+      "size_bytes": 21166757760
+    },
+    {
       "destination": "models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
       "filename": "Qwen3-Embedding-0.6B-Q8_0.gguf",
       "id": "embedding-qwen3-0.6b-q8",

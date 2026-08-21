@@ -2,6 +2,7 @@
 # Any new reference outside this list will be reported by the release audit.
 
 AI Station/AI Station Manager.cmd
+AI Station/AI Station Manager.ps1
 AI Station/AI Station.cmd
 AI Station/AI Station.ps1
 AI Station/AI Station Admin.cmd
@@ -11,13 +12,14 @@ README.md
 .env.models.example
 apps/gateway/app/main.py
 config/install-layout.env
-config/skills/local-ai-ops.md
 config/registry/models.yaml
 config/registry/projects.yaml
 config/gateway/litellm.yaml
+config/clients/opencode/opencode.jsonc.template
+config/skills/ai-station-client-integration/SKILL.md
+config/skills/ai-station-operations/SKILL.md
 docs/ARCHITECTURE.md
 docs/INSTALLATION.md
-docs/MULTI_MACHINE_DEPLOYMENT.md
 install/README.md
 install/windows/Install-AIStation.ps1
 install/linux/install-ai-station.sh
@@ -25,8 +27,6 @@ scripts/build-install-pack.sh
 docs/MODELS.md
 docs/OPERATIONS.md
 docs/PLATFORM.md
-docs/PORTABILITY_POLICY.md
-docs/README_FA.md
 docs/SCRIPTS.md
 docs/TROUBLESHOOTING.md
 docs/ops/AI_STATION_CURRENT_STATE.md
@@ -54,8 +54,6 @@ scripts/stop-ai-station-models.sh
 scripts/switch-ai-station-model.sh
 config/providers.yaml
 config/hardware-profile.json
-docs/research/AI_STATION_ARCHITECTURE_AUDIT.md
-docs/research/IMPLEMENTATION_PLAN.md
 docs/research/RISK_REGISTER.md
 docs/research/TECHNOLOGY_EVALUATION_MATRIX.md
 docs/security/THREAT_MODEL.md
@@ -66,12 +64,19 @@ docs/adr/ADR-004-resource-admission-control.md
 docs/adr/ADR-005-retrieval-engine.md
 docs/adr/ADR-006-document-router.md
 docs/adr/ADR-007-observability-boundary.md
+docs/adr/ADR-012-graphify-code-knowledge-graph.md
+docs/adr/ADR-013-opencode-desktop-wsl-and-preview-verification.md
+docs/adr/ADR-009-opencode-local-client.md
+docs/clients/OPENCODE.md
+infra/systemd/ai-station-opencode.service
 infra/systemd/ai-station-gateway.service
 infra/systemd/ai-station-ui-gateway.service
+scripts/configure-opencode-desktop.ps1
 scripts/install-systemd.sh
-scripts/quarantine-model-path.sh
 apps/gateway/app/admission.py
 apps/gateway/app/providers.py
+apps/ui-gateway/ui_gateway.py
 docs/research/INFERENCE_BENCHMARK_REPORT.md
-docs/research/RETRIEVAL_EVALUATION_PLAN.md
-docs/research/DOCUMENT_GOLDEN_SET_PLAN.md
+tests/test_openai_contracts.py
+tests/test_opencode_client_contract.py
+tests/test_opencode_failure_regression.py

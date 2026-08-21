@@ -1,0 +1,45 @@
+{
+  "skill_name": "ai-station-operations",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "OpenCode launched from Windows suddenly cannot reach my local coder model. Diagnose it, but do not change any state. Give me the exact checks and the supported runtime path.",
+      "expected_output": "A read-only diagnosis using status, health, and OpenCode doctor; it preserves LiteLLM :4000/v1 and the WSL-native non-root client path.",
+      "files": [],
+      "expectations": [
+        "Uses ai status and ai health before mutation",
+        "Uses ai opencode doctor as the read-only client diagnostic",
+        "States that OpenCode must use http://127.0.0.1:4000/v1",
+        "Identifies WSL-native OpenCode as the supported developer runtime",
+        "Does not recommend :8888 or :8083 as a client endpoint",
+        "Does not start, stop, restart, or reconfigure services"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to reclaim the coder model disk space for a week and restore it later. Show the safest AI Station commands. Assume it might currently be active; do not actually remove anything.",
+      "expected_output": "A recoverable, manifest-driven dry-run/quarantine/restore workflow that checks the active profile and never uses rm.",
+      "files": [],
+      "expectations": [
+        "Uses ai models catalog and checks or stops the active profile",
+        "Uses ai models remove with a dry-run before --confirm",
+        "Explains that removal is recoverable quarantine",
+        "Includes ai models restore with --confirm",
+        "Does not recommend rm or destructive Docker cleanup"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "AI Station restarted unexpectedly and Open WebUI may have lost state. Diagnose first, then give me a safe backup and recovery sequence without deleting volumes.",
+      "expected_output": "An evidence-first diagnosis followed by the canonical backup and bounded recovery workflow, with no destructive volume cleanup.",
+      "files": [],
+      "expectations": [
+        "Uses ai status and ai health before mutation",
+        "Captures bounded logs before recovery",
+        "Uses ai backup before a restart when state is accessible",
+        "Uses the canonical ai restart lifecycle",
+        "Does not delete Docker volumes or model data"
+      ]
+    }
+  ]
+}

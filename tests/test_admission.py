@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from apps.gateway.app.admission import admit, estimate_required_vram_mib, get_provider
+from apps.gateway.app.admission import (
+    admit,
+    estimate_required_vram_mib,
+    get_provider,
+    vram_probe_looks_stale,
+)
 
 
 class AdmissionTests(unittest.TestCase):
@@ -143,6 +148,39 @@ class AdmissionTests(unittest.TestCase):
             estimate_required_vram_mib(provider, 8000),
             21000 + int(8 * 180),
         )
+
+    def test_vram_probe_looks_stale_when_active_heavy_but_vram_nearly_full(
+        self,
+    ) -> None:
+        warning = vram_probe_looks_stale(
+            22935,
+            ["llama-cpp-ornith"],
+            self.hardware,
+        )
+        self.assertIsNotNone(warning)
+        assert warning is not None
+        self.assertIn("stale", warning.lower())
+        self.assertIn("llama-cpp-ornith", warning)
+
+    def test_vram_probe_not_stale_when_vram_matches_loaded_model(self) -> None:
+        warning = vram_probe_looks_stale(
+            2441,
+            ["llama-cpp-ornith"],
+            self.hardware,
+        )
+        self.assertIsNone(warning)
+
+    def test_vram_probe_not_stale_when_no_heavy_active(self) -> None:
+        warning = vram_probe_looks_stale(22935, [], self.hardware)
+        self.assertIsNone(warning)
+
+    def test_vram_probe_not_stale_when_gpu_total_unknown(self) -> None:
+        warning = vram_probe_looks_stale(
+            22935,
+            ["llama-cpp-ornith"],
+            {"gpu": {}, "memory": {}},
+        )
+        self.assertIsNone(warning)
 
 
 if __name__ == "__main__":
