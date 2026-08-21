@@ -11,6 +11,8 @@ All notable project changes should be recorded in this file.
 - tracked the Postgres schema under `infra/postgres/` and described the host
   as Linux or Windows+WSL in the architecture diagram;
 - restored execute bits on `scripts/test.sh` and other operator entrypoints;
+- resolved `AI_STATION_TEST_PYTHON=python` from PATH so GitHub Actions
+  offline-quality can find the setup-python interpreter;
 - folded install, portability, and second-machine clone steps into
   `docs/INSTALLATION.md`; Linux and Windows+WSL now share one guide;
 - added `ai models add` for curated install and for registering a new

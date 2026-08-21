@@ -26,6 +26,45 @@ class QualityGateContractTests(unittest.TestCase):
         self.assertIn("test) cmd_test", cli)
         self.assertIn("scripts/test.sh", release)
         self.assertIn("./scripts/test.sh", workflow)
+        self.assertIn("AI_STATION_TEST_PYTHON: python", workflow)
+
+    def test_runner_resolves_unqualified_python_command_names(self) -> None:
+        import shutil
+        import subprocess
+        import tempfile
+
+        runner = ROOT / "scripts/test.sh"
+        real = shutil.which("python3") or shutil.which("python")
+        self.assertIsNotNone(real, "need python3 or python on PATH")
+        names = [name for name in ("python3", "python") if shutil.which(name)]
+        for name in names:
+            result = subprocess.run(
+                [str(runner), "--print-python"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "AI_STATION_TEST_PYTHON": name},
+            )
+            printed = result.stdout.strip()
+            self.assertTrue(os.access(printed, os.X_OK), printed)
+            self.assertTrue(Path(printed).is_file(), printed)
+
+        with tempfile.TemporaryDirectory() as directory:
+            shim = Path(directory) / "python"
+            shim.symlink_to(real)
+            env = os.environ.copy()
+            env["PATH"] = directory + os.pathsep + env.get("PATH", "")
+            env["AI_STATION_TEST_PYTHON"] = "python"
+            result = subprocess.run(
+                [str(runner), "--print-python"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            printed = Path(result.stdout.strip())
+            self.assertTrue(printed.is_file())
+            self.assertTrue(os.access(printed, os.X_OK))
 
     def test_operator_scripts_are_executable(self) -> None:
         for relative in (
