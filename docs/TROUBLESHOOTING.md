@@ -314,10 +314,32 @@ Then run:
 
 ## Port conflict
 
+Loopback ports that the station publishes:
+
 ~~~bash
 ss -lntp | grep -E \
   ':(3000|5432|6379|8082|8090|8888|8889|8890|9998)\b'
 ~~~
+
+### Docker Desktop `/forwards/expose` HTTP 500
+
+On Windows 11 + WSL2, Docker Desktop's userspace port proxy can fail while
+publishing `127.0.0.1:9998` (Apache Tika) or another loopback port:
+
+~~~text
+Error response from daemon: ports are not available: exposing port
+TCP 127.0.0.1:9998 -> 127.0.0.1:0: /forwards/expose returned unexpected
+status: 500
+~~~
+
+`ai start` retries compose up three times and removes containers stuck in
+`Created`. If it still fails:
+
+1. Wait until Docker Desktop shows running.
+2. Restart Docker Desktop once.
+3. Run Start again from Manager.
+
+Do not bind station ports to `0.0.0.0` to work around this.
 
 ## Release audit warning
 

@@ -113,8 +113,12 @@ From PowerShell, after NVIDIA + WSL2 + Docker Desktop work:
 irm https://raw.githubusercontent.com/Ramtin-Karbaschi/ai-station/main/install/windows/Install-AIStation.ps1 | iex
 ~~~
 
-Day-to-day management: `AI Station/AI Station Manager.cmd`.
+Day-to-day management: `Desktop\AI Station\AI Station Manager.cmd`.
 Open WebUI: `http://127.0.0.1:3000`. Apps: `http://127.0.0.1:4000/v1`.
+
+The Desktop `.cmd` files always run the panel in WSL
+(`/opt/ai-station/AI Station/`). Do not keep a full copy of
+`AI Station Manager.ps1` on the Desktop; it goes stale after upgrades.
 
 Pack and bootstrap notes: [install/README.md](../install/README.md).
 

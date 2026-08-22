@@ -75,13 +75,42 @@ sudo ./scripts/install.sh
 '@
 
 Write-Host ""
-Write-Host "3) Copying Desktop launchers..."
+Write-Host "3) Installing Desktop launchers (thin trampolines to WSL /opt/ai-station)..."
 $Desktop = [Environment]::GetFolderPath("Desktop")
-$DesktopWsl = (wsl.exe -d $WslDistro -- wslpath -a "$Desktop").Trim()
-wsl.exe -d $WslDistro -- bash -lc "cp -a '/opt/ai-station/AI Station/'*.cmd '$DesktopWsl'/ && ls -1 '$DesktopWsl'/AI\ Station*.cmd"
+$LauncherDir = Join-Path $Desktop "AI Station"
+New-Item -ItemType Directory -Force -Path $LauncherDir | Out-Null
+$DesktopWsl = (wsl.exe -d $WslDistro -- wslpath -a "$LauncherDir").Trim()
+wsl.exe -d $WslDistro -- bash -lc "mkdir -p '$DesktopWsl' && cp -a '/opt/ai-station/AI Station/AI Station.cmd' '/opt/ai-station/AI Station/AI Station Manager.cmd' '$DesktopWsl'/"
+
+# Keep a .ps1 name on Desktop for people who pin the old file, but never
+# duplicate the control panel. Always re-enter the WSL copy.
+$trampoline = @"
+#Requires -Version 5.1
+`$ErrorActionPreference = "Stop"
+`$Distro = if (`$env:AI_STATION_WSL_DISTRO) { `$env:AI_STATION_WSL_DISTRO } else { "$WslDistro" }
+`$Canonical = "\\wsl.localhost\`$Distro\opt\ai-station\AI Station\AI Station Manager.ps1"
+if (-not (Test-Path -LiteralPath `$Canonical)) {
+    Write-Host "AI Station is not installed in WSL at `$Canonical" -ForegroundColor Red
+    [void](Read-Host "Press ENTER to close")
+    exit 1
+}
+& `$Canonical @args
+"@
+Set-Content -LiteralPath (Join-Path $LauncherDir "AI Station Manager.ps1") -Value $trampoline -Encoding UTF8
+
+# Remove leftover copies that used to shadow /opt/ai-station after upgrades.
+@(
+  (Join-Path $LauncherDir "AI Station.ps1"),
+  (Join-Path $LauncherDir "AI Station Admin.cmd"),
+  (Join-Path $Desktop "AI Station.cmd"),
+  (Join-Path $Desktop "AI Station Manager.cmd"),
+  (Join-Path $Desktop "AI Station Admin.cmd"),
+  (Join-Path $Desktop "AI Station Manager.ps1"),
+  (Join-Path $Desktop "AI Station.ps1")
+) | ForEach-Object { Remove-Item -LiteralPath $_ -Force -ErrorAction SilentlyContinue }
 
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "Open WebUI:  http://127.0.0.1:3000"
 Write-Host "App API:     http://127.0.0.1:4000/v1"
-Write-Host "Daily start: Desktop\AI Station.cmd"
+Write-Host "Daily start: Desktop\AI Station\AI Station.cmd"

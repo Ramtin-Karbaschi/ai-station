@@ -124,6 +124,39 @@ ai_ensure_docker() {
   fi
 }
 
+ai_dump_published_ports() {
+  echo "--- loopback listeners ---" >&2
+  ss -lntp 2>/dev/null | grep -E \
+    ':(3000|5432|6379|8082|8083|8084|8085|8086|8090|8888|8889|8890|9998)\b' >&2 || true
+  echo "--- ai-station containers ---" >&2
+  docker ps -a --filter name=ai-station \
+    --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' >&2 || true
+}
+
+# Docker Desktop on WSL2 sometimes returns HTTP 500 from /forwards/expose
+# while publishing 127.0.0.1 ports (Tika :9998 is a frequent hit). Retry
+# after dropping containers stuck in "Created".
+ai_retry_compose() {
+  local attempt
+  for attempt in 1 2 3; do
+    if ai_compose "$@"; then
+      return 0
+    fi
+    echo "WARNING: docker compose failed (attempt ${attempt}/3)." >&2
+    if (( attempt < 3 )); then
+      echo "Retrying; Docker Desktop WSL port forwarding can return HTTP 500." >&2
+      docker ps -aq --filter name=ai-station --filter status=created \
+        | xargs -r docker rm -f >/dev/null 2>&1 || true
+      sleep $((attempt * 3))
+    fi
+  done
+  echo "ERROR: docker compose failed after 3 attempts: $*" >&2
+  echo "If the log mentioned /forwards/expose or ports are not available:" >&2
+  echo "  restart Docker Desktop on Windows, wait until it is ready, then Start again." >&2
+  ai_dump_published_ports
+  return 1
+}
+
 ai_last_or_default_profile() {
   local profile
   profile="$(ai_active_heavy_profile 2>/dev/null || true)"

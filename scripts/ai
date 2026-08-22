@@ -211,7 +211,7 @@ cmd_start() {
 
   ai_ensure_network
 
-  ai_compose up -d postgres redis searxng tika embedder
+  ai_retry_compose up -d postgres redis searxng tika embedder
   ai_wait_compose_service postgres healthy 120
   ai_wait_compose_service redis healthy 60
   ai_wait_compose_service tika healthy 90
@@ -220,7 +220,7 @@ cmd_start() {
   "$ROOT/scripts/sync-litellm-db-url.sh"
   "$ROOT/scripts/ensure-litellm-db.sh"
 
-  ai_compose up -d llm-gateway
+  ai_retry_compose up -d llm-gateway
   ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 120
 
   # Bring host-side gateways up after Docker upstreams are ready; skip restart
@@ -229,11 +229,11 @@ cmd_start() {
   ai_ensure_host_gateway ai-station-ui-gateway "http://127.0.0.1:8890/health" "UI Gateway"
 
   # Start the model before Open WebUI so the UI does not open onto a cold backend.
-  ai_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
+  ai_retry_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
   ai_set_active_heavy_profile "$profile"
   ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300
 
-  ai_compose up -d open-webui
+  ai_retry_compose up -d open-webui
 
   ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180
   ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 180

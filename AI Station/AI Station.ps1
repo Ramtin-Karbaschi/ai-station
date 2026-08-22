@@ -1,20 +1,13 @@
+#Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
 # AI Station quick-start (Windows)
 # Starts the platform, waits until Open WebUI is ready, opens the DEFAULT browser.
 # Leaves the platform running (stop via Manager).
 
-$Distro = "Ubuntu"
+$Distro = if ($env:AI_STATION_WSL_DISTRO) { $env:AI_STATION_WSL_DISTRO } else { "Ubuntu" }
+$AiPath = "/opt/ai-station/scripts/ai"
 $Url = "http://127.0.0.1:3000"
-$StartScript = "/opt/ai-station/scripts/ai-station-user-start.sh"
-
-function Invoke-WslBash {
-    param([string]$Command)
-    & wsl.exe -d $Distro --user root -- bash -lc $Command
-    if ($LASTEXITCODE -ne 0) {
-        throw "WSL command failed: $Command"
-    }
-}
 
 function Wait-OpenWebUI {
     Write-Host "Waiting for Open WebUI to become ready..."
@@ -34,7 +27,10 @@ function Wait-OpenWebUI {
 }
 
 Write-Host "Starting AI Station..."
-Invoke-WslBash $StartScript
+& wsl.exe -d $Distro --user root -- $AiPath start
+if ($LASTEXITCODE -ne 0) {
+    throw "AI Station start failed (exit $LASTEXITCODE). If Docker Desktop reported /forwards/expose 500, restart Docker Desktop and retry."
+}
 
 Wait-OpenWebUI
 
@@ -44,7 +40,7 @@ Write-Host ""
 Write-Host "Sign in with your local Open WebUI account."
 Write-Host ""
 Write-Host "If the password is rejected, open AI Station Manager.cmd"
-Write-Host "and choose: 26. Reset Open WebUI password"
+Write-Host "and choose: 38. Reset Open WebUI password"
 Start-Process $Url
 
 Write-Host ""

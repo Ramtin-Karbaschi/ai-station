@@ -5,7 +5,6 @@ AI Station/AI Station Manager.cmd
 AI Station/AI Station Manager.ps1
 AI Station/AI Station.cmd
 AI Station/AI Station.ps1
-AI Station/AI Station Admin.cmd
 AI Station/README.md
 README.md
 .env.example

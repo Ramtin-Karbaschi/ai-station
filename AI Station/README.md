@@ -1,19 +1,23 @@
 # AI Station Windows Launchers
 
+These files live in the repository. Desktop shortcuts must call the copies
+under `\\wsl.localhost\Ubuntu\opt\ai-station\AI Station\` so they cannot go
+stale after an upgrade.
+
 ## Which file should I use?
 
 | File | Role |
 |---|---|
-| **AI Station.cmd** | Quick start: start platform + open Open WebUI in your default browser |
-| **AI Station Manager.cmd** | Control panel: platform, models, API keys, logs, backup |
-| **AI Station Admin.cmd** | Compatibility alias → opens Manager |
+| **AI Station.cmd** | Quick start: start platform + open Open WebUI |
+| **AI Station Manager.cmd** | Control panel: lifecycle, models, API keys, logs, backup |
 
-The Manager `.cmd` is a stable launcher for a typed PowerShell control panel.
-It passes command arguments directly through WSL without constructing
-`bash -lc` strings. In addition to normal lifecycle operations, the panel
-provides catalog/install/add/quarantine/restore, offline tests, Graphify, and
-the non-root WSL OpenCode developer client. Clients option 28 runs the
-verified developer client; option 32 repairs its pinned runtime/config.
+The `.cmd` files pass typed arguments into WSL. They do not keep a second
+copy of the PowerShell panel on the Desktop.
+
+In addition to lifecycle operations, the panel provides catalog / install /
+add / quarantine / restore, offline tests, Graphify, and the non-root WSL
+OpenCode developer client. Clients option 28 runs the verified developer
+client; option 32 repairs its pinned runtime and config.
 
 ## Two different logins
 

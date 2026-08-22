@@ -6,6 +6,12 @@ All notable project changes should be recorded in this file.
 
 ### Operator simplification
 
+- retried `docker compose up` on Docker Desktop WSL port-proxy HTTP 500
+  (`/forwards/expose`) so Start is not a one-shot failure on Tika `:9998`;
+- Windows Desktop launchers now trampoline into `/opt/ai-station` instead of
+  keeping a second, stale copy of the Manager panel;
+- restored the missing `Read-SafeId` helper in the Windows Manager;
+- removed the unused Admin.cmd alias from `AI Station/`;
 - documented a three-branch Git workflow (`development`, `stage`, `main`) and
   stopped treating extra branch names as part of the supported process;
 - tracked the Postgres schema under `infra/postgres/` and described the host

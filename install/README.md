@@ -70,7 +70,8 @@ What the script does:
 1. checks `wsl` / Docker visibility hints;
 2. clones (or updates) the repo inside WSL;
 3. runs `./scripts/install.sh --validate-only` then `sudo ./scripts/install.sh`;
-4. copies Desktop launchers from `AI Station/`.
+4. installs thin Desktop launchers under `Desktop\AI Station\` that always
+   call `/opt/ai-station` (they do not keep a second Manager.ps1 copy).
 
 Open UI: http://127.0.0.1:3000
 

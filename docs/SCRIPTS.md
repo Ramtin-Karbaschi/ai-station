@@ -16,6 +16,9 @@ Windows launchers call the same script:
 | `AI Station/AI Station.cmd` → `.ps1` | `ai start` (restores last heavy profile, else `general`) |
 | `AI Station/AI Station Manager.cmd` | `ai <action>` (same verbs as the Manager menu, including `opencode configure`) |
 
+Desktop copies are trampolines into `/opt/ai-station`. Do not keep a second
+full `AI Station Manager.ps1` on the Desktop.
+
 Compat shims (kept so old Desktop shortcuts / Makefile paths still work; they only `exec` `ai`):
 
 - `scripts/start.sh` / `stop.sh` / `status.sh`

@@ -13,6 +13,9 @@ function Invoke-AIStation {
     & wsl.exe -d $Distro --user root -- $AiPath @AiArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Host "AI Station command failed (exit $LASTEXITCODE)." -ForegroundColor Red
+        if ($AiArgs.Count -gt 0 -and $AiArgs[0] -eq "start") {
+            Write-Host "If Docker Desktop said ports are not available or /forwards/expose 500, restart Docker Desktop and try Start again." -ForegroundColor Yellow
+        }
         return $false
     }
     return $true
@@ -21,6 +24,16 @@ function Invoke-AIStation {
 function Wait-ForEnter {
     Write-Host ""
     [void](Read-Host "Press ENTER to continue")
+}
+
+function Read-SafeId {
+    param([Parameter(Mandatory)][string]$Prompt)
+    $value = (Read-Host $Prompt).Trim()
+    if ($value -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+        Write-Host "Use letters, numbers, dot, underscore, and hyphen." -ForegroundColor Yellow
+        return $null
+    }
+    return $value
 }
 
 function Read-SafeRepo {
