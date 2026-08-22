@@ -4,6 +4,17 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Experimental ComfyUI MiniMax media studio
+
+- **ADR-015 Accepted:** isolated ComfyUI overlay for MiniMax Music 3 and
+  MiniMax H3 next to Open WebUI. Loopback `:8188`, off by default, one
+  heavy GPU at a time. Chat remains LiteLLM `:4000`. See
+  `docs/clients/COMFYUI.md`. Live Music3 and H3 text-to-video smokes passed
+  on 2026-08-22; ComfyUI stays experimental. Generated media, prompt
+  dumps, and `/system_stats` snapshots stay gitignored; only slim
+  `health.json` and `*-smoke.json` files are kept under
+  `benchmarks/results/`.
+
 ### Operator simplification
 
 - retried `docker compose up` on Docker Desktop WSL port-proxy HTTP 500

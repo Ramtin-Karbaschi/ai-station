@@ -15,6 +15,7 @@ fact across multiple documents.
 | See the verified release snapshot | [AI_STATION_CURRENT_STATE.md](ops/AI_STATION_CURRENT_STATE.md) |
 | Configure OpenCode | [OPENCODE.md](clients/OPENCODE.md) |
 | Use the code graph | [GRAPHIFY.md](clients/GRAPHIFY.md) |
+| Generate music or video | [COMFYUI.md](clients/COMFYUI.md) |
 | Diagnose a failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Find the correct script | [SCRIPTS.md](SCRIPTS.md) |
 | Review security boundaries | [THREAT_MODEL.md](security/THREAT_MODEL.md) |

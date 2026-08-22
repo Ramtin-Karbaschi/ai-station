@@ -302,6 +302,7 @@ security vulnerabilities through a public issue.
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
 | [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
+| [ComfyUI](docs/clients/COMFYUI.md) | Experimental MiniMax music and video studio |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |
 | [Operations](docs/OPERATIONS.md) | Start, stop, verify |
 | [Models](docs/MODELS.md) | Add, remove, profiles, hardware hints |

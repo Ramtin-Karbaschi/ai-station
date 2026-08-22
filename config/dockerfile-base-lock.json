@@ -1,6 +1,13 @@
 {
   "dockerfiles": [
     {
+      "dockerfile": "infra/comfyui/Dockerfile",
+      "line": 1,
+      "locked": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime@sha256:7b324d212a4450795b49edba9949b7cdc72429148a64e974334bfe5774d51385",
+      "original": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime",
+      "type": "registry-digest"
+    },
+    {
       "dockerfile": "infra/tika-fa/Dockerfile",
       "line": 1,
       "locked": "apache/tika@sha256:ecdd37e204308266b1f8e28569f8516ebd5b96d7a4518a71d3904710b20c03b3",

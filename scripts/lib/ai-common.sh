@@ -9,6 +9,10 @@ AI_ACTIVE_PROFILE_FILE="${AI_ACTIVE_PROFILE_FILE:-$AI_STATE_DIR/active-heavy-pro
 
 HEAVY_PROFILES=(general coder reasoning vision ornith)
 OPTIONAL_PROFILES=(reranker)
+EXPERIMENTAL_GPU_OVERLAYS=(
+  "comfyui-experimental:compose.comfyui.experimental.yaml:comfyui-experimental"
+  "sglang-experimental:compose.sglang.experimental.yaml:sglang-experimental"
+)
 
 ai_root() {
   cd "$AI_STATION_ROOT"
@@ -155,6 +159,54 @@ ai_retry_compose() {
   echo "  restart Docker Desktop on Windows, wait until it is ready, then Start again." >&2
   ai_dump_published_ports
   return 1
+}
+
+ai_stop_experimental_gpu_overlays() {
+  local root="${AI_STATION_ROOT:-/opt/ai-station}"
+  local entry profile overlay service
+  (
+    cd "$root"
+    for entry in "${EXPERIMENTAL_GPU_OVERLAYS[@]}"; do
+      IFS=':' read -r profile overlay service <<<"$entry"
+      env -u COMPOSE_FILE docker compose \
+        --project-name "${COMPOSE_PROJECT_NAME:-ai-station}" \
+        --env-file .env \
+        -f compose.yml -f "$overlay" \
+        --profile "$profile" \
+        stop "$service" 2>/dev/null || true
+    done
+  )
+}
+
+ai_prepare_comfyui_runtime_dirs() {
+  local data="${AI_STATION_DATA:-/srv/ai-station}"
+  mkdir -p \
+    "$data/runtime/comfyui/input" \
+    "$data/runtime/comfyui/output" \
+    "$data/runtime/comfyui/user/default/workflows" \
+    "$data/models/comfyui/diffusion_models" \
+    "$data/models/comfyui/text_encoders" \
+    "$data/models/comfyui/vae" \
+    "$data/models/comfyui/loras"
+  python3 - "$data/runtime/comfyui/user/default/comfy.settings.json" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+data = {}
+if path.is_file():
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            data = loaded
+    except json.JSONDecodeError:
+        data = {}
+data.setdefault("Comfy.TutorialCompleted", True)
+data.setdefault("Comfy.RightSidePanel.IsOpen", True)
+path.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+PY
 }
 
 ai_last_or_default_profile() {

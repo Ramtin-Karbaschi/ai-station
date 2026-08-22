@@ -1,0 +1,9 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "checked_at": "2026-08-22T07:57:36Z",
+  "health_url": "http://127.0.0.1:8188/system_stats",
+  "ok": true,
+  "generate": true,
+  "generate_workload": "minimax-music3-int8-tiled-decode"
+}

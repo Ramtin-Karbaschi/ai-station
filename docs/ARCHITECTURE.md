@@ -133,6 +133,11 @@ Windows 11 + WSL2. The client contract remains independent of container
 internals: applications call LiteLLM on `:4000/v1`, and llama.cpp remains
 the inference core.
 
+Optional media generation uses an off-by-default ComfyUI overlay on
+`127.0.0.1:8188` (ADR-015, [clients/COMFYUI.md](clients/COMFYUI.md)).
+It is a different workload from chat. `ai start` does not launch it.
+Starting it stops the active llama.cpp heavy profile.
+
 ## Reproducibility controls
 
 ### Container images

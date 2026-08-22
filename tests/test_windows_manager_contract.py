@@ -69,6 +69,8 @@ class WindowsManagerContractTests(unittest.TestCase):
             '@("models", "restore", $modelId, "--confirm")',
             "http://127.0.0.1:4000/ui",
             "Read-SafeRepo",
+            "http://127.0.0.1:8188",
+            '@("provider", "start", "comfyui-media-experimental")',
         ):
             self.assertIn(needle, text)
 

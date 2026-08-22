@@ -1,0 +1,51 @@
+# Experimental ComfyUI media studio (ADR-015).
+# Off by default. Mutually exclusive with llama.cpp heavy profiles.
+#
+# Start:
+#   ai models stop
+#   ai provider start comfyui-media-experimental
+#
+# Stop / uninstall:
+#   ./scripts/uninstall-comfyui-experimental.sh
+#   ai models use coder
+
+services:
+  comfyui-experimental:
+    profiles: ["comfyui-experimental"]
+    image: ai-station/comfyui:0.33.3
+    pull_policy: never
+    build:
+      context: "./infra/comfyui"
+      dockerfile: "Dockerfile"
+    container_name: ai-station-comfyui-experimental
+    restart: "no"
+    gpus: all
+    ipc: host
+    shm_size: "8gb"
+    environment:
+      HF_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - ${MODELS_DIR:-/srv/ai-station/models}/comfyui:/opt/ComfyUI/models:ro
+      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/input:/opt/ComfyUI/input
+      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/output:/opt/ComfyUI/output
+      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/user:/opt/ComfyUI/user
+      - ./config/clients/comfyui/workflows:/opt/ComfyUI/user/default/workflows:ro
+      - ./infra/comfyui/custom_nodes/ai_station_minimax:/opt/ComfyUI/custom_nodes/ai_station_minimax:ro
+    ports:
+      - "127.0.0.1:${COMFYUI_PORT:-8188}:8188"
+    networks:
+      - default
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats')\" >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 40
+      start_period: 180s

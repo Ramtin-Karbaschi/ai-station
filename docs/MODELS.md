@@ -83,6 +83,11 @@ Experimental SGLang AWQ shards may appear in the manifest under
 `experimental-sglang` for research. They are **not** part of production
 provisioning and are not promoted (see ADR-002).
 
+Experimental ComfyUI MiniMax Music3 and H3 packs use profile
+`experimental-comfyui`. They are **not** in `core` or `all`. Start them
+only through `ai provider start comfyui-media-experimental` (ADR-015,
+[clients/COMFYUI.md](clients/COMFYUI.md)).
+
 ## Day-to-day add and remove
 
 ~~~bash
@@ -151,6 +156,7 @@ Invalid existing files are quarantined rather than silently overwritten.
 /srv/ai-station/models/reranker
 /srv/ai-station/models/whisper
 /srv/ai-station/models/custom
+/srv/ai-station/models/comfyui
 ~~~
 
 ## Runtime profile switch

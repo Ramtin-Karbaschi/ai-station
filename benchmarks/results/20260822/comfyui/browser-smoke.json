@@ -1,0 +1,20 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "checked_at": "2026-08-22T08:30:36Z",
+  "ok": true,
+  "source": "loopback ComfyUI UI http://127.0.0.1:8188",
+  "music3": {
+    "prompt_id": "a035d949-a99c-4865-9444-515e95e3bd62",
+    "status": "success",
+    "seconds": 186.91,
+    "output": "audio/audio_minimax_music3_00001.mp3"
+  },
+  "h3_t2v": {
+    "prompt_id": "26773ed0-56f5-4f39-9701-08f36c407831",
+    "status": "success",
+    "seconds": 488.17,
+    "output": "video/MiniMax_H3_00001_.mp4"
+  },
+  "promoted": false
+}

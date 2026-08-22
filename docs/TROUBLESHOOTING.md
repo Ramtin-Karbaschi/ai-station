@@ -28,6 +28,20 @@ Common causes:
 - PostgreSQL is unhealthy;
 - required secret values are missing;
 - Tika or the embedding service has not started;
+
+## ComfyUI media studio is unavailable
+
+ComfyUI is experimental and off by default. Open WebUI chat does not
+start it.
+
+~~~bash
+ai provider start comfyui-media-experimental --dry-run
+curl -v http://127.0.0.1:8188/system_stats
+docker logs --tail=200 ai-station-comfyui-experimental
+~~~
+
+If the GPU still holds a llama.cpp profile, stop it first
+(`ai models stop`). See [clients/COMFYUI.md](clients/COMFYUI.md).
 - the Open WebUI persistent volume contains incompatible state;
 - port 3000 is already in use.
 

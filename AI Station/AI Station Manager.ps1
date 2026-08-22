@@ -85,6 +85,10 @@ function Show-Menu {
     Write-Host "  35  Disk/Docker usage    36  Open in VS Code"
     Write-Host "  37  Git status           38  Reset WebUI password"
     Write-Host ""
+    Write-Host " Media studio (experimental ComfyUI)"
+    Write-Host "  39  Start MiniMax media  40  Stop media / restore coder"
+    Write-Host "  41  Open ComfyUI"
+    Write-Host ""
     Write-Host "   0  Exit"
     Write-Host ""
 }
@@ -214,6 +218,16 @@ while ($true) {
             "36" { [void](Invoke-AIStation @("vscode")); Wait-ForEnter }
             "37" { [void](Invoke-AIStation @("git")); Wait-ForEnter }
             "38" { [void](Invoke-AIStation @("reset-webui-password")); Wait-ForEnter }
+            "39" {
+                [void](Invoke-AIStation @("provider", "start", "comfyui-media-experimental"))
+                Wait-ForEnter
+            }
+            "40" {
+                [void](Invoke-AIStation @("provider", "stop", "comfyui-media-experimental"))
+                [void](Invoke-AIStation @("models", "use", "coder"))
+                Wait-ForEnter
+            }
+            "41" { Start-Process "http://127.0.0.1:8188" }
             default { Write-Host "Unknown selection." -ForegroundColor Yellow; Start-Sleep -Seconds 1 }
         }
     } catch {

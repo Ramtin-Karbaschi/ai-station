@@ -45,6 +45,8 @@ ai graphify query "what starts the coder profile?"
 
 Templates live in `config/clients/opencode/`. Graphify is an optional
 code-graph CLI (`config/clients/graphify/`, [clients/GRAPHIFY.md](clients/GRAPHIFY.md)).
+ComfyUI is the experimental MiniMax music/video studio
+(`config/clients/comfyui/`, [clients/COMFYUI.md](clients/COMFYUI.md)).
 Do not commit the generated
 Windows `opencode.jsonc` (it contains the project API key). See
 [clients/OPENCODE.md](clients/OPENCODE.md).
@@ -85,7 +87,11 @@ Keep as-needed; not used by the Windows quick-start path:
 
 - `provision-experimental-snapshot.py`
 - `uninstall-sglang-experimental.sh`
+- `uninstall-comfyui-experimental.sh`
+- `comfyui-media-smoke.sh` (slim JSON under `benchmarks/results/`; raw
+  dumps under `/srv/ai-station/runtime/comfyui/smoke/`)
 - Compose overlay: `compose.sglang.experimental.yaml` (research only; not promoted)
+- Compose overlay: `compose.comfyui.experimental.yaml` (media studio; ADR-015)
 
 ## Incident / maintenance
 

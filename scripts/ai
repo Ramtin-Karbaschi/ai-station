@@ -21,6 +21,7 @@ Usage:
   ai models catalog [--json]
   ai models add|install|verify|remove|restore ...
   ai provider list|status|inspect|start|stop|doctor ...
+      # experimental media: comfyui-media-experimental (http://127.0.0.1:8188)
   ai projects list|create|revoke|show ...
   ai opencode install|configure|doctor|parity|run|acceptance ...
   ai opencode use general|coder|reasoning|ornith
@@ -205,6 +206,7 @@ cmd_start() {
 
   ai_lifecycle_lock "start"
   ai_ensure_docker
+  ai_stop_experimental_gpu_overlays
 
   # Prevent Windows from idle-shutting the WSL2 VM (kills Docker + all containers).
   "$ROOT/scripts/ensure-wsl-idle-timeout.sh" >/dev/null 2>&1 || true
@@ -251,6 +253,7 @@ cmd_start() {
 cmd_stop() {
   ai_lifecycle_lock "stop"
   ai_ensure_docker || true
+  ai_stop_experimental_gpu_overlays
   ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile reranker \
     stop llm-general llm-coder llm-reasoning llm-vision llm-ornith reranker 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
@@ -511,7 +514,10 @@ print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
 PY
 )"
   if [[ -n "$compose_files" ]]; then
-    # Experimental / alternate Compose overlays (e.g. SGLang).
+    # Experimental / alternate Compose overlays (SGLang, ComfyUI).
+    if [[ "$profile" == "comfyui-experimental" ]]; then
+      ai_prepare_comfyui_runtime_dirs
+    fi
     cmd_models_stop
     ai_compose stop embedder 2>/dev/null || true
     local -a file_args=()

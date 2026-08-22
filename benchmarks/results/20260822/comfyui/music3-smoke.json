@@ -1,0 +1,22 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "checked_at": "2026-08-22T07:57:36Z",
+  "ok": true,
+  "generate": true,
+  "workload": "minimax-music3-int8-tiled-decode",
+  "prompt_id": "1fc89188-0a02-4150-8759-fb637cd4e59f",
+  "status": "success",
+  "prompt_executed_seconds": 185.7,
+  "max_duration_seconds": 16.0,
+  "sampler_steps": 30,
+  "peak_vram_observed_mib": 12914,
+  "output": {
+    "filename": "ai-station-music3-smoke_00001.flac",
+    "subfolder": "audio",
+    "bytes": 1421681
+  },
+  "classification": "experimental",
+  "promoted": false,
+  "notes": "H3 T2V was not generated in this smoke. NVFP4 encoder remains unverified under WSL2."
+}

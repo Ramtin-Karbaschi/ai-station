@@ -13,7 +13,7 @@ Usage:
   provision-models.sh [options]
 
 Options:
-  --profile core|all
+  --profile core|all|experimental-comfyui|experimental-sglang
   --id MODEL_ID              Install one manifest model (repeatable)
   --data-root PATH
   --help

@@ -133,6 +133,21 @@ release-output/
 /graphify-out
 config/skills/*-workspace/
 
+# Generated audio/video (ComfyUI and other media studios)
+*.flac
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.ogg
+*.mkv
+*.aac
+
+# ComfyUI live dumps: keep slim health.json and *-smoke.json only
+benchmarks/results/**/comfyui/*
+!benchmarks/results/**/comfyui/health.json
+!benchmarks/results/**/comfyui/*-smoke.json
+
 # Editor and agent instruction files stay local. Do not commit them.
 /AGENTS.md
 /CLAUDE.md

@@ -17,9 +17,10 @@ Promote `development` → `stage` → `main` after `make check` (and `ai verify`
 when runtime behavior changed). Do not create or use any other branch name.
 
 Do not commit editor folders, workstation agent files (`/AGENTS.md`),
-secrets, model binaries, or runtime state. The OpenCode client
-template `config/clients/opencode/AGENTS.md` is product configuration and
-belongs in Git.
+secrets, model binaries, generated audio/video, ComfyUI prompt/history
+dumps, or runtime state. Slim smoke JSON under `benchmarks/results/` is
+allowed. The OpenCode client template `config/clients/opencode/AGENTS.md`
+is product configuration and belongs in Git.
 
 Commit messages are conventional and technical (`feat:`, `fix:`, `docs:`,
 `refactor:`, `test:`, `chore:`). Explain why in one or two sentences. Do not
@@ -53,7 +54,8 @@ A pull request should:
 - address one coherent change;
 - explain the reason for the change;
 - preserve repository-relative Compose paths;
-- avoid committing model binaries or runtime state;
+- avoid committing model binaries, generated media, ComfyUI dumps, or
+  runtime state;
 - update documentation;
 - include validation commands and results;
 - keep the release audit at zero errors and zero warnings.

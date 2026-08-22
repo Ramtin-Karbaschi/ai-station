@@ -146,6 +146,12 @@ cmd_models_use() {
   fi
 
   echo "Switching heavy model profile -> ${profile}"
+  if [[ "$current" == "comfyui-experimental" || "$current" == "sglang-experimental" ]]; then
+    echo "Stopping experimental overlay: $current"
+    ai_stop_experimental_gpu_overlays
+    ai_set_active_heavy_profile ""
+    current=""
+  fi
   if [[ -n "$current" && "$current" != "$profile" ]]; then
     echo "Stopping previous profile: $current"
     ai_compose --profile "$current" stop "$(ai_profile_service "$current")" || true
@@ -179,6 +185,7 @@ cmd_models_stop() {
   for p in "${HEAVY_PROFILES[@]}"; do
     ai_compose --profile "$p" stop "$(ai_profile_service "$p")" 2>/dev/null || true
   done
+  ai_stop_experimental_gpu_overlays
   ai_set_active_heavy_profile ""
   echo "All heavy model profiles stopped."
 }

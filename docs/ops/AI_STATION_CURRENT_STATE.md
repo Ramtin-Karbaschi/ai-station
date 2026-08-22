@@ -1,6 +1,6 @@
 # AI Station Current State
 
-Verified: 2026-08-21
+Verified: 2026-08-22
 
 This file is the concise release snapshot: what is supported now, which
 boundaries are authoritative, and which limitations are still real. Design
@@ -34,6 +34,7 @@ changes in `CHANGELOG.md`.
 | SearXNG | Local metasearch boundary | Compose | Optional egress |
 | Graphify | Repository code knowledge graph | Pinned Python venv | Optional client tool |
 | OpenCode WSL | Non-root agentic development client | Pinned WSL binary + generated config | Verified developer client |
+| ComfyUI | MiniMax Music 3 / H3 media studio | Isolated Compose overlay, loopback `:8188` | Experimental; off by default (ADR-015) |
 
 ## Model capability matrix
 
@@ -115,7 +116,14 @@ The `ai` CLI is the single day-to-day control plane. Windows Manager invokes
 it by direct WSL argument passing. Model add/install/verify and recoverable
 quarantine/restore are available through `ai models`.
 
-Live verification on 2026-08-21 passed with the `coder` profile active.
+Live verification on 2026-08-22 started ComfyUI, passed `/system_stats`,
+generated a 16 s MiniMax Music 3 clip (INT8 DiT, tiled VAE decode,
+~187 s) and a MiniMax H3 text-to-video clip (~488 s, about 18 GiB VRAM
+observed) from the ComfyUI UI. ComfyUI is **not** promoted. Generated
+media stays under `/srv/ai-station/runtime/comfyui/output/`. Raw smoke
+dumps stay under `/srv/ai-station/runtime/comfyui/smoke/`. Git keeps
+only slim `health.json` and `*-smoke.json` under
+`benchmarks/results/`.
 
 ## Verified endpoints
 
@@ -128,6 +136,7 @@ Live verification on 2026-08-21 passed with the `coder` profile active.
 | SearXNG | `http://127.0.0.1:8889` | Open WebUI/search |
 | Tika | `http://127.0.0.1:9998` | Open WebUI/documents |
 | Embedding | `http://127.0.0.1:8090/v1` | Internal retrieval |
+| ComfyUI | `http://127.0.0.1:8188` | Experimental media UI; off by default |
 
 Heavy model ports (`:8082`–`:8086`) are internal diagnostics, not client
 contracts.
@@ -149,6 +158,12 @@ offline gates and parses every PowerShell entrypoint on Windows.
 
 - The single 24 GiB GPU leaves little headroom with one heavy model plus the
   embedder; admission control and one-heavy-profile exclusivity are required.
+  ComfyUI and llama.cpp cannot share the GPU.
+- ComfyUI MiniMax packs are experimental. Music3 INT8 tiled-decode and
+  H3 FL2VA text-to-video smokes passed on 2026-08-22
+  (`benchmarks/results/20260822/comfyui/`). NVFP4 encoder speed under
+  WSL2 is still unproven. Image-to-video and reference-to-video were
+  not part of that smoke.
 - DeepSeek is not approved for agentic OpenCode use because its short live
   chat timed out after warm-up.
 - Native Windows Desktop on a WSL UNC worktree is not the verified developer

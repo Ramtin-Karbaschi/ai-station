@@ -1,11 +1,14 @@
 # Technology Evaluation Matrix
 
 Date: 2026-07-23
-Updated: 2026-07-24, 2026-08-19
+Updated: 2026-07-24, 2026-08-19, 2026-08-22
 Status: Phase 0–5 decisions recorded. Production stack marked "running
 today". SGLang local trial failed to serve (OOM). Retrieval/document
 baselines committed under `benchmarks/results/`. Remaining "requires
 benchmark" cells are for components not yet justified to install.
+2026-08-22 addendum: ComfyUI v0.33.3 adopted as an **experimental**
+media-generation studio for MiniMax Music3 and H3 (ADR-015). It is not
+a chat engine and is not promoted. NVFP4 under WSL2 remains unverified.
 2026-08-19 addendum: llama.cpp quantized KV cache researched as the one
 realistic VRAM lever for the original OpenCode 8K context ceiling (see the new
 subsection below); local benchmark evidence and the resulting decision
@@ -121,3 +124,16 @@ without a local benchmark under this repository's harness.
 | Classification | optional_profile (coding assistants) | ADR-012 | 2026-08-19 | decision |
 
 Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1 EXTRACTED edge; `query`/`explain` worked with no GPU. Community LOCOMO numbers are directional only and are **not** used to promote Graphify over pgvector.
+
+## 2026-08-22 addendum: ComfyUI MiniMax media studio
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| UI | Native MiniMax H3 and Music3 nodes; Open WebUI cannot run those workflows | Comfy-Org/ComfyUI v0.30.0+; Open WebUI `image_generation` is still-image only | v0.33.3 pin 2026-08-22 | confirmed from upstream |
+| H3 official serve | SGLang example uses `--num-gpus 4`; full BF16 ~124 GB | MiniMax-H3 model card | fetched 2026-08-22 | confirmed |
+| 24 GiB pack | Comfy-Org pruned INT8 ConvRot + quantized Qwen3-VL encoder | Comfy-Org/MiniMax-H3; Comfy docs | fetched 2026-08-22 | documented |
+| Music3 local smoke | INT8 DiT + tiled VAE decode, 16 s, 30 steps, success in 185.7 s, ~13 GiB VRAM observed | `benchmarks/results/20260822/comfyui/music3-smoke.json` | 2026-08-22 | confirmed; still experimental, not promoted |
+| H3 local smoke | FL2VA T2V from ComfyUI UI, success in 488 s, ~18 GiB VRAM observed | `benchmarks/results/20260822/comfyui/browser-smoke.json` | 2026-08-22 | confirmed; still experimental, not promoted |
+| NVFP4 | Hardware profile: NVFP4 unverified under WSL2 dxgkrnl | `config/hardware-profile.json`; ADR-015 | 2026-08-22 | fallback INT8 encoder named, not assumed |
+| Overlap | Media generation, not chat. Does not replace llama.cpp / LiteLLM | ADR-015 | 2026-08-22 | decision |
+| Classification | experimental, off by default | ADR-015 | 2026-08-22 | decision |

@@ -44,6 +44,17 @@ class AdmissionTests(unittest.TestCase):
                     "max_context": 32768,
                     "fallback_provider": "llama-cpp-general",
                 },
+                "comfyui-media-experimental": {
+                    "id": "comfyui-media-experimental",
+                    "heavy": True,
+                    "minimum_vram_mib": 20000,
+                    "minimum_ram_mib": 16384,
+                    "minimum_storage_mib": 80000,
+                    "kv_cache_mib_per_1k_context": 0,
+                    "default_context": 1,
+                    "max_context": 1,
+                    "fallback_provider": None,
+                },
             },
         }
         self.hardware = {
@@ -141,6 +152,19 @@ class AdmissionTests(unittest.TestCase):
             active_heavy=["llama-cpp-general"],
         )
         self.assertEqual(decision.decision, "QUEUE")
+
+    def test_comfyui_stops_conflicting_llama_cpp(self) -> None:
+        decision = admit(
+            "comfyui-media-experimental",
+            registry=self.registry,
+            hardware=self.hardware,
+            free_vram_mib=400,
+            free_ram_mib=40000,
+            free_storage_mib=500000,
+            active_heavy=["llama-cpp-general"],
+        )
+        self.assertEqual(decision.decision, "STOP_CONFLICTING_PROVIDER_AND_START")
+        self.assertEqual(decision.stop_providers, ["llama-cpp-general"])
 
     def test_estimate_kv_budget(self) -> None:
         provider = get_provider(self.registry, "llama-cpp-general")

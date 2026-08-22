@@ -290,3 +290,41 @@ providers:
     compose_files:
       - compose.yml
       - compose.sglang.experimental.yaml
+
+  comfyui-media-experimental:
+    id: comfyui-media-experimental
+    engine: comfyui
+    deployment_type: compose
+    classification: experimental
+    experimental: true
+    heavy: true
+    resource_group: gpu-heavy
+    service: comfyui-experimental
+    profile: comfyui-experimental
+    port: 8188
+    endpoint: http://127.0.0.1:8188
+    health_endpoint: http://127.0.0.1:8188/system_stats
+    metrics_endpoint: null
+    catalog_ids: []
+    model_aliases:
+      - experimental-comfyui-media
+    capabilities:
+      - text-to-music
+      - text-to-video
+      - image-to-video
+      - reference-to-video
+    latency_class: batch
+    stability_class: experimental
+    minimum_vram_mib: 20000
+    minimum_ram_mib: 16384
+    minimum_storage_mib: 80000
+    kv_cache_mib_per_1k_context: 0
+    default_context: 1
+    max_context: 1
+    required_features:
+      - nvidia_cuda
+    fallback_provider: null
+    lifecycle_command: "ai provider start comfyui-media-experimental"
+    compose_files:
+      - compose.yml
+      - compose.comfyui.experimental.yaml
