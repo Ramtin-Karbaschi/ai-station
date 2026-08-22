@@ -91,9 +91,9 @@
       "manifest_id": "vision-qwen3-vl-32b-q4"
     },
     {
-      "id": "ornith-1_0-35b",
-      "display_name": "Ornith-1.0-35B-Q4_K_M",
-      "public_model_id": "Ornith-1.0-35B-Q4_K_M",
+      "id": "ornith-1_5-35b",
+      "display_name": "Ornith-1.5-35B-Q4_K_M",
+      "public_model_id": "Ornith-1.5-35B-Q4_K_M",
       "alias": "local-ornith",
       "role": "ornith",
       "family": "qwen",
@@ -108,7 +108,7 @@
       "supports_vision": false,
       "supports_tools": true,
       "default_system_prefix": "/no_think",
-      "manifest_id": "ornith-1.0-35b-q4",
+      "manifest_id": "ornith-1.5-35b-q4",
       "supports_json_schema": true
     },
     {

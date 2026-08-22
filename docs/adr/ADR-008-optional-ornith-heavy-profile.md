@@ -2,6 +2,9 @@
 
 - Status: Accepted
 - Date: 2026-08-18
+- Weight pin superseded 2026-08-22 by
+  [ADR-017](ADR-017-ornith-1.5-gguf.md) (same optional `ornith` profile;
+  GGUF is now Ornith 1.5 Q4_K_M). Topology in this ADR is unchanged.
 
 ## Context
 

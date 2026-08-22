@@ -1,10 +1,12 @@
 # ComfyUI media studio on AI Station
 
-ComfyUI is the experimental **music and video** UI next to Open WebUI.
-Chat stays on Open WebUI (`:3000`) and LiteLLM (`http://127.0.0.1:4000/v1`).
-Media jobs use ComfyUI on `http://127.0.0.1:8188`.
+ComfyUI is the experimental **music, video, and still-image** UI next to
+Open WebUI. Chat stays on Open WebUI (`:3000`) and LiteLLM
+(`http://127.0.0.1:4000/v1`). Media jobs use ComfyUI on
+`http://127.0.0.1:8188`.
 
-ADR: [ADR-015](../adr/ADR-015-comfyui-minimax-media-studio.md)
+ADR: [ADR-015](../adr/ADR-015-comfyui-minimax-media-studio.md),
+[ADR-018](../adr/ADR-018-flux2-dev-comfyui.md)
 
 Open WebUI image generation stays off. Do not point applications at `:8188`.
 
@@ -56,11 +58,17 @@ list after start:
 - `h3-text-to-video.json` — text to video, no extra files (~3 s / 73 frames)
 - `h3-image-to-video.json` — needs a first-frame image in Load Image
 - `h3-reference-to-video.json` — needs a reference image in Load Image
+- `flux2-text-to-image.json` — FLUX.2-dev Q4 GGUF still image, 768², CLIP on CPU
 
-The stock ComfyUI canvas is Flux.2. That graph is not installed here.
-On start, AI Station replaces it with MiniMax Music 3. Queue Prompt on
-a Flux/LTX/Wan template will show an alert instead of a missing-file
-error.
+The stock ComfyUI canvas is Flux.2 FP8, which this station does not ship
+(35 GB DiT exceeds 24 GiB). On start, AI Station replaces that canvas
+with MiniMax Music 3. Queue Prompt accepts MiniMax graphs and the
+station FLUX.2 GGUF workflow. Other Flux/LTX/Wan templates still alert.
+
+Still-image weights (city96 Q4 DiT of BFL FLUX.2-dev, Comfy-Org FP4
+text encoder, Comfy-Org VAE) are extra `experimental-comfyui` manifest
+ids. Official Comfy-Org FP8 mixed DiT is not the 24 GiB default
+(ADR-018). FLUX weights are non-commercial.
 
 You can also use Template Library: Audio → MiniMax Music 3;
 Video → MiniMax H3. Keep the first Music3 clip around 15–20 seconds and

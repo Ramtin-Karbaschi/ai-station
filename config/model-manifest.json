@@ -35,19 +35,19 @@
       "size_bytes": 17665334432
     },
     {
-      "destination": "models/ornith/ornith-1.0-35b-q4_k_m.gguf",
-      "filename": "ornith-1.0-35b-Q4_K_M.gguf",
-      "id": "ornith-1.0-35b-q4",
+      "destination": "models/ornith/ornith-1.5-35b-q4_k_m.gguf",
+      "filename": "Ornith-1.5-35B-Q4_K_M.gguf",
+      "id": "ornith-1.5-35b-q4",
       "profiles": [
         "all"
       ],
-      "repo_id": "deepreinforce-ai/Ornith-1.0-35B-GGUF",
+      "repo_id": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
       "required_for_runtime": false,
-      "revision": "013ba12322a9bcb7392736432ab5db9751e439f5",
+      "revision": "fbbaed45c2f0e200276ffa51701a24d45dc7f57e",
       "revision_is_immutable": true,
       "role": "agentic_coding",
-      "sha256": "ff25291b2599fb927a835e624d2b3540106af61761c3fa57ac4264046dbec002",
-      "size_bytes": 21166757760
+      "sha256": "ca6ea26329c88b78ffd90a85163be2e746c2fafd1024f56db47e499f117f9a7f",
+      "size_bytes": 21713462848
     },
     {
       "destination": "models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
@@ -124,96 +124,6 @@
       "role": "vision_mmproj",
       "sha256": "c01734a97adc350c1eebb957ed433afee4e376ebd0949163f659c76d8dcf20ca",
       "size_bytes": 772360224
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00001-of-00006.safetensors",
-      "filename": "model-00001-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-01",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_01",
-      "sha256": "c891132409d4a307fe823ef79850f5af966066a9bfc463c4d84abbeb8c6c92d4",
-      "size_bytes": 5003326816
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00002-of-00006.safetensors",
-      "filename": "model-00002-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-02",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_02",
-      "sha256": "8120f800f5433f2eca1a0c500e8b02c53fb1e929e2bf919eee8fc6653a6751da",
-      "size_bytes": 5003377800
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00003-of-00006.safetensors",
-      "filename": "model-00003-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-03",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_03",
-      "sha256": "a4eecfcbc4ce890f7983458e591bac0d90586d875696bdbb2e6347e0ddabc61e",
-      "size_bytes": 5002869776
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00004-of-00006.safetensors",
-      "filename": "model-00004-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-04",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_04",
-      "sha256": "1b37d15adfacdfbdd8063bdc8b71a77dd944cb5188c63a937a33a1e219679c39",
-      "size_bytes": 4091590840
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00005-of-00006.safetensors",
-      "filename": "model-00005-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-05",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_05",
-      "sha256": "6b2a05921830d4f6bd020548af539ea19b69a3c55a05c7fc3e1e300145e7874e",
-      "size_bytes": 4998869216
-    },
-    {
-      "destination": "models/experimental/qwen3.6-35b-a3b-awq-4bit/model-00006-of-00006.safetensors",
-      "filename": "model-00006-of-00006.safetensors",
-      "id": "experimental-sglang-qwen3.6-35b-awq-06",
-      "profiles": [
-        "experimental-sglang"
-      ],
-      "repo_id": "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit",
-      "required_for_runtime": false,
-      "revision": "00fcea2d3bcf5389b518d4fc082e5590e0ba4844",
-      "revision_is_immutable": true,
-      "role": "experimental_sglang_awq_shard_06",
-      "sha256": "bf9299874e2dd09c007f9bc8f6fbe2bdfd12b34da916c97517d50c42efd1c182",
-      "size_bytes": 869773960
     },
     {
       "id": "experimental-comfyui-music3-dit-int8",
@@ -364,6 +274,51 @@
       "role": "experimental_comfyui_h3_ref2v_lora",
       "sha256": "5b9ab5ade15d0775676d01a907268a69a1468dc6033b3b0d3ded5502f3ebb84c",
       "size_bytes": 1956193000
+    },
+    {
+      "id": "experimental-comfyui-flux2-dit-q4",
+      "destination": "models/comfyui/diffusion_models/flux2-dev-Q4_K_M.gguf",
+      "filename": "flux2-dev-Q4_K_M.gguf",
+      "profiles": [
+        "experimental-comfyui"
+      ],
+      "repo_id": "city96/FLUX.2-dev-gguf",
+      "required_for_runtime": false,
+      "revision": "ade5d688ddab0d9cf4a5b01bf4321e01c115020d",
+      "revision_is_immutable": true,
+      "role": "experimental_comfyui_flux2_dit",
+      "sha256": "fca680c7b221a713b5cf7db6cf6b33474875320ee61f4c585bc33fe391dab9a6",
+      "size_bytes": 20082414560
+    },
+    {
+      "id": "experimental-comfyui-flux2-text-encoder-fp4",
+      "destination": "models/comfyui/text_encoders/mistral_3_small_flux2_fp4_mixed.safetensors",
+      "filename": "split_files/text_encoders/mistral_3_small_flux2_fp4_mixed.safetensors",
+      "profiles": [
+        "experimental-comfyui"
+      ],
+      "repo_id": "Comfy-Org/flux2-dev",
+      "required_for_runtime": false,
+      "revision": "ab9055628ea245000e610f2aa2c96f4746093546",
+      "revision_is_immutable": true,
+      "role": "experimental_comfyui_flux2_text_encoder",
+      "sha256": "1ee1ff334d78228d73049ef0ee4fcd21c1700536b5a45c06547af057f92463a7",
+      "size_bytes": 12275678071
+    },
+    {
+      "id": "experimental-comfyui-flux2-vae",
+      "destination": "models/comfyui/vae/flux2-vae.safetensors",
+      "filename": "split_files/vae/flux2-vae.safetensors",
+      "profiles": [
+        "experimental-comfyui"
+      ],
+      "repo_id": "Comfy-Org/flux2-dev",
+      "required_for_runtime": false,
+      "revision": "ab9055628ea245000e610f2aa2c96f4746093546",
+      "revision_is_immutable": true,
+      "role": "experimental_comfyui_flux2_vae",
+      "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
+      "size_bytes": 336213556
     }
   ],
   "profiles": {
@@ -373,11 +328,8 @@
     "core": {
       "description": "Required runtime models: general reasoning and embedding."
     },
-    "experimental-sglang": {
-      "description": "Optional SGLang AWQ trial weights for Qwen3.6-35B-A3B. Not part of default install."
-    },
     "experimental-comfyui": {
-      "description": "Optional ComfyUI MiniMax Music3 and H3 packs. Not part of default install. Off-by-default GPU overlay (ADR-015)."
+      "description": "Optional ComfyUI MiniMax Music3/H3 and FLUX.2-dev still-image packs. Not part of default install. Off-by-default GPU overlay (ADR-015, ADR-018)."
     }
   },
   "schema_version": 1

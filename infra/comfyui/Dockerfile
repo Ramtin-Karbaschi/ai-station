@@ -33,6 +33,18 @@ RUN grep -viE '^(torch|torchvision|torchaudio)([=<>[:space:]]|$)' requirements.t
     pip install --no-cache-dir -r /tmp/comfyui-requirements.txt && \
     rm /tmp/comfyui-requirements.txt
 
+# ComfyUI-GGUF (ADR-018). Loads FLUX.2-dev Q4 GGUF on this 24 GiB GPU.
+# Tarball checksum fails closed if GitHub recompresses the archive.
+ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
+ARG COMFYUI_GGUF_TARBALL_SHA256=688126d5c2b8c4ff061f56b23c3c6791ac01dc366e98d41ef1aaef374c36f283
+RUN curl -fsSL -o /tmp/comfyui-gguf.tar.gz \
+      "https://github.com/city96/ComfyUI-GGUF/archive/${COMFYUI_GGUF_REF}.tar.gz" && \
+    echo "${COMFYUI_GGUF_TARBALL_SHA256}  /tmp/comfyui-gguf.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/comfyui-gguf.tar.gz && \
+    mv "ComfyUI-GGUF-${COMFYUI_GGUF_REF}" /opt/ComfyUI/custom_nodes/ComfyUI-GGUF && \
+    pip install --no-cache-dir -r /opt/ComfyUI/custom_nodes/ComfyUI-GGUF/requirements.txt && \
+    rm /tmp/comfyui-gguf.tar.gz
+
 COPY custom_nodes/ai_station_minimax /opt/ComfyUI/custom_nodes/ai_station_minimax
 
 EXPOSE 8188

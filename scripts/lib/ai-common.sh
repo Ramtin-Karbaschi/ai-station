@@ -11,7 +11,6 @@ HEAVY_PROFILES=(general coder reasoning vision ornith)
 OPTIONAL_PROFILES=(reranker)
 EXPERIMENTAL_GPU_OVERLAYS=(
   "comfyui-experimental:compose.comfyui.experimental.yaml:comfyui-experimental"
-  "sglang-experimental:compose.sglang.experimental.yaml:sglang-experimental"
 )
 
 ai_root() {
@@ -175,6 +174,9 @@ ai_stop_experimental_gpu_overlays() {
         --profile "$profile" \
         stop "$service" 2>/dev/null || true
     done
+    # Retired SGLang overlay: drop a leftover container if an old
+    # active-profile file still names it.
+    docker rm -f ai-station-sglang-experimental >/dev/null 2>&1 || true
   )
 }
 

@@ -39,7 +39,7 @@ Only **one** heavy profile may run on a ~24GB GPU:
 | `coder` | `Qwen3-Coder-30B-A3B-Instruct-Q4` | 8083 |
 | `reasoning` | `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M` | 8084 |
 | `vision` | `Qwen3-VL-32B-Instruct-Q4_K_M` | 8085 |
-| `ornith` (optional) | `Ornith-1.0-35B-Q4_K_M` | 8086 |
+| `ornith` (optional) | `Ornith-1.5-35B-Q4_K_M` | 8086 |
 
 `ornith` does not replace `coder` (ADR-008). Rollback is `ai models use general`.
 
@@ -92,7 +92,7 @@ Recommended pattern: one virtual key per use-case / project.
 docs-rag-api      -> models: Qwen3.6-35B-A3B-UD-Q4_K_M, Qwen3-Embedding-0.6B-Q8_0
 email-agent-api   -> models: Qwen3.6-35B-A3B-UD-Q4_K_M
 coder-agent-api   -> models: Qwen3-Coder-30B-A3B-Instruct-Q4
-opencode          -> models: Qwen3-Coder-30B-A3B-Instruct-Q4, Qwen3.6-35B-A3B-UD-Q4_K_M, DeepSeek-R1-Distill-Qwen-32B-Q4_K_M, Ornith-1.0-35B-Q4_K_M
+opencode          -> models: Qwen3-Coder-30B-A3B-Instruct-Q4, Qwen3.6-35B-A3B-UD-Q4_K_M, DeepSeek-R1-Distill-Qwen-32B-Q4_K_M, Ornith-1.5-35B-Q4_K_M
 ```
 
 ### 3) OpenCode developer runtime (WSL)

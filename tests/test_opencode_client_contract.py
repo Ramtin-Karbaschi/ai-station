@@ -45,7 +45,7 @@ class OpenCodeClientContractTests(unittest.TestCase):
             "Qwen3-Coder-30B-A3B-Instruct-Q4": (16384, 4096, True),
             "Qwen3.6-35B-A3B-UD-Q4_K_M": (8192, 2048, True),
             "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M": (8192, 2048, False),
-            "Ornith-1.0-35B-Q4_K_M": (8192, 2048, True),
+            "Ornith-1.5-35B-Q4_K_M": (8192, 2048, True),
         }
         self.assertEqual(set(self.models), set(expected))
         for model_id, (context, output, tools) in expected.items():

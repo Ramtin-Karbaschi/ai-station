@@ -57,7 +57,7 @@ public_name_for_profile() {
     coder) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
     reasoning) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
     vision) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
-    ornith) echo "Ornith-1.0-35B-Q4_K_M" ;;
+    ornith) echo "Ornith-1.5-35B-Q4_K_M" ;;
     reranker) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
     *) return 1 ;;
   esac
@@ -69,14 +69,14 @@ public_name_for_model_id() {
     local-coder|Qwen3-Coder-30B-A3B-Instruct-Q4) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
     local-reasoning|DeepSeek-R1-Distill-Qwen-32B-Q4_K_M) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
     local-vision|Qwen3-VL-32B-Instruct-Q4_K_M) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
-    local-ornith|Ornith-1.0-35B-Q4_K_M) echo "Ornith-1.0-35B-Q4_K_M" ;;
+    local-ornith|Ornith-1.5-35B-Q4_K_M|Ornith-1.0-35B-Q4_K_M) echo "Ornith-1.5-35B-Q4_K_M" ;;
     local-embedding|Qwen3-Embedding-0.6B-Q8_0) echo "Qwen3-Embedding-0.6B-Q8_0" ;;
     local-reranker|Qwen3-Reranker-0.6B-Q8_0) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
     *) echo "$1" ;;
   esac
 }
 
-# LiteLLM only accepts catalog public ids (Ornith-1.0-35B-Q4_K_M), not
+# LiteLLM only accepts catalog public ids (Ornith-1.5-35B-Q4_K_M), not
 # llama.cpp aliases like local-ornith. After /v1/models is up, retry chat
 # until ready. HTTP 400 for an unknown model is a config error, not a load delay.
 ai_litellm_warmup_chat() {
@@ -384,7 +384,7 @@ Canonical public model names:
   Qwen3-Coder-30B-A3B-Instruct-Q4
   DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
   Qwen3-VL-32B-Instruct-Q4_K_M
-  Ornith-1.0-35B-Q4_K_M
+  Ornith-1.5-35B-Q4_K_M
   Qwen3-Embedding-0.6B-Q8_0
   Qwen3-Reranker-0.6B-Q8_0
 
@@ -519,7 +519,7 @@ print(get_provider(load_providers(), sys.argv[1]).get("service") or "")
 PY
 )"
   if [[ -n "$compose_files" ]]; then
-    # Experimental / alternate Compose overlays (SGLang, ComfyUI).
+    # Experimental / alternate Compose overlays (ComfyUI).
     if [[ "$profile" == "comfyui-experimental" ]]; then
       ai_prepare_comfyui_runtime_dirs
     fi

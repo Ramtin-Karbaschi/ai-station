@@ -13,7 +13,7 @@ Usage:
   provision-models.sh [options]
 
 Options:
-  --profile core|all|experimental-comfyui|experimental-sglang
+  --profile core|all|experimental-comfyui
   --id MODEL_ID              Install one manifest model (repeatable)
   --data-root PATH
   --help
@@ -49,6 +49,12 @@ while (( $# > 0 )); do
             ;;
     esac
 done
+
+# huggingface_hub defaults to a 10s stream timeout, which aborts multi-GB
+# GGUF/safetensors transfers on a brief stall. These are import-time env vars.
+export HF_HUB_DOWNLOAD_TIMEOUT="${HF_HUB_DOWNLOAD_TIMEOUT:-600}"
+export HF_HUB_ETAG_TIMEOUT="${HF_HUB_ETAG_TIMEOUT:-120}"
+export HF_XET_HIGH_PERFORMANCE="${HF_XET_HIGH_PERFORMANCE:-1}"
 
 MANIFEST="$ROOT/config/model-manifest.json"
 PYTHON_SCRIPT="$ROOT/scripts/model_provision.py"

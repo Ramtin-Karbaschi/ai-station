@@ -220,7 +220,6 @@ mkdir -p \
     "$DATA_ROOT/models/ornith" \
     "$DATA_ROOT/models/embedding" \
     "$DATA_ROOT/models/reranker" \
-    "$DATA_ROOT/models/ocr" \
     "$DATA_ROOT/models/vision" \
     "$DATA_ROOT/models/whisper" \
     "$DATA_ROOT/runtime" \

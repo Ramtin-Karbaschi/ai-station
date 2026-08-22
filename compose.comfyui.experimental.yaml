@@ -1,4 +1,4 @@
-# Experimental ComfyUI media studio (ADR-015).
+# Experimental ComfyUI media studio (ADR-015, ADR-018).
 # Off by default. Mutually exclusive with llama.cpp heavy profiles.
 #
 # Start:

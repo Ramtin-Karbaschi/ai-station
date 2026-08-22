@@ -80,6 +80,9 @@ class ComfyuiMediaContractTests(unittest.TestCase):
             "experimental-comfyui-h3-text-encoder-nvfp4",
             "experimental-comfyui-h3-video-vae",
             "experimental-comfyui-h3-audio-vae",
+            "experimental-comfyui-flux2-dit-q4",
+            "experimental-comfyui-flux2-text-encoder-fp4",
+            "experimental-comfyui-flux2-vae",
         }
         ids = {model["id"] for model in models}
         self.assertTrue(required_ids <= ids)
@@ -110,6 +113,12 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertEqual(client["port"], 8188)
         self.assertEqual(client["listen"], "127.0.0.1")
         self.assertIn(client["git_commit"], dockerfile)
+        self.assertEqual(
+            client["comfyui_gguf_git_commit"],
+            "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
+        )
+        self.assertIn(client["comfyui_gguf_tarball_sha256"], dockerfile)
+        self.assertIn("city96/ComfyUI-GGUF", dockerfile)
 
     def test_workflows_parse_and_name_pinned_files(self) -> None:
         expected = {
@@ -142,6 +151,16 @@ class ComfyuiMediaContractTests(unittest.TestCase):
             self.assertIn('"type": "minimax"', blob, name)
             for needle in needles:
                 self.assertIn(needle, blob, name)
+        flux2 = json.loads((WORKFLOWS / "flux2-text-to-image.json").read_text(encoding="utf-8"))
+        flux_blob = json.dumps(flux2)
+        self.assertIn("prompt", flux2)
+        self.assertIn("UnetLoaderGGUF", flux_blob)
+        self.assertIn("EmptyFlux2LatentImage", flux_blob)
+        self.assertIn("flux2-dev-Q4_K_M.gguf", flux_blob)
+        self.assertIn("mistral_3_small_flux2_fp4_mixed.safetensors", flux_blob)
+        self.assertIn("flux2-vae.safetensors", flux_blob)
+        self.assertIn("SaveImage", flux_blob)
+        self.assertNotIn('"type": "minimax"', flux_blob)
         music = json.loads((WORKFLOWS / "music3-text-to-music.json").read_text(encoding="utf-8"))
         music_blob = json.dumps(music)
         self.assertIn("VAEDecodeAudioTiled", music_blob)
@@ -161,6 +180,8 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         js_text = js.read_text(encoding="utf-8")
         self.assertIn("EmptySD3LatentImage", js_text)
         self.assertIn("workflows%2Fmusic3-text-to-music.json", js_text)
+        self.assertIn("flux2-text-to-image.json", js_text)
+        self.assertIn("UnetLoaderGGUF", js_text)
         self.assertIn("queuePrompt", js_text)
         self.assertIn("custom_nodes/ai_station_minimax", dockerfile)
         common = COMMON.read_text(encoding="utf-8")
@@ -196,6 +217,11 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertIn("Status: Accepted", adr)
         self.assertIn("experimental", adr)
         self.assertIn("Reject SGLang-Omni", adr)
+        flux_adr = (ROOT / "docs/adr/ADR-018-flux2-dev-comfyui.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Status: Accepted", flux_adr)
+        self.assertIn("Do **not** enable Open WebUI", flux_adr)
 
 
 if __name__ == "__main__":

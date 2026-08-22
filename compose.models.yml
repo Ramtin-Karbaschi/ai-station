@@ -147,7 +147,7 @@ services:
     container_name: ai-station-llm-ornith
     command:
       - -m
-      - /models/${LLM_ORNITH_MODEL_FILE:-ornith/ornith-1.0-35b-q4_k_m.gguf}
+      - /models/${LLM_ORNITH_MODEL_FILE:-ornith/ornith-1.5-35b-q4_k_m.gguf}
       - --alias
       - ai-station-ornith
       - --reasoning

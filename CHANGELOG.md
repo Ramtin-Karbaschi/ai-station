@@ -4,6 +4,34 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+## 2026-08-22
+
+### Model download reliability
+
+- Hugging Face provisioner uses a 600s stream timeout, retries, stale
+  lock cleanup, and HTTP Range resume for incomplete destination files
+  (huggingface_hub's 10s default aborted multi-GB transfers).
+
+### Ornith 1.5 and FLUX.2-dev
+
+- **ADR-017 Accepted:** the optional `ornith` llama.cpp profile now
+  pins Ornith 1.5 35B-A3B Q4_K_M GGUF. Coder stays the production
+  default.
+- **ADR-018 Accepted:** FLUX.2-dev still images on the existing
+  experimental ComfyUI overlay (city96 Q4 GGUF + Comfy-Org VAE/FP4
+  encoder). Open WebUI image generation stays off. No LiteLLM image
+  route. Live image smoke is separate from `make check`.
+
+### Unused model purge
+
+- Removed unmanaged OCR snapshots (DeepSeek-OCR-2, dots.ocr, dots-mocr),
+  unused experimental SGLang AWQ shard pins, and superseded Ornith 1.0
+  (quarantine + Hugging Face cache). They are not in the live manifest.
+- Removed the unused experimental SGLang Compose overlay, provider,
+  uninstall script, and bench config. ADR-002 still rejects promotion;
+  the 2026-07-24 OOM JSON remains as evidence. Persian OCR stays on
+  Tika + Tesseract (`fas`).
+
 ### Operator console, selectable outputs, Graphify map
 
 - **ADR-016 Accepted:** `ai` and Windows Manager remain the privileged

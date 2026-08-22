@@ -20,6 +20,19 @@ function isMiniMaxGraph(text) {
   );
 }
 
+function isFlux2Graph(text) {
+  return (
+    text.includes("UnetLoaderGGUF") ||
+    text.includes("EmptyFlux2LatentImage") ||
+    text.includes("flux2-dev-Q4_K_M.gguf") ||
+    text.includes("mistral_3_small_flux2_")
+  );
+}
+
+function isStationGraph(text) {
+  return isMiniMaxGraph(text) || isFlux2Graph(text);
+}
+
 async function fetchWorkflow(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -49,7 +62,13 @@ function missingLoaderFiles() {
       continue;
     }
     for (const widget of node.widgets || []) {
-      if (typeof widget.value !== "string" || !widget.value.endsWith(".safetensors")) {
+      if (typeof widget.value !== "string") {
+        continue;
+      }
+      if (
+        !widget.value.endsWith(".safetensors") &&
+        !widget.value.endsWith(".gguf")
+      ) {
         continue;
       }
       const options = widget.options?.values || widget.options || [];
@@ -67,10 +86,10 @@ app.registerExtension({
     const originalQueue = app.queuePrompt.bind(app);
     app.queuePrompt = async function queuedPrompt(number, batchCount) {
       const text = graphText();
-      if (!isMiniMaxGraph(text)) {
+      if (!isStationGraph(text)) {
         window.alert(
-          "This canvas is not a MiniMax Music 3 or H3 workflow.\n\n" +
-            "Open Workflows → music3-text-to-music.json or h3-text-to-video.json."
+          "This canvas is not a station MiniMax or FLUX.2 workflow.\n\n" +
+            "Open Workflows → music3-text-to-music.json, h3-text-to-video.json, or flux2-text-to-image.json."
         );
         return;
       }
@@ -79,7 +98,7 @@ app.registerExtension({
         window.alert(
           "AI Station does not have those model files.\n\n" +
             missing.slice(0, 8).join("\n") +
-            "\n\nOpen Workflows → music3-text-to-music.json or h3-text-to-video.json."
+            "\n\nOpen Workflows → music3-text-to-music.json, h3-text-to-video.json, or flux2-text-to-image.json."
         );
         return;
       }
@@ -87,7 +106,7 @@ app.registerExtension({
     };
 
     const text = graphText();
-    if (isMiniMaxGraph(text) && !text.includes("EmptySD3LatentImage")) {
+    if (isStationGraph(text) && !text.includes("EmptySD3LatentImage")) {
       return;
     }
     try {

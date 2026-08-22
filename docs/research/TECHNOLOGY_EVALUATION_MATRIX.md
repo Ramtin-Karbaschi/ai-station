@@ -12,6 +12,15 @@ a chat engine and is not promoted. NVFP4 under WSL2 remains unverified.
 Second 2026-08-22 addendum: ADR-016 keeps `ai` + Windows Manager as the
 operator console, adds selectable output roots, and wraps Graphify's
 existing HTML export on loopback `:4174`. No second admin product.
+Third 2026-08-22 addendum: Ornith optional profile replaced 1.0 GGUF
+with Ornith 1.5 Q4_K_M (ADR-017). ComfyUI overlay also pins FLUX.2-dev
+still-image weights as experimental Q4 GGUF + Comfy-Org VAE/FP4 encoder
+(ADR-018). Official 35 GB FP8 DiT is not the 24 GiB default. Open WebUI
+image generation stays off.
+Fourth 2026-08-22 addendum: unused OCR snapshots and the rejected SGLang
+Compose overlay were removed from the live tree. Persian OCR remains
+Tika + Tesseract (`fas`). SGLang classification is rejected, not
+experimental-retained.
 2026-08-19 addendum: llama.cpp quantized KV cache researched as the one
 realistic VRAM lever for the original OpenCode 8K context ceiling (see the new
 subsection below); local benchmark evidence and the resulting decision
@@ -42,7 +51,7 @@ Evidence sources are listed per candidate at the end of this document.
 | Component | Model support | Quantization | API compat | Metrics | Memory behavior | Maturity | Maintenance | Unresolved issues | Benchmark status | Operational cost | Overlap | Proposed classification | Final decision |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | llama.cpp | GGUF everything incl. MoE, vision (mmproj), embeddings, reranking | GGUF K-quants, IQ, FP16 | OpenAI-compatible | `/metrics` (Prometheus) available; not enabled here | predictable; CPU/GPU offload via `-ngl` | high | very active (daily releases) | CUDA 13 MMQ segfault report on Blackwell (external) | baseline requires benchmark | low (running, pinned, installer integration exists) | none (incumbent) | production default | **retain** (ADR-003) |
-| SGLang | HF safetensors families incl. Qwen3; not GGUF-first | AWQ, GPTQ (Marlin), FP8 (slow under WSL2), NVFP4 (not verified under WSL2) | OpenAI-compatible | Prometheus metrics | RadixAttention prefix cache; continuous batching; KV paging | medium-high on consumer Blackwell | very active | WSL2 FP8 exposure; consumer SM120 recency; **24 GiB OOM on Qwen3.6-35B-A3B AWQ MoE hybrid (2026-07-24)** | failed local serve; rejected for promotion | medium (new container, new model artifacts in AWQ/GPTQ format) | overlaps llama.cpp for GPU-resident chat only | experimental (retained; not optional-prod) | **reject promotion** (ADR-002) |
+| SGLang | HF safetensors families incl. Qwen3; not GGUF-first | AWQ, GPTQ (Marlin), FP8 (slow under WSL2), NVFP4 (not verified under WSL2) | OpenAI-compatible | Prometheus metrics | RadixAttention prefix cache; continuous batching; KV paging | medium-high on consumer Blackwell | very active | WSL2 FP8 exposure; consumer SM120 recency; **24 GiB OOM on Qwen3.6-35B-A3B AWQ MoE hybrid (2026-07-24)** | failed local serve; rejected for promotion | medium (new container, new model artifacts in AWQ/GPTQ format) | overlaps llama.cpp for GPU-resident chat only | rejected (overlay removed 2026-08-22) | **reject promotion** (ADR-002) |
 | vLLM | HF safetensors; GGUF experimental | AWQ/GPTQ Marlin, FP8 (slow under WSL2), NVFP4 (not verified) | OpenAI-compatible | Prometheus metrics | PagedAttention; continuous batching | medium on consumer Blackwell | very active | consumer SM120 absent from official wheels: source build with pinned commit required | requires benchmark | high (source build, PyTorch nightly pin, rebuild every upgrade) | duplicates SGLang role | rejected for now; re-evaluate if wheels ship SM120 | **postpone** |
 | TensorRT-LLM | curated model list; conversion/engine build per model | FP8, NVFP4, AWQ, INT4 | OpenAI-compatible server | metrics available | engine-plan preallocation; least flexible | medium on sm_120 (v1.3.0+) | active (NVIDIA) | WSL2 NVFP4/FP8 exposure not verified; heavy containers; per-model engine builds | requires benchmark | very high | overlaps SGLang/llama.cpp for one curated model | research-only until Phase 6 | **postpone** (Phase 6) |
 | KTransformers | very large MoE (DeepSeek-V3-class) via CPU+GPU expert placement | AMXINT4/8 (needs AMX), RAWINT4/FP8 (needs AVX-512), GGUF via llamafile AVX2 | OpenAI-compatible via SGLang integration | partial | CPU-RAM heavy (hundreds of GiB for frontier MoE) | research-grade | active | our CPU lacks AVX-512/AMX; GPU wheels SM80-90; 47 GiB WSL RAM cannot host frontier MoE experts | not applicable on this hardware | very high | overlaps llama.cpp CPU/GPU offload, which already works here | research-only | **reject** for this hardware (revisit on AMX + 128 GiB RAM) |
@@ -140,3 +149,17 @@ Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1
 | NVFP4 | Hardware profile: NVFP4 unverified under WSL2 dxgkrnl | `config/hardware-profile.json`; ADR-015 | 2026-08-22 | fallback INT8 encoder named, not assumed |
 | Overlap | Media generation, not chat. Does not replace llama.cpp / LiteLLM | ADR-015 | 2026-08-22 | decision |
 | Classification | experimental, off by default | ADR-015 | 2026-08-22 | decision |
+
+## 2026-08-22 addendum: Ornith 1.5 and FLUX.2-dev
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Ornith 1.5 GGUF | Official llama.cpp artifact `Ornith-1.5-35B-Q4_K_M.gguf`, 21.7 GB, MIT, architecture `qwen35moe` | `ornith-ai/Ornith-1.5-35B-A3B-GGUF` revision `fbbaed45c2f0e200276ffa51701a24d45dc7f57e` | fetched 2026-08-22 | confirmed |
+| Ornith serve | Vendor recipes are vLLM/SGLang on large GPUs; station keeps llama.cpp | Ornith 1.5 model card; ADR-002 | fetched 2026-08-22 | confirmed |
+| Classification | optional_profile; does not replace coder | ADR-017 | 2026-08-22 | decision |
+| FLUX.2-dev origin | 32B rectified flow, FLUX Non-Commercial License, HF gated BF16 | [black-forest-labs/FLUX.2-dev](https://huggingface.co/black-forest-labs/FLUX.2-dev) | fetched 2026-08-22 | confirmed |
+| Official Comfy-Org FP8 DiT | `flux2_dev_fp8mixed.safetensors` 35.4 GB; exceeds 24 GiB VRAM | `Comfy-Org/flux2-dev` revision `ab9055628ea245000e610f2aa2c96f4746093546` | fetched 2026-08-22 | confirmed |
+| 24 GiB path | city96 Q4_K_M GGUF 20.1 GB + Comfy-Org FP4 TE 12.3 GB + VAE 321 MiB | `city96/FLUX.2-dev-gguf`; ADR-018 | fetched 2026-08-22 | documented; live image smoke required |
+| Remote text encoder | BFL Diffusers consumer example calls Hugging Face HTTP | FLUX.2-dev card | fetched 2026-08-22 | rejected for station default |
+| Open WebUI img | `ENABLE_IMAGE_GENERATION` stays false | ADR-015 / ADR-018 | 2026-08-22 | decision |
+| Classification | experimental still-image on existing ComfyUI overlay | ADR-018 | 2026-08-22 | decision |

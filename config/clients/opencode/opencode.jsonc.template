@@ -95,7 +95,7 @@
             "output": 2048
           }
         },
-        "Ornith-1.0-35B-Q4_K_M": {
+        "Ornith-1.5-35B-Q4_K_M": {
           "name": "Ornith Coding",
           "tool_call": true,
           "limit": {

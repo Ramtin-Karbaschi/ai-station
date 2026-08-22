@@ -33,7 +33,7 @@ NO_PREFIX_MODEL = {
 class RewriteMessagesTests(unittest.TestCase):
     def test_merges_prefix_into_existing_leading_system_message(self) -> None:
         body = {
-            "model": "ornith-1_0-35b",
+            "model": "ornith-1_5-35b",
             "messages": [
                 {"role": "system", "content": "You are a coding agent."},
                 {"role": "user", "content": "hi"},
@@ -52,7 +52,7 @@ class RewriteMessagesTests(unittest.TestCase):
 
     def test_inserts_new_system_message_when_none_exists(self) -> None:
         body = {
-            "model": "ornith-1_0-35b",
+            "model": "ornith-1_5-35b",
             "messages": [{"role": "user", "content": "hi"}],
         }
 
@@ -76,7 +76,7 @@ class RewriteMessagesTests(unittest.TestCase):
 
     def test_handles_multi_part_list_content_defensively(self) -> None:
         body = {
-            "model": "ornith-1_0-35b",
+            "model": "ornith-1_5-35b",
             "messages": [
                 {
                     "role": "system",

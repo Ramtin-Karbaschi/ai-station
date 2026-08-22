@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 MODEL = "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4"
-ORNITH_MODEL = "ai-station/Ornith-1.0-35B-Q4_K_M"
+ORNITH_MODEL = "ai-station/Ornith-1.5-35B-Q4_K_M"
 
 
 def main() -> int:

@@ -37,11 +37,6 @@ python3 benchmarks/runners/run_openai_bench.py \
   --config benchmarks/configs/llama-cpp-general.yaml \
   --out benchmarks/results/$(date -u +%Y%m%d)/llama-cpp/general-qwen3.6.json
 
-# Experimental SGLang (requires experimental profile healthy on :8100)
-python3 benchmarks/runners/run_openai_bench.py \
-  --config benchmarks/configs/sglang-general-experimental.yaml \
-  --out benchmarks/results/$(date -u +%Y%m%d)/sglang/general-qwen3.6-awq.json
-
 # Phase 4 retrieval lexical baseline
 python3 benchmarks/runners/run_retrieval_eval.py \
   --out benchmarks/results/$(date -u +%Y%m%d)/retrieval/lexical-public-safe-v1.json

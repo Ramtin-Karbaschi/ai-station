@@ -34,7 +34,7 @@ changes in `CHANGELOG.md`.
 | SearXNG | Local metasearch boundary | Compose | Optional egress |
 | Graphify | Repository code knowledge graph | Pinned Python venv | Optional client tool |
 | OpenCode WSL | Non-root agentic development client | Pinned WSL binary + generated config | Verified developer client |
-| ComfyUI | MiniMax Music 3 / H3 media studio | Isolated Compose overlay, loopback `:8188` | Experimental; off by default (ADR-015) |
+| ComfyUI | MiniMax Music 3 / H3 and FLUX.2-dev still images | Isolated Compose overlay, loopback `:8188` | Experimental; off by default (ADR-015, ADR-018) |
 
 ## Model capability matrix
 
@@ -42,7 +42,7 @@ changes in `CHANGELOG.md`.
 |---|---|---:|---:|---|
 | `coder` | Qwen3 Coder 30B-A3B | 32768 runtime; 16384 OpenCode cap | Yes | Default OpenCode/build agent |
 | `general` | Qwen3.6 35B-A3B | 8192 | Yes | General chat and tool use |
-| `ornith` | Ornith 1.0 35B | 8192 | Yes | Optional coding agent |
+| `ornith` | Ornith 1.5 35B | 8192 | Yes | Optional coding agent |
 | `reasoning` | DeepSeek-R1 Distill Qwen 32B | 8192 | No | Non-tool reasoning; high latency |
 | `vision` | Qwen3-VL 32B + mmproj | 8192 | No | Multimodal requests |
 | default embedder | Qwen3 Embedding 0.6B Q8 | 8192 | n/a | Retrieval embeddings |
@@ -172,6 +172,8 @@ offline gates and parses every PowerShell entrypoint on Windows.
 - The single 24 GiB GPU leaves little headroom with one heavy model plus the
   embedder; admission control and one-heavy-profile exclusivity are required.
   ComfyUI and llama.cpp cannot share the GPU.
+- SGLang is not a startable provider. The 2026-07-24 trial OOMed; the
+  experimental overlay was removed on 2026-08-22 (ADR-002).
 - ComfyUI MiniMax packs are experimental. Music3 INT8 tiled-decode and
   H3 FL2VA text-to-video smokes passed on 2026-08-22
   (`benchmarks/results/20260822/comfyui/`). NVFP4 encoder speed under

@@ -143,7 +143,7 @@ $nativeGuard = [ordered]@{
                     tool_call = $false
                     limit = [ordered]@{ context = 8192; output = 2048 }
                 }
-                "Ornith-1.0-35B-Q4_K_M" = [ordered]@{
+                "Ornith-1.5-35B-Q4_K_M" = [ordered]@{
                     name = "Ornith Coding"
                     tool_call = $true
                     limit = [ordered]@{ context = 8192; output = 2048 }

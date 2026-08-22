@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-23
-- Updated: 2026-07-24
+- Updated: 2026-08-22
 
 ## Context
 
@@ -48,19 +48,25 @@ Retain llama.cpp as the production primary interactive engine.
 **Reject SGLang promotion** on this workstation for the incumbent
 Qwen3.6-35B-A3B MoE family: no healthy OpenAI endpoint could be stood up,
 so the >= 20% decode/TTFT promotion threshold cannot be evaluated and is
-not met. The experimental Compose profile may remain in-tree for future
-hardware or denser artifacts, but stays off-by-default and is not an
-optional production path.
+not met.
+
+On 2026-08-22 the unused experimental Compose overlay, provider entry,
+uninstall script, and AWQ shard pins were removed from the live tree.
+They were not serving requests and could not be started on this GPU.
+The OOM evidence JSON remains under `benchmarks/results/20260724/sglang/`.
+SGLang is not an optional production path.
 
 Continue to postpone vLLM (source-build cost) and TensorRT-LLM (Phase 6).
 
 ## Consequences
 
 - Production default unchanged.
-- Experimental SGLang profile + uninstall script remain available; weights
-  may be quarantined later with `./scripts/uninstall-sglang-experimental.sh --remove-weights`.
+- No SGLang provider, Compose overlay, or start command remains in the
+  live tree. Persian/English OCR stays on Tika + Tesseract (`fas`), not
+  on a second GPU engine.
 - Revisit only if a same-family artifact loads with usable KV headroom on
-  this GPU, or hardware VRAM increases.
+  this GPU, or hardware VRAM increases. Any reopen requires a new ADR
+  plus a new isolated overlay; do not restore the deleted files by habit.
 
 ## Risks
 
@@ -69,8 +75,9 @@ Continue to postpone vLLM (source-build cost) and TensorRT-LLM (Phase 6).
 
 ## Rollback
 
-Already rolled back: experimental container removed; `ai models use general`
-and embedder restored after the trial.
+The 2026-07-24 trial already rolled back to llama.cpp. Overlay removal is
+reversed only from Git history after a new ADR; do not reactivate the
+rejected 24 GiB AWQ serve path.
 
 ## Acceptance criteria
 

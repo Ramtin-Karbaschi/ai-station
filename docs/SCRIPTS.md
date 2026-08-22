@@ -90,11 +90,9 @@ Keep as-needed; not used by the Windows quick-start path:
 ## Experimental (off by default)
 
 - `provision-experimental-snapshot.py`
-- `uninstall-sglang-experimental.sh`
 - `uninstall-comfyui-experimental.sh`
 - `comfyui-media-smoke.sh` (slim JSON under `benchmarks/results/`; raw
   dumps under `/srv/ai-station/runtime/comfyui/smoke/`)
-- Compose overlay: `compose.sglang.experimental.yaml` (research only; not promoted)
 - Compose overlay: `compose.comfyui.experimental.yaml` (media studio; ADR-015)
 
 ## Incident / maintenance

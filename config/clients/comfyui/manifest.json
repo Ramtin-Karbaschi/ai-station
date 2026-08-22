@@ -13,5 +13,8 @@
   "provider_id": "comfyui-media-experimental",
   "compose_overlay": "compose.comfyui.experimental.yaml",
   "compose_profile": "comfyui-experimental",
-  "adr": "docs/adr/ADR-015-comfyui-minimax-media-studio.md"
+  "adr": "docs/adr/ADR-015-comfyui-minimax-media-studio.md",
+  "still_image_adr": "docs/adr/ADR-018-flux2-dev-comfyui.md",
+  "comfyui_gguf_git_commit": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
+  "comfyui_gguf_tarball_sha256": "688126d5c2b8c4ff061f56b23c3c6791ac01dc366e98d41ef1aaef374c36f283"
 }

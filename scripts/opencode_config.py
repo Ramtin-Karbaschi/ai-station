@@ -19,7 +19,7 @@ MODELS = {
     "coder": "Qwen3-Coder-30B-A3B-Instruct-Q4",
     "general": "Qwen3.6-35B-A3B-UD-Q4_K_M",
     "reasoning": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
-    "ornith": "Ornith-1.0-35B-Q4_K_M",
+    "ornith": "Ornith-1.5-35B-Q4_K_M",
 }
 EXPECTED = {
     MODELS["coder"]: (16384, 4096, True),

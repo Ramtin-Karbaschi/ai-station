@@ -71,7 +71,7 @@ Core plus selectable heavy and optional roles:
 - Qwen3 Coder 30B-A3B;
 - DeepSeek-R1 Distill Qwen 32B (reasoning);
 - Qwen3-VL 32B + mmproj (vision);
-- Ornith-1.0 35B Q4 (optional coding profile; does not replace coder);
+- Ornith-1.5 35B Q4 (optional coding profile; does not replace coder);
 - Qwen3 Reranker 0.6B (CPU; started with `ai start` for hybrid RAG).
 
 ~~~bash
@@ -79,14 +79,10 @@ Core plus selectable heavy and optional roles:
 ./scripts/verify-models.sh --profile all
 ~~~
 
-Experimental SGLang AWQ shards may appear in the manifest under
-`experimental-sglang` for research. They are **not** part of production
-provisioning and are not promoted (see ADR-002).
-
-Experimental ComfyUI MiniMax Music3 and H3 packs use profile
-`experimental-comfyui`. They are **not** in `core` or `all`. Start them
-only through `ai provider start comfyui-media-experimental` (ADR-015,
-[clients/COMFYUI.md](clients/COMFYUI.md)).
+Experimental ComfyUI MiniMax Music3 / H3 and FLUX.2-dev still-image packs
+use profile `experimental-comfyui`. They are **not** in `core` or `all`.
+Start them only through `ai provider start comfyui-media-experimental`
+(ADR-015, ADR-018, [clients/COMFYUI.md](clients/COMFYUI.md)).
 
 ## Day-to-day add and remove
 
@@ -137,12 +133,20 @@ The Hugging Face cache is retained at:
 
 Interrupted downloads can resume from this cache.
 
+`provision-models.sh` sets `HF_HUB_DOWNLOAD_TIMEOUT=600` and
+`HF_HUB_ETAG_TIMEOUT=120` before importing `huggingface_hub` (upstream
+defaults are 10 seconds and abort large files on a brief stall). Stale
+`.lock` files for that repo are removed before each retry. Destination
+files smaller than the manifest size are resumed with HTTP Range (aria2c
+when present, otherwise curl) instead of being quarantined.
+
 A downloaded file is placed at its final destination only after:
 
 1. its size matches the manifest;
 2. its SHA-256 checksum matches the manifest.
 
-Invalid existing files are quarantined rather than silently overwritten.
+Full-size files with a mismatched checksum are quarantined rather than
+silently overwritten.
 
 ## Default model paths
 

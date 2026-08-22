@@ -90,8 +90,8 @@ models:
 
   local-ornith:
     alias: local-ornith
-    catalog_id: ornith-1_0-35b
-    public_name: Ornith-1.0-35B-Q4_K_M
+    catalog_id: ornith-1_5-35b
+    public_name: Ornith-1.5-35B-Q4_K_M
     role: ornith
     kind: chat
     heavy: true
@@ -100,10 +100,10 @@ models:
     port: 8086
     backend_model: ai-station-ornith
     runtime: llama-cpp
-    file: ornith/ornith-1.0-35b-q4_k_m.gguf
+    file: ornith/ornith-1.5-35b-q4_k_m.gguf
     context_size: 8192
     status: optional
-    manifest_id: ornith-1.0-35b-q4
+    manifest_id: ornith-1.5-35b-q4
     note: Optional heavy profile; does not replace the coder profile. Switch with ai models use ornith.
 
   local-embedding:

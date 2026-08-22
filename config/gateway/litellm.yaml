@@ -41,14 +41,14 @@ model_list:
       id: Qwen3-VL-32B-Instruct-Q4_K_M
       mode: chat
 
-  - model_name: Ornith-1.0-35B-Q4_K_M
+  - model_name: Ornith-1.5-35B-Q4_K_M
     litellm_params:
-      model: openai/Ornith-1.0-35B-Q4_K_M
+      model: openai/Ornith-1.5-35B-Q4_K_M
       api_base: http://host.docker.internal:8888/v1
       api_key: "not-needed"
       timeout: 600
     model_info:
-      id: Ornith-1.0-35B-Q4_K_M
+      id: Ornith-1.5-35B-Q4_K_M
       mode: chat
 
   - model_name: Qwen3-Embedding-0.6B-Q8_0

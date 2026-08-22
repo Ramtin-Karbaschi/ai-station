@@ -21,7 +21,7 @@ CANONICAL_CHAT_MODELS = [
     "Qwen3-Coder-30B-A3B-Instruct-Q4",
     "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
     "Qwen3-VL-32B-Instruct-Q4_K_M",
-    "Ornith-1.0-35B-Q4_K_M",
+    "Ornith-1.5-35B-Q4_K_M",
 ]
 CANONICAL_UTILITY_MODELS = [
     "Qwen3-Embedding-0.6B-Q8_0",
@@ -53,14 +53,42 @@ class CatalogContractTests(unittest.TestCase):
         self.assertTrue(
             by_id["general-qwen3_6-35b-a3b"].get("supports_json_schema")
         )
-        self.assertTrue(by_id["ornith-1_0-35b"].get("supports_tools"))
-        self.assertTrue(by_id["ornith-1_0-35b"].get("supports_json_schema"))
-        self.assertEqual(by_id["ornith-1_0-35b"]["port"], 8086)
-        self.assertEqual(by_id["ornith-1_0-35b"]["manifest_id"], "ornith-1.0-35b-q4")
-        self.assertEqual(by_id["ornith-1_0-35b"]["alias"], "local-ornith")
+        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_tools"))
+        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_json_schema"))
+        self.assertEqual(by_id["ornith-1_5-35b"]["port"], 8086)
+        self.assertEqual(by_id["ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4")
+        self.assertEqual(by_id["ornith-1_5-35b"]["alias"], "local-ornith")
         self.assertEqual(
-            by_id["ornith-1_0-35b"].get("default_system_prefix"), "/no_think"
+            by_id["ornith-1_5-35b"].get("default_system_prefix"), "/no_think"
         )
+        self.assertNotIn("ornith-1_0-35b", by_id)
+        manifest = json.loads(
+            (ROOT / "config/model-manifest.json").read_text(encoding="utf-8")
+        )
+        by_manifest = {m["id"]: m for m in manifest["models"]}
+        self.assertEqual(
+            by_manifest["ornith-1.5-35b-q4"]["revision"],
+            "fbbaed45c2f0e200276ffa51701a24d45dc7f57e",
+        )
+        self.assertNotIn("ornith-1.0-35b-q4", by_manifest)
+        self.assertFalse(
+            any(item["id"].startswith("experimental-sglang-qwen") for item in manifest["models"])
+        )
+
+    def test_rejected_sglang_overlay_is_absent(self) -> None:
+        providers = yaml.safe_load(
+            (ROOT / "config/providers.yaml").read_text(encoding="utf-8")
+        )
+        self.assertNotIn("sglang-general-experimental", providers["providers"])
+        self.assertFalse((ROOT / "compose.sglang.experimental.yaml").exists())
+        self.assertFalse(
+            (ROOT / "scripts/uninstall-sglang-experimental.sh").exists()
+        )
+        self.assertFalse(
+            (ROOT / "benchmarks/configs/sglang-general-experimental.yaml").exists()
+        )
+        common = (ROOT / "scripts/lib/ai-common.sh").read_text(encoding="utf-8")
+        self.assertNotIn("compose.sglang.experimental.yaml", common)
 
     def test_ornith_provider_is_optional_and_coder_remains(self) -> None:
         providers = yaml.safe_load(

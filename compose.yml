@@ -201,7 +201,7 @@ services:
       ENABLE_OLLAMA_API: "False"
       OPENAI_API_BASE_URLS: "http://llm-gateway:4000/v1"
       OPENAI_API_KEYS: "${LITELLM_MASTER_KEY}"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.6-35B-A3B-UD-Q4_K_M", "Qwen3-Coder-30B-A3B-Instruct-Q4", "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M", "Qwen3-VL-32B-Instruct-Q4_K_M", "Ornith-1.0-35B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.6-35B-A3B-UD-Q4_K_M", "Qwen3-Coder-30B-A3B-Instruct-Q4", "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M", "Qwen3-VL-32B-Instruct-Q4_K_M", "Ornith-1.5-35B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
 
       ENABLE_PERSISTENT_CONFIG: "False"
       ENABLE_EVALUATION_ARENA_MODELS: "False"

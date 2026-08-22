@@ -7,11 +7,17 @@ import hashlib
 import json
 import os
 import pathlib
-import re
 import shutil
+import subprocess
 import sys
 import time
 from typing import Any
+
+HUB_DOWNLOAD_TIMEOUT_SECONDS = 600
+HUB_ETAG_TIMEOUT_SECONDS = 120
+HUB_DOWNLOAD_ATTEMPTS = 5
+HTTP_USER_AGENT = "ai-station-provisioner"
+
 
 def sha256_file(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
@@ -26,6 +32,183 @@ def sha256_file(path: pathlib.Path) -> str:
             digest.update(chunk)
 
     return digest.hexdigest()
+
+
+def configure_hub_client() -> None:
+    # huggingface_hub reads these at import time (default download timeout is 10s).
+    os.environ.setdefault(
+        "HF_HUB_DOWNLOAD_TIMEOUT",
+        str(HUB_DOWNLOAD_TIMEOUT_SECONDS),
+    )
+    os.environ.setdefault(
+        "HF_HUB_ETAG_TIMEOUT",
+        str(HUB_ETAG_TIMEOUT_SECONDS),
+    )
+    os.environ.setdefault("HF_XET_HIGH_PERFORMANCE", "1")
+
+
+def hub_lock_dir(cache_dir: pathlib.Path, repo_id: str) -> pathlib.Path:
+    return cache_dir / ".locks" / ("models--" + repo_id.replace("/", "--"))
+
+
+def clear_stale_hub_locks(cache_dir: pathlib.Path, repo_id: str) -> int:
+    lock_dir = hub_lock_dir(cache_dir, repo_id)
+    if not lock_dir.is_dir():
+        return 0
+
+    removed = 0
+    for lock in lock_dir.glob("*.lock"):
+        try:
+            lock.unlink()
+        except OSError:
+            continue
+        removed += 1
+    return removed
+
+
+def huggingface_resolve_url(repo_id: str, revision: str, filename: str) -> str:
+    return (
+        f"https://huggingface.co/{repo_id}/resolve/{revision}/{filename}"
+    )
+
+
+def is_incomplete_destination(path: pathlib.Path, size_bytes: int) -> bool:
+    return path.is_file() and 0 < path.stat().st_size < size_bytes
+
+
+def is_retryable_download_error(exc: BaseException) -> bool:
+    text = f"{type(exc).__name__} {exc}".lower()
+    needles = (
+        "timed out",
+        "timeout",
+        "temporarily unavailable",
+        "connection",
+        "reset by peer",
+        "lock",
+        "429",
+        "503",
+        "ssl",
+        "incomplete",
+        "temporary failure",
+    )
+    return any(needle in text for needle in needles)
+
+
+def _auth_headers(token: str | None) -> list[str]:
+    if not token:
+        return []
+    return ["-H", f"Authorization: Bearer {token}"]
+
+
+def resolve_download_url(
+    url: str,
+    *,
+    token: str | None = None,
+    user_agent: str = HTTP_USER_AGENT,
+) -> str:
+    command = [
+        "curl",
+        "-fsSL",
+        "-A",
+        user_agent,
+        "-o",
+        os.devnull,
+        "-w",
+        "%{url_effective}",
+        "--max-redirs",
+        "8",
+        "--connect-timeout",
+        "30",
+        "--max-time",
+        "60",
+        *_auth_headers(token),
+        url,
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return url
+
+    resolved = completed.stdout.strip()
+    return resolved or url
+
+
+def http_resume_download(
+    url: str,
+    dest: pathlib.Path,
+    *,
+    token: str | None = None,
+    user_agent: str = HTTP_USER_AGENT,
+) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    source = resolve_download_url(
+        url,
+        token=token,
+        user_agent=user_agent,
+    )
+    auth = _auth_headers(token)
+
+    if shutil.which("aria2c"):
+        command = [
+            "aria2c",
+            "--continue=true",
+            "--max-connection-per-server=4",
+            "--split=4",
+            "--min-split-size=8M",
+            "--file-allocation=none",
+            "--max-tries=40",
+            "--retry-wait=5",
+            "--timeout=60",
+            "--connect-timeout=30",
+            "--lowest-speed-limit=8192",
+            "--allow-overwrite=true",
+            "--auto-file-renaming=false",
+            f"--user-agent={user_agent}",
+            "--console-log-level=notice",
+            "--summary-interval=30",
+            "-d",
+            str(dest.parent),
+            "-o",
+            dest.name,
+        ]
+        if token:
+            command.append(f"--header=Authorization: Bearer {token}")
+        command.append(source)
+    else:
+        command = [
+            "curl",
+            "-fL",
+            "--retry",
+            "40",
+            "--retry-delay",
+            "4",
+            "--retry-all-errors",
+            "--connect-timeout",
+            "30",
+            "--speed-limit",
+            "8192",
+            "--speed-time",
+            "60",
+            "-C",
+            "-",
+            "-A",
+            user_agent,
+            *auth,
+            "-o",
+            str(dest),
+            source,
+        ]
+
+    completed = subprocess.run(command, check=False)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"HTTP resume download failed (exit {completed.returncode}): {dest}"
+        )
 
 
 def load_manifest(path: pathlib.Path) -> dict[str, Any]:
@@ -103,55 +286,11 @@ def verify_model(
     return True
 
 
-def install_model(
+def _place_verified_download(
     model: dict[str, Any],
-    data_root: pathlib.Path,
-    cache_dir: pathlib.Path,
-    token: str | None,
+    downloaded: pathlib.Path,
+    destination: pathlib.Path,
 ) -> None:
-    # Keep list/help/verify usable without the download-only dependency.
-    from huggingface_hub import hf_hub_download
-
-    destination = data_root / model["destination"]
-    destination.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    if verify_model(model, data_root):
-        print(f"SKIP: {model['id']} already verified.")
-        return
-
-    if destination.exists():
-        quarantine = destination.with_name(
-            destination.name
-            + ".invalid-"
-            + time.strftime("%Y%m%d-%H%M%S")
-        )
-
-        destination.rename(quarantine)
-
-        print(
-            f"Moved invalid file to: {quarantine}"
-        )
-
-    print()
-    print(f"Downloading: {model['id']}")
-    print(f"Repository:  {model['repo_id']}")
-    print(f"Revision:    {model['revision']}")
-    print(f"Filename:    {model['filename']}")
-    print(f"Destination: {destination}")
-
-    downloaded = pathlib.Path(
-        hf_hub_download(
-            repo_id=model["repo_id"],
-            filename=model["filename"],
-            revision=model["revision"],
-            cache_dir=str(cache_dir),
-            token=token,
-        )
-    )
-
     downloaded_size = downloaded.stat().st_size
 
     if downloaded_size != model["size_bytes"]:
@@ -186,12 +325,138 @@ def install_model(
     os.chmod(temporary, 0o644)
     os.replace(temporary, destination)
 
-    if not verify_model(model, data_root):
-        raise RuntimeError(
-            f"Final verification failed: {model['id']}"
-        )
 
-    print(f"INSTALLED: {model['id']}")
+def install_model(
+    model: dict[str, Any],
+    data_root: pathlib.Path,
+    cache_dir: pathlib.Path,
+    token: str | None,
+) -> None:
+    configure_hub_client()
+
+    destination = data_root / model["destination"]
+    destination.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if verify_model(model, data_root):
+        print(f"SKIP: {model['id']} already verified.")
+        return
+
+    if destination.exists() and not is_incomplete_destination(
+        destination,
+        model["size_bytes"],
+    ):
+        if destination.stat().st_size == 0:
+            destination.unlink()
+        else:
+            quarantine = destination.with_name(
+                destination.name
+                + ".invalid-"
+                + time.strftime("%Y%m%d-%H%M%S")
+            )
+            destination.rename(quarantine)
+            print(f"Moved invalid file to: {quarantine}")
+
+    print()
+    print(f"Downloading: {model['id']}")
+    print(f"Repository:  {model['repo_id']}")
+    print(f"Revision:    {model['revision']}")
+    print(f"Filename:    {model['filename']}")
+    print(f"Destination: {destination}")
+
+    resolve_url = huggingface_resolve_url(
+        model["repo_id"],
+        model["revision"],
+        model["filename"],
+    )
+
+    if is_incomplete_destination(destination, model["size_bytes"]):
+        print(
+            "Incomplete destination present; resuming over HTTP Range "
+            f"({destination.stat().st_size} of {model['size_bytes']} bytes)."
+        )
+        try:
+            http_resume_download(
+                resolve_url,
+                destination,
+                token=token,
+            )
+        except Exception as exc:
+            print(f"HTTP resume failed: {exc}")
+        else:
+            if verify_model(model, data_root):
+                print(f"INSTALLED: {model['id']}")
+                return
+
+    # Keep list/help/verify usable without the download-only dependency.
+    from huggingface_hub import hf_hub_download
+
+    last_error: Exception | None = None
+    downloaded: pathlib.Path | None = None
+
+    for attempt in range(1, HUB_DOWNLOAD_ATTEMPTS + 1):
+        removed = clear_stale_hub_locks(cache_dir, model["repo_id"])
+        if removed:
+            print(
+                f"Cleared {removed} stale Hugging Face lock file(s)."
+            )
+
+        try:
+            downloaded = pathlib.Path(
+                hf_hub_download(
+                    repo_id=model["repo_id"],
+                    filename=model["filename"],
+                    revision=model["revision"],
+                    cache_dir=str(cache_dir),
+                    token=token,
+                    etag_timeout=int(
+                        os.environ.get(
+                            "HF_HUB_ETAG_TIMEOUT",
+                            str(HUB_ETAG_TIMEOUT_SECONDS),
+                        )
+                    ),
+                )
+            )
+            break
+        except Exception as exc:
+            last_error = exc
+            print(
+                f"Hub download attempt {attempt}/{HUB_DOWNLOAD_ATTEMPTS} "
+                f"failed: {exc}"
+            )
+            if (
+                not is_retryable_download_error(exc)
+                or attempt == HUB_DOWNLOAD_ATTEMPTS
+            ):
+                break
+            time.sleep(min(30, 4 * attempt))
+
+    if downloaded is not None:
+        _place_verified_download(model, downloaded, destination)
+        if not verify_model(model, data_root):
+            raise RuntimeError(
+                f"Final verification failed: {model['id']}"
+            )
+        print(f"INSTALLED: {model['id']}")
+        return
+
+    print("Falling back to HTTP Range download of the destination file.")
+    http_resume_download(
+        resolve_url,
+        destination,
+        token=token,
+    )
+    if verify_model(model, data_root):
+        print(f"INSTALLED: {model['id']}")
+        return
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError(
+        f"Download failed after hub retries and HTTP fallback: {model['id']}"
+    )
 
 
 def main() -> int:

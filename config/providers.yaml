@@ -167,7 +167,7 @@ providers:
     health_endpoint: http://127.0.0.1:8086/v1/models
     metrics_endpoint: null
     catalog_ids:
-      - ornith-1_0-35b
+      - ornith-1_5-35b
     model_aliases:
       - local-ornith
     capabilities:
@@ -179,7 +179,7 @@ providers:
     stability_class: production
     minimum_vram_mib: 21000
     minimum_ram_mib: 8192
-    minimum_storage_mib: 22000
+    minimum_storage_mib: 23000
     kv_cache_mib_per_1k_context: 180
     default_context: 8192
     max_context: 32768
@@ -252,44 +252,6 @@ providers:
     required_features: []
     fallback_provider: null
     lifecycle_command: "ai models start-reranker"
-
-  sglang-general-experimental:
-    id: sglang-general-experimental
-    engine: sglang
-    deployment_type: compose
-    classification: experimental
-    experimental: true
-    heavy: true
-    # Phase 3 (2026-07-24): rejected for promotion on 24 GiB with this MoE AWQ.
-    resource_group: gpu-heavy
-    service: sglang-experimental
-    profile: sglang-experimental
-    port: 8100
-    endpoint: http://127.0.0.1:8100/v1
-    health_endpoint: http://127.0.0.1:8100/health
-    metrics_endpoint: http://127.0.0.1:8100/metrics
-    catalog_ids: []
-    model_aliases:
-      - experimental-sglang-general
-    capabilities:
-      - chat
-      - tools
-      - json_schema
-    latency_class: interactive
-    stability_class: experimental
-    minimum_vram_mib: 20000
-    minimum_ram_mib: 16384
-    minimum_storage_mib: 26000
-    kv_cache_mib_per_1k_context: 220
-    default_context: 8192
-    max_context: 16384
-    required_features:
-      - nvidia_cuda
-    fallback_provider: llama-cpp-general
-    lifecycle_command: "docker compose -f compose.yml -f compose.sglang.experimental.yaml --profile sglang-experimental up -d sglang-experimental"
-    compose_files:
-      - compose.yml
-      - compose.sglang.experimental.yaml
 
   comfyui-media-experimental:
     id: comfyui-media-experimental

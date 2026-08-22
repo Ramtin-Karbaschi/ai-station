@@ -1,0 +1,43 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "workflow": "flux2-text-to-image.json",
+  "ok": true,
+  "prompt_id": "e4afbee5-c5a0-47c3-953a-cd465220285e",
+  "elapsed_s": 125.1,
+  "images": [
+    {
+      "filename": "ai-station-flux2-smoke_00001_.png",
+      "subfolder": "",
+      "type": "output"
+    }
+  ],
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "e4afbee5-c5a0-47c3-953a-cd465220285e",
+          "timestamp": 1787413712225
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "e4afbee5-c5a0-47c3-953a-cd465220285e",
+          "timestamp": 1787413712227
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "e4afbee5-c5a0-47c3-953a-cd465220285e",
+          "timestamp": 1787413833906
+        }
+      ]
+    ]
+  }
+}
