@@ -7,7 +7,7 @@ install, release, or incident recovery.
 
 | Entry | Purpose |
 |---|---|
-| **`scripts/ai`** (`/usr/local/bin/ai`) | **Only** platform control plane: start/stop/restart/status/models/provider/projects/opencode/graphify/test/logs/verify/backup/disk/… |
+| **`scripts/ai`** (`/usr/local/bin/ai`) | **Only** platform control plane: start/stop/restart/status/models/provider/projects/opencode/graphify/output/test/logs/verify/backup/disk/… |
 
 Windows launchers call the same script:
 
@@ -40,7 +40,9 @@ ai models add coder-qwen3-30b-a3b-q4
 ai models install coder-qwen3-30b-a3b-q4
 ai models remove coder-qwen3-30b-a3b-q4   # dry-run unless --confirm
 ai graphify install && ai graphify extract --code-only
+ai graphify view
 ai graphify query "what starts the coder profile?"
+ai output show
 ~~~
 
 Templates live in `config/clients/opencode/`. Graphify is an optional
@@ -53,7 +55,9 @@ Windows `opencode.jsonc` (it contains the project API key). See
 
 Internal helpers used by `ai start` (not user-facing):
 
-- `scripts/lib/ai-common.sh`, `ai-models.sh`, `ai-opencode.sh`, `ai-graphify.sh`
+- `scripts/lib/ai-common.sh`, `ai-models.sh`, `ai-opencode.sh`, `ai-graphify.sh`,
+  `ai-output.sh`
+- `scripts/operator_output.py`, `scripts/graphify_view.py`
 
 - `scripts/compose-ai-station.sh`
 - `scripts/ensure-litellm-db.sh` / `sync-litellm-db-url.sh` / `ensure-wsl-idle-timeout.sh`

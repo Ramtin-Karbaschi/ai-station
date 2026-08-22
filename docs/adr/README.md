@@ -20,6 +20,7 @@ live ADR.
 | [013](ADR-013-opencode-desktop-wsl-and-preview-verification.md) | Desktop uses the canonical WSL OpenCode server | Accepted |
 | [014](ADR-014-opencode-local-document-normalization.md) | Normalize attached documents before local inference | Accepted |
 | [015](ADR-015-comfyui-minimax-media-studio.md) | ComfyUI is the experimental MiniMax music/video studio | Accepted |
+| [016](ADR-016-operator-console-and-selectable-outputs.md) | `ai` + Windows Manager stay the console; outputs are selectable; Graphify map is loopback HTML | Accepted |
 
 ADR-010 (custom OpenCode compaction hook) was superseded by ADR-009 and ADR-013
 and removed. The incident remains in Git history.

@@ -46,6 +46,48 @@ function Read-SafeRepo {
     return $value
 }
 
+function Read-SafeAbsPath {
+    param([Parameter(Mandatory)][string]$Prompt)
+    $value = (Read-Host $Prompt).Trim()
+    if ($value -notmatch '^(/[A-Za-z0-9._-]+)+$') {
+        Write-Host "Use an absolute path with letters, numbers, dot, underscore, and hyphen." -ForegroundColor Yellow
+        return $null
+    }
+    return $value
+}
+
+function ConvertTo-WslUnc {
+    param([Parameter(Mandatory)][string]$LinuxPath)
+    $trimmed = $LinuxPath.Trim()
+    if ($trimmed -match '^/mnt/([a-zA-Z])/(.*)$') {
+        $drive = $Matches[1].ToUpper()
+        $rest = $Matches[2] -replace '/', '\'
+        return "${drive}:\${rest}"
+    }
+    $unc = $trimmed -replace '/', '\'
+    return "\\wsl.localhost\$Distro$unc"
+}
+
+function Read-WslFolder {
+    Add-Type -AssemblyName System.Windows.Forms
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Select an output folder"
+    if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+        return $null
+    }
+    $converted = & wsl.exe -d $Distro --user root -- wslpath -a $dialog.SelectedPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Could not convert that folder to a WSL path." -ForegroundColor Yellow
+        return $null
+    }
+    $linux = ([string]$converted).Trim()
+    if ($linux -notmatch '^(/[A-Za-z0-9._-]+)+$') {
+        Write-Host "Use a folder path without spaces or unusual characters." -ForegroundColor Yellow
+        return $null
+    }
+    return $linux
+}
+
 function Show-Menu {
     Clear-Host
     Write-Host "================================================" -ForegroundColor Cyan
@@ -79,8 +121,8 @@ function Show-Menu {
     Write-Host ""
     Write-Host " Clients"
     Write-Host "  28  OpenCode developer   29  Graphify status"
-    Write-Host "  30  Graphify extract     31  Run offline tests"
-    Write-Host "  32  Repair OpenCode WSL"
+    Write-Host "  30  Graphify extract     42  Graphify map"
+    Write-Host "  31  Run offline tests    32  Repair OpenCode WSL"
     Write-Host ""
     Write-Host " Operations"
     Write-Host "  33  Logs                 34  Backup"
@@ -89,7 +131,9 @@ function Show-Menu {
     Write-Host ""
     Write-Host " Media studio (experimental ComfyUI)"
     Write-Host "  39  Start MiniMax media  40  Stop media / restore coder"
-    Write-Host "  41  Open ComfyUI"
+    Write-Host "  41  Open ComfyUI         43  Open media output"
+    Write-Host "  44  Set media output     45  Set export folder"
+    Write-Host "  46  Open export folder"
     Write-Host ""
     Write-Host "   0  Exit"
     Write-Host ""
@@ -230,6 +274,42 @@ while ($true) {
                 Wait-ForEnter
             }
             "41" { Start-Process "http://127.0.0.1:8188" }
+            "42" {
+                if (Invoke-AIStation @("graphify", "view")) {
+                    Start-Process "http://127.0.0.1:4174"
+                }
+                Wait-ForEnter
+            }
+            "43" {
+                $media = & wsl.exe -d $Distro --user root -- $AiPath output path media
+                if ($LASTEXITCODE -eq 0 -and $media) {
+                    Start-Process (ConvertTo-WslUnc ([string]$media).Trim())
+                } else {
+                    Write-Host "Could not resolve the media output folder." -ForegroundColor Yellow
+                }
+                Wait-ForEnter
+            }
+            "44" {
+                $folder = Read-WslFolder
+                if (-not $folder) { $folder = Read-SafeAbsPath "Linux media path under /srv/ai-station/runtime" }
+                if ($folder) { [void](Invoke-AIStation @("output", "set", "media", $folder)) }
+                Wait-ForEnter
+            }
+            "45" {
+                $folder = Read-WslFolder
+                if (-not $folder) { $folder = Read-SafeAbsPath "Export path" }
+                if ($folder) { [void](Invoke-AIStation @("output", "set", "export", $folder)) }
+                Wait-ForEnter
+            }
+            "46" {
+                $export = & wsl.exe -d $Distro --user root -- $AiPath output path export
+                if ($LASTEXITCODE -eq 0 -and $export) {
+                    Start-Process (ConvertTo-WslUnc ([string]$export).Trim())
+                } else {
+                    Write-Host "Could not resolve the export folder." -ForegroundColor Yellow
+                }
+                Wait-ForEnter
+            }
             default { Write-Host "Unknown selection." -ForegroundColor Yellow; Start-Sleep -Seconds 1 }
         }
     } catch {

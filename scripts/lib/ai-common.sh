@@ -170,7 +170,7 @@ ai_stop_experimental_gpu_overlays() {
       IFS=':' read -r profile overlay service <<<"$entry"
       env -u COMPOSE_FILE docker compose \
         --project-name "${COMPOSE_PROJECT_NAME:-ai-station}" \
-        --env-file .env \
+        $(ai_compose_env_file_args) \
         -f compose.yml -f "$overlay" \
         --profile "$profile" \
         stop "$service" 2>/dev/null || true
@@ -178,8 +178,17 @@ ai_stop_experimental_gpu_overlays() {
   )
 }
 
+ai_compose_env_file_args() {
+  local extra="${AI_STATION_DATA:-/srv/ai-station}/runtime/compose-operator.env"
+  printf '%s\n' --env-file .env
+  if [[ -f "$extra" ]]; then
+    printf '%s\n' --env-file "$extra"
+  fi
+}
+
 ai_prepare_comfyui_runtime_dirs() {
   local data="${AI_STATION_DATA:-/srv/ai-station}"
+  python3 "${AI_STATION_ROOT}/scripts/operator_output.py" ensure
   mkdir -p \
     "$data/runtime/comfyui/input" \
     "$data/runtime/comfyui/output" \

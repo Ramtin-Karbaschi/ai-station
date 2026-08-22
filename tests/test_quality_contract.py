@@ -79,6 +79,8 @@ class QualityGateContractTests(unittest.TestCase):
             "scripts/verify-startup-stability.sh",
             "scripts/uninstall-comfyui-experimental.sh",
             "scripts/comfyui-media-smoke.sh",
+            "scripts/operator_output.py",
+            "scripts/graphify_view.py",
         ):
             path = ROOT / relative
             self.assertTrue(path.is_file(), relative)

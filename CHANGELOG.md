@@ -4,6 +4,13 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Operator console, selectable outputs, Graphify map
+
+- **ADR-016 Accepted:** `ai` and Windows Manager remain the privileged
+  console. Operators pick media, Graphify, and export directories with
+  `ai output`. `ai graphify view` serves the upstream Graphify HTML plus
+  a loopback station map on `127.0.0.1:4174`. No second admin API.
+
 ### Open WebUI hybrid RAG notebooks
 
 - Wired the existing CPU Qwen3 reranker into Open WebUI hybrid search

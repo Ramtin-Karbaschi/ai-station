@@ -1,7 +1,7 @@
 # AI Station Threat Model
 
 Date: 2026-07-23
-Updated: 2026-08-21
+Updated: 2026-08-22
 Status: implemented controls plus residual risks. Review after any new public
 surface, runtime engine, model capability, or agent tool adoption.
 
@@ -120,6 +120,14 @@ Controls: provisioning scripts write only under `/srv/ai-station/models`,
 verify size + SHA-256, and use immutable revisions.
 Gaps: interrupted-download and checksum-mismatch scenarios lack tests
 (required by the testing plan, Phase 1).
+
+### T11 Loopback Graphify map
+
+`ai graphify view` serves static HTML from the Graphify output directory on
+`127.0.0.1:4174`. It does not start GPU providers or expose secrets.
+Controls: loopback bind, directory limited to the generated graph folder,
+`--stop` tears the listener down. Residual risk: any local process can
+read `graph.json` (already on disk). Do not bind `:4174` on `0.0.0.0`.
 
 ## Non-goals
 

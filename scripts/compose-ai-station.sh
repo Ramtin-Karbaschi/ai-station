@@ -40,7 +40,13 @@ PY
   fi
 fi
 
+OPERATOR_ENV="${AI_STATION_DATA:-/srv/ai-station}/runtime/compose-operator.env"
+ENV_FILE_ARGS=(--env-file .env)
+if [[ -f "$OPERATOR_ENV" ]]; then
+  ENV_FILE_ARGS+=(--env-file "$OPERATOR_ENV")
+fi
+
 exec docker compose \
   --project-name "${COMPOSE_PROJECT_NAME:-ai-station}" \
-  --env-file .env \
+  "${ENV_FILE_ARGS[@]}" \
   "$@"

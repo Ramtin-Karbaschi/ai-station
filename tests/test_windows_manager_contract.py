@@ -71,6 +71,9 @@ class WindowsManagerContractTests(unittest.TestCase):
             "Read-SafeRepo",
             "http://127.0.0.1:8188",
             '@("provider", "start", "comfyui-media-experimental")',
+            '@("graphify", "view")',
+            '@("output", "set", "media", $folder)',
+            "http://127.0.0.1:4174",
         ):
             self.assertIn(needle, text)
 

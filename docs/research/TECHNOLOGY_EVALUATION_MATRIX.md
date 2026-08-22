@@ -9,6 +9,9 @@ benchmark" cells are for components not yet justified to install.
 2026-08-22 addendum: ComfyUI v0.33.3 adopted as an **experimental**
 media-generation studio for MiniMax Music3 and H3 (ADR-015). It is not
 a chat engine and is not promoted. NVFP4 under WSL2 remains unverified.
+Second 2026-08-22 addendum: ADR-016 keeps `ai` + Windows Manager as the
+operator console, adds selectable output roots, and wraps Graphify's
+existing HTML export on loopback `:4174`. No second admin product.
 2026-08-19 addendum: llama.cpp quantized KV cache researched as the one
 realistic VRAM lever for the original OpenCode 8K context ceiling (see the new
 subsection below); local benchmark evidence and the resulting decision

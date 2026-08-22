@@ -108,7 +108,8 @@ Latest live acceptance (2026-08-21):
 Code-only extraction, query, and relationship traversal work without a cloud
 key or GPU. Generated graphs live under `/srv/ai-station/runtime/graphify/`
 and are linked locally as `graphify-out/`; they are never committed. Graphify
-does not replace pgvector.
+does not replace pgvector. `ai graphify view` serves the upstream HTML map
+on loopback `:4174`.
 
 ## Operations and storage
 
@@ -122,7 +123,9 @@ Runtime:    /srv/ai-station/runtime
 
 The `ai` CLI is the single day-to-day control plane. Windows Manager invokes
 it by direct WSL argument passing. Model add/install/verify and recoverable
-quarantine/restore are available through `ai models`.
+quarantine/restore are available through `ai models`. Output directories are
+selected with `ai output`. The Graphify map is `ai graphify view` on
+`http://127.0.0.1:4174/` (ADR-016).
 
 Live verification on 2026-08-22 started ComfyUI, passed `/system_stats`,
 generated a 16 s MiniMax Music 3 clip (INT8 DiT, tiled VAE decode,
@@ -146,6 +149,7 @@ only slim `health.json` and `*-smoke.json` under
 | Embedding | `http://127.0.0.1:8090/v1` | Internal retrieval |
 | Reranker | `http://127.0.0.1:8091/v1` | Open WebUI hybrid RAG (CPU) |
 | ComfyUI | `http://127.0.0.1:8188` | Experimental media UI; off by default |
+| Graphify map | `http://127.0.0.1:4174/` | Optional HTML map; off until `ai graphify view` |
 
 Heavy model ports (`:8082`–`:8086`) are internal diagnostics, not client
 contracts.

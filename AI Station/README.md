@@ -15,7 +15,8 @@ The `.cmd` files pass typed arguments into WSL. They do not keep a second
 copy of the PowerShell panel on the Desktop.
 
 In addition to lifecycle operations, the panel provides catalog / install /
-add / quarantine / restore, offline tests, Graphify, and the non-root WSL
+add / quarantine / restore, offline tests, Graphify, the Graphify map
+(option 42), selectable output folders (43–46), and the non-root WSL
 OpenCode developer client. Clients option 28 runs the verified developer
 client; option 32 repairs its pinned runtime and config.
 

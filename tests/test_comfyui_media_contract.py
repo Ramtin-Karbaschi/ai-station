@@ -35,6 +35,7 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertTrue(str(service["volumes"][0]).endswith(":ro"))
         volumes = "\n".join(str(item) for item in service["volumes"])
         self.assertIn("custom_nodes/ai_station_minimax", volumes)
+        self.assertIn("AI_STATION_COMFYUI_OUTPUT", volumes)
         health = " ".join(service["healthcheck"]["test"])
         self.assertIn("/system_stats", health)
         start = CLI.read_text(encoding="utf-8")

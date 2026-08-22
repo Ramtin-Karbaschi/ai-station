@@ -72,7 +72,9 @@ Adopt option 3.
 Operators can build and query a code graph without a GPU. Assistants
 can answer architecture questions from `graph.json` instead of grepping.
 Semantic (docs) extraction remains opt-in and shares the single heavy
-GPU via LiteLLM / admission (ADR-004).
+GPU via LiteLLM / admission (ADR-004). `ai graphify view` (ADR-016)
+writes upstream HTML and a loopback map; assistants still query
+`graph.json`.
 
 ## Risks
 
@@ -108,3 +110,4 @@ Remove `config/clients/opencode/commands/graphify.md` and
 5. Default docs backend is `http://127.0.0.1:4000/v1`, never a public
    cloud URL.
 6. `ai graphify uninstall` removes the venv; `--purge` removes graphs.
+7. `ai graphify view --no-serve` writes `graph.html` next to `graph.json`.

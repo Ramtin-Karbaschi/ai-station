@@ -56,6 +56,8 @@ ai projects create inventory-api --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedd
 ai projects list
 ai opencode configure
 ai opencode test
+ai graphify view
+ai output show
 ai status
 ai verify
 ```

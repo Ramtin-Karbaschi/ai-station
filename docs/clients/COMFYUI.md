@@ -32,7 +32,9 @@ ai provider stop comfyui-media-experimental
 ai models use coder
 ~~~
 
-Windows Manager: 39 start, 40 stop and restore coder, 41 open ComfyUI.
+Windows Manager: 39 start, 40 stop and restore coder, 41 open ComfyUI,
+43 open the current media folder, 44 choose a media folder under
+`/srv/ai-station/runtime`.
 
 ## Models
 
@@ -86,6 +88,19 @@ Local Music3 INT8 tiled-decode smoke on 2026-08-22 succeeded
 Music3 + H3 text-to-video also succeeded the same day
 (`benchmarks/results/20260822/comfyui/browser-smoke.json`). That is not
 a promotion to `optional_profile`.
+
+## Output folder
+
+Default host bind is `/srv/ai-station/runtime/comfyui/output/`.
+
+~~~bash
+ai output show
+ai output set media /srv/ai-station/runtime/comfyui/output
+~~~
+
+Restart `comfyui-media-experimental` after changing `media` so the
+bind mount moves. Windows Manager options 43–46 open or set folders.
+See [ADR-016](../adr/ADR-016-operator-console-and-selectable-outputs.md).
 
 ## Uninstall
 

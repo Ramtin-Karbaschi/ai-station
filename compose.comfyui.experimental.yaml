@@ -31,7 +31,7 @@ services:
     volumes:
       - ${MODELS_DIR:-/srv/ai-station/models}/comfyui:/opt/ComfyUI/models:ro
       - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/input:/opt/ComfyUI/input
-      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/output:/opt/ComfyUI/output
+      - ${AI_STATION_COMFYUI_OUTPUT:-/srv/ai-station/runtime/comfyui/output}:/opt/ComfyUI/output
       - ${AI_STATION_DATA:-/srv/ai-station}/runtime/comfyui/user:/opt/ComfyUI/user
       - ./config/clients/comfyui/workflows:/opt/ComfyUI/user/default/workflows:ro
       - ./infra/comfyui/custom_nodes/ai_station_minimax:/opt/ComfyUI/custom_nodes/ai_station_minimax:ro

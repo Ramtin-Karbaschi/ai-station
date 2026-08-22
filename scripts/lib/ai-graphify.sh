@@ -11,13 +11,16 @@ Usage:
   ai graphify install [--dry-run]
   ai graphify configure [--dry-run]
   ai graphify status
-  ai graphify extract [PATH] [--code-only|--docs] [--dry-run] [--force]
+  ai graphify extract [PATH] [--code-only|--docs] [--out DIR] [--dry-run] [--force]
   ai graphify query "<question>" [--graph PATH]
   ai graphify path "<A>" "<B>" [--graph PATH]
   ai graphify explain "<concept>" [--graph PATH]
+  ai graphify view [--graph PATH] [--port PORT] [--no-serve|--stop|--status]
   ai graphify uninstall [--purge] [--dry-run]
 
 Default extract is --code-only (tree-sitter, no GPU). --docs uses LiteLLM :4000.
+--out selects the parent directory (writes DIR/graphify-out/). Default: ai output path graphify.
+view writes graph.html plus a loopback map on 127.0.0.1:4174.
 Graphs live under /srv/ai-station/runtime/graphify/ (not committed).
 EOF
 }
@@ -70,6 +73,7 @@ cmd_graphify() {
     query) cmd_graphify_query "$@" ;;
     path) cmd_graphify_path "$@" ;;
     explain) cmd_graphify_explain "$@" ;;
+    view) cmd_graphify_view "$@" ;;
     uninstall) cmd_graphify_uninstall "$@" ;;
     -h|--help|help|"") ai_graphify_usage ;;
     *)
@@ -158,17 +162,21 @@ cmd_graphify_status() {
 }
 
 cmd_graphify_extract() {
-  local dry_run=0 mode="code-only" force=0 target="$ROOT"
+  local dry_run=0 mode="code-only" force=0 target="$ROOT" out_override=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --dry-run) dry_run=1; shift ;;
       --code-only) mode="code-only"; shift ;;
       --docs) mode="docs"; shift ;;
       --force) force=1; shift ;;
+      --out|--output)
+        out_override="${2:-}"
+        shift 2
+        ;;
       --help|-h) ai_graphify_usage; return 0 ;;
       --*)
         echo "Unknown argument: $1" >&2
-        echo "Usage: ai graphify extract [PATH] [--code-only|--docs] [--dry-run] [--force]" >&2
+        echo "Usage: ai graphify extract [PATH] [--code-only|--docs] [--out DIR] [--dry-run] [--force]" >&2
         exit 2
         ;;
       *)
@@ -179,7 +187,13 @@ cmd_graphify_extract() {
   done
   local out tag
   tag="$(basename "$(readlink -f "$target")")"
-  out="$GRAPHIFY_RUNTIME_ROOT/$tag"
+  if [[ -n "$out_override" ]]; then
+    out="$out_override"
+  elif [[ "$(readlink -f "$target")" == "$(readlink -f "$ROOT")" ]]; then
+    out="$(python3 "$ROOT/scripts/operator_output.py" path graphify)"
+  else
+    out="$GRAPHIFY_RUNTIME_ROOT/$tag"
+  fi
   if [[ "$dry_run" -eq 1 ]]; then
     echo "DRY-RUN: would extract $target -> $out/graphify-out/ (mode=$mode, force=$force)"
     if [[ "$mode" == "docs" ]]; then
@@ -341,6 +355,32 @@ cmd_graphify_explain() {
     cmd_graphify_install
   fi
   "$(ai_graphify_bin)" explain "$concept" --graph "$resolved"
+}
+
+cmd_graphify_view() {
+  local graph="" extra=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --graph) graph="${2:-}"; shift 2 ;;
+      --help|-h) ai_graphify_usage; return 0 ;;
+      *) extra+=("$1"); shift ;;
+    esac
+  done
+  if [[ ! -x "$(ai_graphify_bin)" ]]; then
+    cmd_graphify_install
+  fi
+  local resolved=""
+  if [[ "${extra[*]}" != *"--stop"* && "${extra[*]}" != *"--status"* ]]; then
+    if ! resolved="$(ai_graphify_find_graph "$graph")"; then
+      echo "ERROR: graph.json not found. Run: ai graphify extract --code-only" >&2
+      exit 1
+    fi
+    extra+=(--graph "$resolved")
+  elif [[ -n "$graph" ]]; then
+    extra+=(--graph "$graph")
+  fi
+  AI_STATION_GRAPHIFY_BIN="$(ai_graphify_bin)" \
+    python3 "$ROOT/scripts/graphify_view.py" "${extra[@]}"
 }
 
 cmd_graphify_uninstall() {

@@ -11,6 +11,11 @@ AI Station is designed around six constraints:
 5. operational state can be verified through deterministic checks;
 6. multiple application projects share one GenAI platform via a stable API.
 
+The privileged operator console is the `ai` CLI and, on Windows, the
+Manager panel that invokes it. Workload UIs (Open WebUI, LiteLLM Admin,
+ComfyUI, Graphify map) do not start or stop GPU providers. See
+[ADR-016](adr/ADR-016-operator-console-and-selectable-outputs.md).
+
 See also [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
 
 ## Logical architecture
@@ -128,7 +133,8 @@ Persistent information is divided into:
 
 - Docker volumes for PostgreSQL, Redis and Open WebUI state;
 - `/srv/ai-station/models` for model binaries;
-- `/srv/ai-station/runtime` for active heavy-profile state;
+- `/srv/ai-station/runtime` for active heavy-profile state, Graphify
+  graphs, operator output prefs, and ComfyUI media;
 - `/srv/ai-station/backups` for timestamped backups;
 - `/opt/ai-station` for version-controlled application files.
 
