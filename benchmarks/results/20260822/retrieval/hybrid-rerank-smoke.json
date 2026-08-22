@@ -1,0 +1,23 @@
+{
+  "engine": "open-webui-hybrid-rag",
+  "provider_id": "llama-cpp-reranker",
+  "checked_at": "2026-08-22T09:14:00Z",
+  "ok": true,
+  "hybrid": true,
+  "reranker_url": "http://reranker:8091/v1/rerank",
+  "model": "ai-station-reranker",
+  "query": "Where do notebooks live?",
+  "documents": [
+    "Open WebUI Workspace Knowledge stores PDFs for RAG.",
+    "ComfyUI generates MiniMax music and video.",
+    "ai projects creates LiteLLM virtual API keys."
+  ],
+  "scores": [
+    0.005056319758296013,
+    0.00011297369928797707,
+    0.00021010273485444486
+  ],
+  "ranked_indices": [0, 2, 1],
+  "classification": "production_default",
+  "notes": "Open WebUI ExternalReranker.predict inside the UI container. Candidate 0 (Knowledge) ranked first."
+}

@@ -72,7 +72,7 @@ Core plus selectable heavy and optional roles:
 - DeepSeek-R1 Distill Qwen 32B (reasoning);
 - Qwen3-VL 32B + mmproj (vision);
 - Ornith-1.0 35B Q4 (optional coding profile; does not replace coder);
-- Qwen3 Reranker 0.6B (optional CPU).
+- Qwen3 Reranker 0.6B (CPU; started with `ai start` for hybrid RAG).
 
 ~~~bash
 ./scripts/provision-models.sh --profile all

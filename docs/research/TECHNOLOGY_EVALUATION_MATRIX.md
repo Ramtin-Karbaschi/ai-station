@@ -60,7 +60,7 @@ Evidence sources are listed per candidate at the end of this document.
 | Structured output (JSON schema) | llama.cpp grammars (unverified here) | contract tests in Phase 1; SGLang xgrammar in Phase 2 trial |
 | Tool-calling agents | disabled everywhere | enable + contract-test on llama.cpp first |
 | Embeddings | llama.cpp embedder (GPU) | retain; evaluate CPU placement to free VRAM |
-| Reranking | optional CPU profile | wire into RAG only with Phase 4 retrieval eval |
+| Reranking | CPU llama.cpp reranker | wired into Open WebUI hybrid RAG (ADR-005 2026-08-22) |
 | Multimodal (vision) | llama.cpp + mmproj | retain (GGUF path is the only verified one) |
 | Batch reasoning | not served | postpone |
 | Very large MoE experimentation | not possible (hardware) | rejected on this hardware |

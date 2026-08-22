@@ -19,6 +19,8 @@ benchmarks/
 - Never commit private prompts or proprietary documents.
 - Never commit generated audio, video, ComfyUI `/system_stats` dumps, or
   prompt/history JSON. Keep slim `health.json` and `*-smoke.json` only.
+  Retrieval dumps follow the same rule under
+  `benchmarks/results/**/retrieval/`.
 - Record hardware profile hash/date with every result.
 - Same prompts, sampling, context, concurrency, and warm-up policy
   across engines being compared.

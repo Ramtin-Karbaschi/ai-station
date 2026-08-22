@@ -144,7 +144,8 @@ cmd_status() {
     "http://127.0.0.1:8888/health|Host Gateway" \
     "http://127.0.0.1:8890/health|UI Gateway" \
     "http://127.0.0.1:3000|Open WebUI" \
-    "http://127.0.0.1:8090/v1/models|Embedding"; do
+    "http://127.0.0.1:8090/v1/models|Embedding" \
+    "http://127.0.0.1:8091/v1/models|Reranker"; do
     IFS='|' read -r url label <<<"$pair"
     if curl -fsS --max-time 3 "$url" >/dev/null 2>&1; then
       echo "OK   $label"
@@ -171,6 +172,7 @@ cmd_health() {
   local fail=0
   ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 5 || fail=1
   ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 5 || fail=1
+  ai_wait_url "http://127.0.0.1:8091/v1/models" "Reranker" 5 || fail=1
   ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 5 || fail=1
   local active
   active="$(ai_active_heavy_profile || true)"
@@ -214,10 +216,12 @@ cmd_start() {
   ai_ensure_network
 
   ai_retry_compose up -d postgres redis searxng tika embedder
+  ai_retry_compose --profile reranker up -d reranker
   ai_wait_compose_service postgres healthy 120
   ai_wait_compose_service redis healthy 60
   ai_wait_compose_service tika healthy 90
   ai_wait_compose_service embedder healthy 180
+  ai_wait_compose_service reranker healthy 180
 
   "$ROOT/scripts/sync-litellm-db-url.sh"
   "$ROOT/scripts/ensure-litellm-db.sh"

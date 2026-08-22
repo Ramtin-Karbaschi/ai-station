@@ -27,6 +27,7 @@ check_url http://127.0.0.1:8890/health "UI Gateway"
 check_url http://127.0.0.1:9998/tika "Apache Tika"
 check_url "http://127.0.0.1:8889/search?q=test&format=json" "SearXNG"
 check_url http://127.0.0.1:8090/v1/models "Embedding Server"
+check_url http://127.0.0.1:8091/v1/models "Reranker Server"
 
 # Gateways must stay on loopback. The host gateway may additionally expose its
 # TCP proxy on the exact docker0 bridge address so containers can reach the

@@ -94,7 +94,7 @@ RELEASE AUDIT PASSED
 | OpenAI-compatible inference | LiteLLM + host gateway + llama.cpp |
 | Model switching | User-selected canonical model names auto-switch the active heavy runtime; operators can still use `ai models use ...` manually |
 | GPU inference | NVIDIA CUDA container runtime |
-| Retrieval-augmented generation | Open WebUI RAG + local embeddings |
+| Retrieval-augmented generation | Open WebUI Knowledge + hybrid search + CPU reranker |
 | Vector persistence | PostgreSQL + pgvector |
 | Document parsing | Apache Tika |
 | Persian and English OCR | Tesseract through Tika |
@@ -116,6 +116,7 @@ flowchart LR
     API --> G
 
     W --> E[Embedding<br/>127.0.0.1:8090]
+    W --> RR[Reranker CPU<br/>127.0.0.1:8091]
     W --> T[Tika + OCR<br/>127.0.0.1:9998]
     W --> S[SearXNG<br/>127.0.0.1:8889]
     W --> P[(PostgreSQL + pgvector)]
@@ -123,6 +124,7 @@ flowchart LR
 
     L --> M["/srv/ai-station/models"]
     E --> M
+    RR --> M
 ~~~
 
 Application code and persistent data stay separated:
@@ -302,6 +304,7 @@ security vulnerabilities through a public issue.
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
 | [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
+| [Open WebUI](docs/clients/OPENWEBUI.md) | Human chat and Knowledge notebooks |
 | [ComfyUI](docs/clients/COMFYUI.md) | Experimental MiniMax music and video studio |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |
 | [Operations](docs/OPERATIONS.md) | Start, stop, verify |

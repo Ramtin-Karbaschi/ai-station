@@ -29,6 +29,7 @@ flowchart TB
         LiteLLM["LiteLLM Gateway :4000"]
         LLM["llama.cpp heavy profile"]
         Embedder["llama.cpp Embeddings :8090"]
+        Reranker["llama.cpp Reranker :8091"]
         Tika["Apache Tika + Tesseract :9998"]
         Search["SearXNG :8889"]
         Postgres["PostgreSQL + pgvector :5432"]
@@ -51,6 +52,7 @@ flowchart TB
     LiteLLM --> Embedder
 
     WebUI --> Embedder
+    WebUI --> Reranker
     WebUI --> Tika
     WebUI --> Search
     WebUI --> Postgres
@@ -58,6 +60,7 @@ flowchart TB
 
     LLM --> Models
     Embedder --> Models
+    Reranker --> Models
     Postgres --> Volumes
     Redis --> Volumes
     Volumes --> Backups
@@ -91,7 +94,12 @@ flowchart TB
 2. Apache Tika extracts text and performs OCR where required.
 3. The local embedding service creates vectors.
 4. Vectors and metadata are stored in PostgreSQL/pgvector.
-5. Relevant chunks are selected and added to the local model context.
+5. Hybrid BM25 + vector search selects candidates; the CPU reranker keeps
+   the top 3 chunks for the local model context.
+
+Operator notebooks live in Open WebUI Knowledge. See
+[clients/OPENWEBUI.md](clients/OPENWEBUI.md). `ai projects` is only the
+application API key plane.
 
 ### Web search
 

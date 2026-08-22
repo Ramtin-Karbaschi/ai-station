@@ -62,3 +62,13 @@ Lexical public-safe baseline committed at
 (Recall@3=1.0, MRR=0.9, nDCG≈0.93). No specialist engine installed.
 pgvector remains production default; Qdrant stays optional-only pending an
 embedding-backed gap on a larger corpus.
+
+## 2026-08-22 addendum: hybrid search + CPU reranker
+
+Open WebUI now uses hybrid BM25 + dense retrieval against pgvector, then
+the existing CPU `llama-cpp-reranker` (`Qwen3-Reranker-0.6B-Q8_0` at
+`:8091/v1/rerank`). No new vector store. Candidate pool is 20; at most
+3 chunks enter the prompt. Hugging Face CrossEncoders stay disabled
+(`OFFLINE_MODE`). Operator notebooks live in Open WebUI Knowledge, not
+`ai projects`. Live smoke:
+`benchmarks/results/20260822/retrieval/hybrid-rerank-smoke.json`.

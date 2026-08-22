@@ -38,7 +38,8 @@ tighten UI-gateway extraction timeout; include Tika in lock-refresh cadence.
 
 Path: web search results (SearXNG) or RAG chunks carry instructions that
 steer the model, potentially triggering tool calls once tools are enabled.
-Controls: search result count capped at 3; RAG top-k 3; application API keys
+Controls: search result count capped at 3; RAG injects at most 3 chunks
+after rerank from a 20-candidate pool; application API keys
 have explicit model allowlists. OpenCode agent tools run in the user's project
 context, not inside the inference service.
 Gaps: agentic coder/general/Ornith models can act on injected instructions when

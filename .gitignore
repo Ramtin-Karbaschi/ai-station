@@ -148,6 +148,10 @@ benchmarks/results/**/comfyui/*
 !benchmarks/results/**/comfyui/health.json
 !benchmarks/results/**/comfyui/*-smoke.json
 
+# Retrieval live dumps: keep slim *-smoke.json only
+benchmarks/results/**/retrieval/*
+!benchmarks/results/**/retrieval/*-smoke.json
+
 # Editor and agent instruction files stay local. Do not commit them.
 /AGENTS.md
 /CLAUDE.md

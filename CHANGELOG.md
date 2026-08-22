@@ -4,6 +4,13 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+### Open WebUI hybrid RAG notebooks
+
+- Wired the existing CPU Qwen3 reranker into Open WebUI hybrid search
+  (BM25 + pgvector, top 20 candidates, 3 chunks in the prompt). Notebooks
+  are Workspace → Knowledge; `ai projects` remains LiteLLM API keys. See
+  `docs/clients/OPENWEBUI.md`.
+
 ### Experimental ComfyUI MiniMax media studio
 
 - **ADR-015 Accepted:** isolated ComfyUI overlay for MiniMax Music 3 and

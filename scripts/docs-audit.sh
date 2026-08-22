@@ -35,6 +35,7 @@ required_files = [
     "docs/README.md",
     "docs/TROUBLESHOOTING.md",
     "docs/clients/OPENCODE.md",
+    "docs/clients/OPENWEBUI.md",
     "docs/clients/COMFYUI.md",
     "docs/ops/AI_STATION_CURRENT_STATE.md",
     "docs/adr/README.md",

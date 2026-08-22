@@ -44,6 +44,8 @@ chat and vision names are accepted by LiteLLM, then routed through the host
 gateway, which auto-switches the matching heavy runtime when needed.
 
 See [PLATFORM.md](PLATFORM.md) for the multi-project control plane.
+See [clients/OPENWEBUI.md](clients/OPENWEBUI.md) for Knowledge notebooks
+versus `ai projects`.
 See [SCRIPTS.md](SCRIPTS.md) for the canonical scripts map after cleanup.
 
 ## Command overview

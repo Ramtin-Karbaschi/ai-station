@@ -225,7 +225,7 @@ providers:
     id: llama-cpp-reranker
     engine: llama.cpp
     deployment_type: compose
-    classification: optional_profile
+    classification: production_default
     experimental: false
     heavy: false
     resource_group: cpu

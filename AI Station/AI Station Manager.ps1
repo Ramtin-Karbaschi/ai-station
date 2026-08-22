@@ -58,6 +58,8 @@ function Show-Menu {
     Write-Host "   5  Verify                6  Open WebUI"
     Write-Host "   7  Open LiteLLM Admin    8  Open API health"
     Write-Host "   9  Open SearXNG"
+    Write-Host "      Notebooks: Open WebUI -> Workspace -> Knowledge"
+    Write-Host "      API keys:  option 22 (not document RAG)"
     Write-Host ""
     Write-Host " Runtime models (one heavy GPU profile at a time)"
     Write-Host "  10  List runtime models  11  Use general"

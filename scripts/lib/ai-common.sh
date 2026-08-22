@@ -131,7 +131,7 @@ ai_ensure_docker() {
 ai_dump_published_ports() {
   echo "--- loopback listeners ---" >&2
   ss -lntp 2>/dev/null | grep -E \
-    ':(3000|5432|6379|8082|8083|8084|8085|8086|8090|8888|8889|8890|9998)\b' >&2 || true
+    ':(3000|5432|6379|8082|8083|8084|8085|8086|8090|8091|8888|8889|8890|9998)\b' >&2 || true
   echo "--- ai-station containers ---" >&2
   docker ps -a --filter name=ai-station \
     --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' >&2 || true

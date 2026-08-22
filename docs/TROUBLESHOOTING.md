@@ -28,6 +28,29 @@ Common causes:
 - PostgreSQL is unhealthy;
 - required secret values are missing;
 - Tika or the embedding service has not started;
+- the CPU reranker on `:8091` is down (hybrid RAG needs it);
+- the Open WebUI persistent volume contains incompatible state;
+- port 3000 is already in use.
+
+## Knowledge RAG returns empty or ignores documents
+
+Check:
+
+~~~bash
+curl -fsS http://127.0.0.1:8091/v1/models
+docker compose --profile reranker ps reranker
+docker compose logs --tail=100 open-webui reranker
+~~~
+
+Common causes:
+
+- Knowledge collection is not attached to the chat;
+- Native function calling is on (station default is `default` so chunks
+  auto-inject);
+- ComfyUI holds the GPU, so the embedder and chat model are stopped;
+- hybrid search cannot reach `http://reranker:8091/v1/rerank`.
+
+See [clients/OPENWEBUI.md](clients/OPENWEBUI.md).
 
 ## ComfyUI media studio is unavailable
 
@@ -42,8 +65,6 @@ docker logs --tail=200 ai-station-comfyui-experimental
 
 If the GPU still holds a llama.cpp profile, stop it first
 (`ai models stop`). See [clients/COMFYUI.md](clients/COMFYUI.md).
-- the Open WebUI persistent volume contains incompatible state;
-- port 3000 is already in use.
 
 ## Open WebUI shows stale or missing model names
 
@@ -182,6 +203,18 @@ docker compose logs --tail=200 embedder
 curl -v http://127.0.0.1:8090/v1/models
 ./scripts/verify-models.sh --profile core
 ~~~
+
+## Reranker failure
+
+~~~bash
+docker compose --profile reranker logs --tail=200 reranker
+curl -v http://127.0.0.1:8091/v1/models
+curl -fsS http://127.0.0.1:8091/v1/rerank -H 'Content-Type: application/json' \
+  -d '{"model":"ai-station-reranker","query":"test","documents":["alpha","beta"],"top_n":2}'
+~~~
+
+The reranker is CPU-only and starts with `ai start`. Hybrid RAG in Open
+WebUI calls `http://reranker:8091/v1/rerank`.
 
 ## Persian OCR failure
 

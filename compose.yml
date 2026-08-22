@@ -208,7 +208,7 @@ services:
       DEFAULT_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
       DEFAULT_PINNED_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
       DEFAULT_MODEL_METADATA: '{"capabilities": {"vision": true, "file_upload": true, "file_context": true, "web_search": true, "image_generation": false, "code_interpreter": false}}'
-      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 8192, "max_tokens": 1024}'
+      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 8192, "max_tokens": 1024, "function_calling": "default"}'
 
       CONTENT_EXTRACTION_ENGINE: "tika"
       TIKA_SERVER_URL: "http://tika:9998"
@@ -221,7 +221,13 @@ services:
       RAG_TEXT_SPLITTER: "token"
       CHUNK_SIZE: "512"
       CHUNK_OVERLAP: "64"
-      RAG_TOP_K: "3"
+      ENABLE_RAG_HYBRID_SEARCH: "True"
+      RAG_RERANKING_ENGINE: "external"
+      RAG_RERANKING_MODEL: "ai-station-reranker"
+      RAG_EXTERNAL_RERANKER_URL: "http://reranker:8091/v1/rerank"
+      RAG_EXTERNAL_RERANKER_API_KEY: "local-not-used"
+      RAG_TOP_K: "20"
+      RAG_TOP_K_RERANKER: "3"
       RAG_FULL_CONTEXT: "False"
 
       ENABLE_WEB_SEARCH: "True"

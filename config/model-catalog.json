@@ -144,7 +144,7 @@
       "enabled": true,
       "heavy": false,
       "manifest_id": "reranker-qwen3-0.6b-q8",
-      "note": "CPU-only Compose profile; start with: ai models start-reranker"
+      "note": "CPU-only; started with ai start for Open WebUI hybrid RAG"
     }
   ]
 }

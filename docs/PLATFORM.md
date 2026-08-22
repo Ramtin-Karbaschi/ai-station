@@ -26,6 +26,7 @@ Open WebUI :3000 ──> UI Gateway :8890 ──> Host Gateway :8888 ──> act
 | `postgres` | Open WebUI + LiteLLM metadata |
 | `redis` | Open WebUI websockets |
 | `embedder` | Always-on embeddings |
+| `reranker` | Always-on CPU rerank for Open WebUI hybrid RAG |
 | `tika` / `searxng` / `open-webui` | Human RAG / chat UI |
 
 ## On-demand heavy profiles
@@ -42,8 +43,8 @@ Only **one** heavy profile may run on a ~24GB GPU:
 
 `ornith` does not replace `coder` (ADR-008). Rollback is `ai models use general`.
 
-Optional: `reranker` (`Qwen3-Reranker-0.6B-Q8_0`, port 8091) runs CPU-only so it can
-coexist with one heavy GPU model.
+The CPU reranker (`Qwen3-Reranker-0.6B-Q8_0`, port 8091) starts with
+`ai start` and can coexist with one heavy GPU model.
 
 ## Operator CLI
 
@@ -66,8 +67,10 @@ ai verify
 LiteLLM only provides API keys and model routing. Document upload, OCR, and
 retrieval live in your application or in Open WebUI:
 
-- **Interactive / human:** Open WebUI at `http://127.0.0.1:3000` (upload docs,
-  chat with citations).
+- **Interactive / human:** Open WebUI at `http://127.0.0.1:3000`. Create a
+  Knowledge collection (one notebook per topic), upload sources, attach
+  that collection to a chat. That is **not** `ai projects`. See
+  [clients/OPENWEBUI.md](clients/OPENWEBUI.md).
 - **Programmatic:** create a project key that allows
   `Qwen3.6-35B-A3B-UD-Q4_K_M` + `Qwen3-Embedding-0.6B-Q8_0`, store chunks in
   your DB/pgvector, then call chat with

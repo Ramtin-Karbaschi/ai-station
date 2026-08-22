@@ -14,6 +14,7 @@ fact across multiple documents.
 | Add or remove model bytes | [MODELS.md](MODELS.md) |
 | See the verified release snapshot | [AI_STATION_CURRENT_STATE.md](ops/AI_STATION_CURRENT_STATE.md) |
 | Configure OpenCode | [OPENCODE.md](clients/OPENCODE.md) |
+| Build a document notebook | [OPENWEBUI.md](clients/OPENWEBUI.md) |
 | Use the code graph | [GRAPHIFY.md](clients/GRAPHIFY.md) |
 | Generate music or video | [COMFYUI.md](clients/COMFYUI.md) |
 | Diagnose a failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |

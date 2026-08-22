@@ -1,0 +1,11 @@
+{
+  "engine": "open-webui-hybrid-rag",
+  "checked_at": "2026-08-22T09:20:00Z",
+  "ok": true,
+  "ui": "http://127.0.0.1:3000/workspace/knowledge",
+  "collection": "Station notebook smoke",
+  "retrieval_query_ok": true,
+  "chat_grounded": true,
+  "model": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+  "notes": "Logged-in Open WebUI: create Knowledge, ingest public-safe fixture, query collection, chat with collection attached. Chat answer matched the fixture token. Token itself is not stored here."
+}

@@ -23,11 +23,11 @@ changes in `CHANGELOG.md`.
 
 | Component | Role | Deployment | State |
 |---|---|---|---|
-| llama.cpp | Heavy inference, embeddings, optional reranking | Digest-pinned Compose | Production core |
+| llama.cpp | Heavy inference, embeddings, CPU reranking | Digest-pinned Compose | Production core |
 | LiteLLM | Project keys, allowlists, stable OpenAI API | Digest-pinned Compose | Production API |
 | Host gateway | Canonical model routing, switching, admission | Loopback systemd service | Production |
 | UI gateway | Open WebUI attachment/message adaptation | Loopback systemd service | Production |
-| Open WebUI | Human chat, RAG, documents | Compose | Production UI |
+| Open WebUI | Human chat, Knowledge notebooks, RAG | Compose | Production UI |
 | PostgreSQL + pgvector | Application state and retrieval | Compose | Production |
 | Redis | WebUI cache/event support | Compose | Production |
 | Tika + Tesseract | Extraction and Persian/English OCR | Pinned local image | Production |
@@ -46,7 +46,7 @@ changes in `CHANGELOG.md`.
 | `reasoning` | DeepSeek-R1 Distill Qwen 32B | 8192 | No | Non-tool reasoning; high latency |
 | `vision` | Qwen3-VL 32B + mmproj | 8192 | No | Multimodal requests |
 | default embedder | Qwen3 Embedding 0.6B Q8 | 8192 | n/a | Retrieval embeddings |
-| optional reranker | Qwen3 Reranker 0.6B Q8 | n/a | n/a | CPU reranking experiments |
+| CPU reranker | Qwen3 Reranker 0.6B Q8 | n/a | n/a | Open WebUI hybrid RAG |
 
 Coder uses symmetric q4_0 KV cache at the shared 32768-token runtime ceiling
 and leaves about 2568 MiB free VRAM on this GPU. OpenCode retains its verified
@@ -74,6 +74,14 @@ Projects receive one virtual key and an explicit model allowlist. They call:
 ~~~text
 http://127.0.0.1:4000/v1
 ~~~
+
+That is not a document notebook.
+
+### Open WebUI notebooks
+
+Human RAG uses Open WebUI **Workspace → Knowledge**: one collection per
+topic, Tika extraction, hybrid BM25 + embeddings, then the CPU reranker.
+Operator guide: [clients/OPENWEBUI.md](../clients/OPENWEBUI.md).
 
 ### OpenCode
 
@@ -136,6 +144,7 @@ only slim `health.json` and `*-smoke.json` under
 | SearXNG | `http://127.0.0.1:8889` | Open WebUI/search |
 | Tika | `http://127.0.0.1:9998` | Open WebUI/documents |
 | Embedding | `http://127.0.0.1:8090/v1` | Internal retrieval |
+| Reranker | `http://127.0.0.1:8091/v1` | Open WebUI hybrid RAG (CPU) |
 | ComfyUI | `http://127.0.0.1:8188` | Experimental media UI; off by default |
 
 Heavy model ports (`:8082`–`:8086`) are internal diagnostics, not client

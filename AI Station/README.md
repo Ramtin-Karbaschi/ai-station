@@ -23,8 +23,13 @@ client; option 32 repairs its pinned runtime and config.
 
 | Product | URL | Purpose |
 |---|---|---|
-| Open WebUI | http://127.0.0.1:3000 | Human chat, documents, RAG |
+| Open WebUI | http://127.0.0.1:3000 | Human chat, documents, RAG notebooks |
 | LiteLLM Admin UI | http://127.0.0.1:4000/ui | Application API keys |
+
+Open WebUI **Workspace > Knowledge** is the notebook: one collection per
+topic, then attach it to a chat. Manager option 22 (`ai projects`) is a
+LiteLLM virtual key, not a document corpus. See
+`docs/clients/OPENWEBUI.md`.
 
 They are separate accounts. Create the first Open WebUI user on first visit.
 LiteLLM admin credentials are generated at install time under:
