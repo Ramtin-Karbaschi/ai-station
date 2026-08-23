@@ -54,8 +54,9 @@ See [clients/OPENWEBUI.md](clients/OPENWEBUI.md).
 
 ## ComfyUI media studio is unavailable
 
-ComfyUI is experimental and off by default. Open WebUI chat does not
-start it.
+ComfyUI is retained production media and off by default (`ai start` does
+not launch it). Open WebUI chat does not start it. Weights must never
+be deleted.
 
 ~~~bash
 ai provider start comfyui-media-experimental --dry-run

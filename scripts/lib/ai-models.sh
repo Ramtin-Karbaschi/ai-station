@@ -11,13 +11,15 @@ Usage:
       --sha256 HEX --size-bytes N [--destination REL] [--confirm]
   ai models add <manifest-id>
   ai models install|verify|remove|restore <manifest-id>
-  ai models use <general|coder|reasoning|vision|ornith> [--dry-run]
+  ai models use <general|coder|reasoning|vision|ornith|qwen38|longwriter> [--dry-run]
   ai models stop
   ai models start-reranker|stop-reranker
 
 add without --confirm is a dry-run. add <manifest-id> installs a curated id.
 remove quarantines bytes; it does not delete them. Required models need
---allow-required. Stop the active heavy profile before removing its file.
+--allow-required. Retained operator models (Ornith 1.5, Qwen3.8,
+LongWriter-Zero, ComfyUI MiniMax/FLUX.2) cannot be removed.
+Stop the active heavy profile before removing its file.
 EOF
 }
 
@@ -108,7 +110,7 @@ cmd_models_active() {
 cmd_models_use() {
   local profile="${1:-}"
   if [[ -z "$profile" ]] || ! ai_is_heavy_profile "$profile"; then
-    echo "Usage: ai models use <general|coder|reasoning|vision|ornith> [--dry-run]" >&2
+    echo "Usage: ai models use <general|coder|reasoning|vision|ornith|qwen38|longwriter> [--dry-run]" >&2
     exit 2
   fi
   shift

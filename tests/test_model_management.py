@@ -132,7 +132,58 @@ class ModelManagementTests(unittest.TestCase):
             self.assertIn("--allow-required", refused.stderr)
             self.assertTrue(model_path.is_file())
 
-    def test_add_is_dry_run_by_default_and_writes_only_with_confirm(self) -> None:
+    def test_quarantine_refuses_retained_operator_models(self) -> None:
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        model = next(item for item in manifest["models"] if item["id"] == "ornith-1.5-35b-q4")
+        self.assertTrue(model.get("operator_retained"))
+        retained_ids = {
+            "ornith-1.5-35b-q4",
+            "qwen38-27b-q4",
+            "qwen38-27b-mmproj-f16",
+            "longwriter-zero-32b-q4",
+            "experimental-comfyui-music3-dit-int8",
+            "experimental-comfyui-flux2-dit-q4",
+        }
+        by_id = {item["id"]: item for item in manifest["models"]}
+        for retained_id in retained_ids:
+            self.assertTrue(
+                by_id[retained_id].get("operator_retained"),
+                retained_id,
+            )
+        with tempfile.TemporaryDirectory() as directory:
+            data_root = Path(directory)
+            model_path = data_root / model["destination"]
+            model_path.parent.mkdir(parents=True)
+            model_path.write_bytes(b"fixture")
+            refused = subprocess.run(
+                [
+                    str(MANAGER),
+                    "--data-root",
+                    directory,
+                    "quarantine",
+                    "ornith-1.5-35b-q4",
+                    "--confirm",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn("retained operator model", refused.stderr)
+            self.assertTrue(model_path.is_file())
+        missing = subprocess.run(
+            [
+                str(MANAGER),
+                "--data-root",
+                "/tmp/ai-station-missing-retained-root",
+                "quarantine",
+                "experimental-comfyui-flux2-dit-q4",
+                "--confirm",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn("retained operator model", missing.stderr)
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
             shutil.copytree(ROOT / "config", work / "config")

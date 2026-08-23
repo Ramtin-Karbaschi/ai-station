@@ -1,0 +1,47 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "workflow": "music3-text-to-music.json",
+  "ok": true,
+  "prompt_id": "a8f03aaa-ae41-45e8-bdc9-aece56b91c97",
+  "elapsed_s": 176.2,
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "a8f03aaa-ae41-45e8-bdc9-aece56b91c97",
+          "timestamp": 1787470606028
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "a8f03aaa-ae41-45e8-bdc9-aece56b91c97",
+          "timestamp": 1787470606030
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "a8f03aaa-ae41-45e8-bdc9-aece56b91c97",
+          "timestamp": 1787470781427
+        }
+      ]
+    ]
+  },
+  "outputs": {
+    "9": {
+      "audio": [
+        {
+          "filename": "ai-station-music3-smoke_00002.flac",
+          "subfolder": "audio",
+          "type": "output"
+        }
+      ]
+    }
+  }
+}

@@ -11,6 +11,8 @@ runtime_policy:
     - reasoning
     - vision
     - ornith
+    - qwen38
+    - longwriter
   always_on:
     - embedder
     - llm-gateway
@@ -105,6 +107,43 @@ models:
     status: optional
     manifest_id: ornith-1.5-35b-q4
     note: Optional heavy profile; does not replace the coder profile. Switch with ai models use ornith.
+
+  local-qwen38:
+    alias: local-qwen38
+    catalog_id: qwen38-27b
+    public_name: Qwen3.8-27B-UD-Q4_K_M
+    role: qwen38
+    kind: vision
+    heavy: true
+    profile: qwen38
+    service: llm-qwen38
+    port: 8087
+    backend_model: ai-station-qwen38
+    runtime: llama-cpp
+    file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
+    mmproj: qwen38/mmproj-f16.gguf
+    context_size: 8192
+    status: optional
+    manifest_id: qwen38-27b-q4
+    note: Optional dense 27B VL+tools profile from Unsloth GGUF of Qwen/Qwen3.8-27B. Does not replace general or vision. Switch with ai models use qwen38.
+
+  local-longwriter:
+    alias: local-longwriter
+    catalog_id: longwriter-zero-32b
+    public_name: LongWriter-Zero-32B-Q4_K_M
+    role: longwriter
+    kind: chat
+    heavy: true
+    profile: longwriter
+    service: llm-longwriter
+    port: 8088
+    backend_model: ai-station-longwriter
+    runtime: llama-cpp
+    file: longwriter/longwriter-zero-32b-q4_k_m.gguf
+    context_size: 8192
+    status: optional
+    manifest_id: longwriter-zero-32b-q4
+    note: Optional long-form writing / RL profile. Q4_K_M fully GPU-loads on 24 GiB. Does not replace general or reasoning. Switch with ai models use longwriter.
 
   local-embedding:
     alias: local-embedding

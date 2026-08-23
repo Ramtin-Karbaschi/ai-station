@@ -143,14 +143,21 @@ Runtime data must not be committed to Git.
 ## Runtime boundary
 
 Docker Compose is the only supported runtime on native Linux and on
-Windows 11 + WSL2. The client contract remains independent of container
-internals: applications call LiteLLM on `:4000/v1`, and llama.cpp remains
-the inference core.
+Windows 11 + WSL2. The station is **one Compose project** (`ai-station`).
+`ai start` is the operator entry for that unit. llama.cpp heavy
+profiles are the same project with Compose profiles. ComfyUI is the
+same project plus its overlay file. Engines stay in separate
+containers; they are not merged into one image.
 
-Optional media generation uses an off-by-default ComfyUI overlay on
+The client contract remains independent of container internals:
+applications call LiteLLM on `:4000/v1`, and llama.cpp remains the
+inference core.
+
+Retained media generation uses a GPU-exclusive ComfyUI overlay on
 `127.0.0.1:8188` (ADR-015, [clients/COMFYUI.md](clients/COMFYUI.md)).
-It is a different workload from chat. `ai start` does not launch it.
-Starting it stops the active llama.cpp heavy profile.
+It is a different workload from chat and must never be deleted.
+`ai start` does not launch it. Starting it stops the active llama.cpp
+heavy profile.
 
 ## Reproducibility controls
 

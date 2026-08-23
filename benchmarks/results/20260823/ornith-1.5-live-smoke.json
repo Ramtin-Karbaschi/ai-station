@@ -1,0 +1,59 @@
+{
+  "identity": {
+    "elapsed_s": 0.941,
+    "finish_reason": "stop",
+    "model": "Ornith-1.5-35B-Q4_K_M",
+    "content_preview": "ORNITH_1_5_OK",
+    "content_len": 13,
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 37,
+      "total_tokens": 45,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "pass": true
+  },
+  "json": {
+    "elapsed_s": 0.568,
+    "finish_reason": "stop",
+    "model": "Ornith-1.5-35B-Q4_K_M",
+    "content_preview": "{\"ok\": true}",
+    "content_len": 12,
+    "parsed": {
+      "ok": true
+    },
+    "usage": {
+      "completion_tokens": 6,
+      "prompt_tokens": 29,
+      "total_tokens": 35,
+      "prompt_tokens_details": {
+        "cached_tokens": 8
+      }
+    },
+    "pass": true
+  },
+  "tools": {
+    "elapsed_s": 0.893,
+    "finish_reason": "tool_calls",
+    "model": "Ornith-1.5-35B-Q4_K_M",
+    "content_preview": "",
+    "tool_calls": [
+      {
+        "name": "get_time",
+        "arguments": "{\"timezone\":\"UTC\"}"
+      }
+    ],
+    "usage": {
+      "completion_tokens": 26,
+      "prompt_tokens": 282,
+      "total_tokens": 308,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "pass": true
+  },
+  "overall_pass": true
+}

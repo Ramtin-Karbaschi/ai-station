@@ -7,7 +7,7 @@ AI_STATION_DATA="${AI_STATION_DATA:-/srv/ai-station}"
 AI_STATE_DIR="${AI_STATE_DIR:-$AI_STATION_DATA/runtime}"
 AI_ACTIVE_PROFILE_FILE="${AI_ACTIVE_PROFILE_FILE:-$AI_STATE_DIR/active-heavy-profile}"
 
-HEAVY_PROFILES=(general coder reasoning vision ornith)
+HEAVY_PROFILES=(general coder reasoning vision ornith qwen38 longwriter)
 OPTIONAL_PROFILES=(reranker)
 EXPERIMENTAL_GPU_OVERLAYS=(
   "comfyui-experimental:compose.comfyui.experimental.yaml:comfyui-experimental"
@@ -130,7 +130,7 @@ ai_ensure_docker() {
 ai_dump_published_ports() {
   echo "--- loopback listeners ---" >&2
   ss -lntp 2>/dev/null | grep -E \
-    ':(3000|5432|6379|8082|8083|8084|8085|8086|8090|8091|8888|8889|8890|9998)\b' >&2 || true
+    ':(3000|5432|6379|8082|8083|8084|8085|8086|8087|8088|8090|8091|8888|8889|8890|9998)\b' >&2 || true
   echo "--- ai-station containers ---" >&2
   docker ps -a --filter name=ai-station \
     --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' >&2 || true
@@ -225,7 +225,7 @@ ai_last_or_default_profile() {
   profile="$(ai_active_heavy_profile 2>/dev/null || true)"
   profile="$(tr -d '[:space:]' <<<"$profile")"
   case "$profile" in
-    general|coder|reasoning|vision|ornith) printf '%s\n' "$profile" ;;
+    general|coder|reasoning|vision|ornith|qwen38|longwriter) printf '%s\n' "$profile" ;;
     *) printf '%s\n' "general" ;;
   esac
 }
@@ -313,6 +313,8 @@ ai_profile_service() {
     reasoning) echo "llm-reasoning" ;;
     vision) echo "llm-vision" ;;
     ornith) echo "llm-ornith" ;;
+    qwen38) echo "llm-qwen38" ;;
+    longwriter) echo "llm-longwriter" ;;
     reranker) echo "reranker" ;;
     *) return 1 ;;
   esac
@@ -325,6 +327,8 @@ ai_profile_port() {
     reasoning) echo "8084" ;;
     vision) echo "8085" ;;
     ornith) echo "8086" ;;
+    qwen38) echo "8087" ;;
+    longwriter) echo "8088" ;;
     reranker) echo "8091" ;;
     *) return 1 ;;
   esac
@@ -337,6 +341,8 @@ ai_profile_alias() {
     reasoning) echo "local-reasoning" ;;
     vision) echo "local-vision" ;;
     ornith) echo "local-ornith" ;;
+    qwen38) echo "local-qwen38" ;;
+    longwriter) echo "local-longwriter" ;;
     reranker) echo "local-reranker" ;;
     *) return 1 ;;
   esac

@@ -107,7 +107,8 @@ function Show-Menu {
     Write-Host "  10  List runtime models  11  Use general"
     Write-Host "  12  Use coder            13  Use reasoning"
     Write-Host "  14  Use vision           15  Use ornith"
-    Write-Host "  16  Stop heavy model"
+    Write-Host "  16  Use qwen38           48  Use longwriter"
+    Write-Host "  47  Stop heavy model"
     Write-Host ""
     Write-Host " Model storage (add / delete bytes)"
     Write-Host "  17  Catalog              18  Install curated id"
@@ -160,7 +161,7 @@ while ($true) {
             "13" { [void](Invoke-AIStation @("models", "use", "reasoning")); Wait-ForEnter }
             "14" { [void](Invoke-AIStation @("models", "use", "vision")); Wait-ForEnter }
             "15" { [void](Invoke-AIStation @("models", "use", "ornith")); Wait-ForEnter }
-            "16" { [void](Invoke-AIStation @("models", "stop")); Wait-ForEnter }
+            "16" { [void](Invoke-AIStation @("models", "use", "qwen38")); Wait-ForEnter }
             "17" { [void](Invoke-AIStation @("models", "catalog")); Wait-ForEnter }
             "18" {
                 $modelId = Read-SafeId "Manifest model id"
@@ -310,6 +311,8 @@ while ($true) {
                 }
                 Wait-ForEnter
             }
+            "47" { [void](Invoke-AIStation @("models", "stop")); Wait-ForEnter }
+            "48" { [void](Invoke-AIStation @("models", "use", "longwriter")); Wait-ForEnter }
             default { Write-Host "Unknown selection." -ForegroundColor Yellow; Start-Sleep -Seconds 1 }
         }
     } catch {

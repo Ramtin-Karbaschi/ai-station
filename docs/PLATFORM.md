@@ -39,9 +39,13 @@ Only **one** heavy profile may run on a ~24GB GPU:
 | `coder` | `Qwen3-Coder-30B-A3B-Instruct-Q4` | 8083 |
 | `reasoning` | `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M` | 8084 |
 | `vision` | `Qwen3-VL-32B-Instruct-Q4_K_M` | 8085 |
-| `ornith` (optional) | `Ornith-1.5-35B-Q4_K_M` | 8086 |
+| `ornith` (retained) | `Ornith-1.5-35B-Q4_K_M` | 8086 |
+| `qwen38` (retained) | `Qwen3.8-27B-UD-Q4_K_M` | 8087 |
+| `longwriter` (retained) | `LongWriter-Zero-32B-Q4_K_M` | 8088 |
 
-`ornith` does not replace `coder` (ADR-008). Rollback is `ai models use general`.
+`ornith` does not replace `coder` (ADR-008). `qwen38` does not replace
+`general` or `vision` (ADR-019). `longwriter` does not replace `general`
+or `reasoning` (ADR-020). Rollback is `ai models use general`.
 
 The CPU reranker (`Qwen3-Reranker-0.6B-Q8_0`, port 8091) starts with
 `ai start` and can coexist with one heavy GPU model.

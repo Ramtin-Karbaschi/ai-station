@@ -1,0 +1,50 @@
+{
+  "engine": "comfyui",
+  "provider_id": "comfyui-media-experimental",
+  "workflow": "h3-text-to-video.json",
+  "ok": true,
+  "prompt_id": "836369a5-a88f-455a-a560-8e4bddb56c43",
+  "elapsed_s": 302.3,
+  "status": {
+    "status_str": "success",
+    "completed": true,
+    "messages": [
+      [
+        "execution_start",
+        {
+          "prompt_id": "836369a5-a88f-455a-a560-8e4bddb56c43",
+          "timestamp": 1787471056197
+        }
+      ],
+      [
+        "execution_cached",
+        {
+          "nodes": [],
+          "prompt_id": "836369a5-a88f-455a-a560-8e4bddb56c43",
+          "timestamp": 1787471056199
+        }
+      ],
+      [
+        "execution_success",
+        {
+          "prompt_id": "836369a5-a88f-455a-a560-8e4bddb56c43",
+          "timestamp": 1787471356991
+        }
+      ]
+    ]
+  },
+  "outputs": {
+    "16": {
+      "images": [
+        {
+          "filename": "ai-station-h3-t2v_00001_.mp4",
+          "subfolder": "video",
+          "type": "output"
+        }
+      ],
+      "animated": [
+        true
+      ]
+    }
+  }
+}

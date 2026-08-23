@@ -47,7 +47,56 @@
       "revision_is_immutable": true,
       "role": "agentic_coding",
       "sha256": "ca6ea26329c88b78ffd90a85163be2e746c2fafd1024f56db47e499f117f9a7f",
-      "size_bytes": 21713462848
+      "size_bytes": 21713462848,
+      "operator_retained": true
+    },
+    {
+      "destination": "models/qwen38/qwen3.8-27b-ud-q4_k_m.gguf",
+      "filename": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+      "id": "qwen38-27b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "unsloth/Qwen3.8-27B-GGUF",
+      "required_for_runtime": false,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "revision_is_immutable": true,
+      "role": "vision_language",
+      "sha256": "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482",
+      "size_bytes": 16464440224,
+      "operator_retained": true
+    },
+    {
+      "destination": "models/qwen38/mmproj-f16.gguf",
+      "filename": "mmproj-F16.gguf",
+      "id": "qwen38-27b-mmproj-f16",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "unsloth/Qwen3.8-27B-GGUF",
+      "required_for_runtime": false,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "revision_is_immutable": true,
+      "role": "vision_mmproj",
+      "sha256": "cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e",
+      "size_bytes": 927607488,
+      "operator_retained": true
+    },
+    {
+      "destination": "models/longwriter/longwriter-zero-32b-q4_k_m.gguf",
+      "filename": "LongWriter-Zero-32B.Q4_K_M.gguf",
+      "id": "longwriter-zero-32b-q4",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "mradermacher/LongWriter-Zero-32B-GGUF",
+      "required_for_runtime": false,
+      "revision": "4ed85f5410b2a3c16414e9e36e4b9810ee380fb1",
+      "revision_is_immutable": true,
+      "role": "longform_writing",
+      "sha256": "b4beb52b144dd8f02f274c3172c642102fe2153cdd0313cae5166ed48c51af67",
+      "size_bytes": 19851336992,
+      "operator_retained": true
     },
     {
       "destination": "models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
@@ -138,7 +187,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_music3_dit",
       "sha256": "d6b959633e69899f99f3a92d6741c0fe79f26958a30811e50e372ef978b24d5f",
-      "size_bytes": 2502161682
+      "size_bytes": 2502161682,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-music3-text-encoder-int8",
@@ -153,7 +203,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_music3_text_encoder",
       "sha256": "010b7416d2336a08c711bc22ee65849c9623069ddb7d89bec011a75699e52014",
-      "size_bytes": 9196611886
+      "size_bytes": 9196611886,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-music3-vae",
@@ -168,7 +219,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_music3_vae",
       "sha256": "2a32155b769be01445fcc2a8663b910fc9e1751e18dc1c3ec528064512d9ef0c",
-      "size_bytes": 216696128
+      "size_bytes": 216696128,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-fl2va-int8",
@@ -183,7 +235,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_fl2va",
       "sha256": "e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a",
-      "size_bytes": 20970379616
+      "size_bytes": 20970379616,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-ref2va-int8",
@@ -198,7 +251,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_ref2va",
       "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779",
-      "size_bytes": 20970379616
+      "size_bytes": 20970379616,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-text-encoder-nvfp4",
@@ -213,7 +267,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_text_encoder",
       "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
-      "size_bytes": 15687142551
+      "size_bytes": 15687142551,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-video-vae",
@@ -228,7 +283,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_video_vae",
       "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522",
-      "size_bytes": 5207808496
+      "size_bytes": 5207808496,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-audio-vae",
@@ -243,7 +299,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_audio_vae",
       "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48",
-      "size_bytes": 605254808
+      "size_bytes": 605254808,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-fl2v-turbo-lora",
@@ -258,7 +315,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_fl2v_lora",
       "sha256": "2339acdf19bfe123f46b971ea35d367a84adb85de43627e1eceafa5a5b2b111e",
-      "size_bytes": 1956193000
+      "size_bytes": 1956193000,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-h3-ref2v-turbo-lora",
@@ -273,7 +331,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_h3_ref2v_lora",
       "sha256": "5b9ab5ade15d0775676d01a907268a69a1468dc6033b3b0d3ded5502f3ebb84c",
-      "size_bytes": 1956193000
+      "size_bytes": 1956193000,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-flux2-dit-q4",
@@ -288,7 +347,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_flux2_dit",
       "sha256": "fca680c7b221a713b5cf7db6cf6b33474875320ee61f4c585bc33fe391dab9a6",
-      "size_bytes": 20082414560
+      "size_bytes": 20082414560,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-flux2-text-encoder-fp4",
@@ -303,7 +363,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_flux2_text_encoder",
       "sha256": "1ee1ff334d78228d73049ef0ee4fcd21c1700536b5a45c06547af057f92463a7",
-      "size_bytes": 12275678071
+      "size_bytes": 12275678071,
+      "operator_retained": true
     },
     {
       "id": "experimental-comfyui-flux2-vae",
@@ -318,7 +379,8 @@
       "revision_is_immutable": true,
       "role": "experimental_comfyui_flux2_vae",
       "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
-      "size_bytes": 336213556
+      "size_bytes": 336213556,
+      "operator_retained": true
     }
   ],
   "profiles": {
@@ -329,7 +391,7 @@
       "description": "Required runtime models: general reasoning and embedding."
     },
     "experimental-comfyui": {
-      "description": "Optional ComfyUI MiniMax Music3/H3 and FLUX.2-dev still-image packs. Not part of default install. Off-by-default GPU overlay (ADR-015, ADR-018)."
+      "description": "Retained ComfyUI MiniMax Music3/H3 and FLUX.2-dev still-image packs. Never experimental. Never delete. GPU-exclusive overlay; start with ai provider start comfyui-media-experimental (ADR-015, ADR-018)."
     }
   },
   "schema_version": 1

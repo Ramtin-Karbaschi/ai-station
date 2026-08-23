@@ -1,0 +1,21 @@
+{
+  "paragraph": {
+    "elapsed_s": 164.037,
+    "finish_reason": "length",
+    "model": "LongWriter-Zero-32B-Q4_K_M",
+    "content_preview": " <think> The user wants a short English paragraph about local AI workstations. Let me start by breaking down the key ele",
+    "content_len": 630,
+    "completion_tokens": 128,
+    "tok_s": 0.78,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 268,
+      "total_tokens": 396,
+      "prompt_tokens_details": {
+        "cached_tokens": 254
+      }
+    },
+    "pass": true
+  },
+  "overall_pass": true
+}

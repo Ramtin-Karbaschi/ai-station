@@ -16,7 +16,7 @@ Operators asked for two product gaps on top of the existing station:
 
 The station already has a control plane: `ai` (`scripts/ai`) and the
 Windows Manager (`AI Station/AI Station Manager.ps1`), which only
-invokes that CLI. Open WebUI, LiteLLM Admin, and experimental ComfyUI
+invokes that CLI. Open WebUI, LiteLLM Admin, and the retained ComfyUI
 are workload UIs, not operator consoles. A second privileged web admin
 would overlap that control plane and add a new loopback API that can
 start GPU providers.

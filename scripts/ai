@@ -14,9 +14,9 @@ AI Station platform CLI (single day-to-day entrypoint)
 Usage:
   ai status
   ai health
-  ai start [--profile general|coder|reasoning|vision|ornith]
+  ai start [--profile general|coder|reasoning|vision|ornith|qwen38|longwriter]
   ai stop
-  ai restart [--profile general|coder|reasoning|vision|ornith]
+  ai restart [--profile general|coder|reasoning|vision|ornith|qwen38|longwriter]
   ai models list|active|use <profile> [--dry-run]|stop|start-reranker|stop-reranker
   ai models catalog [--json]
   ai models add|install|verify|remove|restore ...
@@ -29,7 +29,7 @@ Usage:
   ai graphify install|configure|status|extract|query|path|explain|view|uninstall
   ai output show|set|open|path media|graphify|export
   ai test [--live] [--endpoint URL] [--model NAME]
-  ai logs [gateway|general|coder|reasoning|vision|ornith|embedder|webui]
+  ai logs [gateway|general|coder|reasoning|vision|ornith|qwen38|longwriter|embedder|webui]
   ai logs snapshot [all|gateway|webui|tika|general]
   ai gateway url
   ai verify [--stability [seconds]]
@@ -58,6 +58,8 @@ public_name_for_profile() {
     reasoning) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
     vision) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
     ornith) echo "Ornith-1.5-35B-Q4_K_M" ;;
+    qwen38) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
+    longwriter) echo "LongWriter-Zero-32B-Q4_K_M" ;;
     reranker) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
     *) return 1 ;;
   esac
@@ -70,6 +72,8 @@ public_name_for_model_id() {
     local-reasoning|DeepSeek-R1-Distill-Qwen-32B-Q4_K_M) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
     local-vision|Qwen3-VL-32B-Instruct-Q4_K_M) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
     local-ornith|Ornith-1.5-35B-Q4_K_M|Ornith-1.0-35B-Q4_K_M) echo "Ornith-1.5-35B-Q4_K_M" ;;
+    local-qwen38|Qwen3.8-27B-UD-Q4_K_M) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
+    local-longwriter|LongWriter-Zero-32B-Q4_K_M|LongWriter-Zero-32B-Q8_0) echo "LongWriter-Zero-32B-Q4_K_M" ;;
     local-embedding|Qwen3-Embedding-0.6B-Q8_0) echo "Qwen3-Embedding-0.6B-Q8_0" ;;
     local-reranker|Qwen3-Reranker-0.6B-Q8_0) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
     *) echo "$1" ;;
@@ -203,7 +207,7 @@ cmd_start() {
   fi
 
   if ! ai_is_heavy_profile "$profile"; then
-    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith)" >&2
+    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith|qwen38|longwriter)" >&2
     exit 2
   fi
 
@@ -259,8 +263,8 @@ cmd_stop() {
   ai_lifecycle_lock "stop"
   ai_ensure_docker || true
   ai_stop_experimental_gpu_overlays
-  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile reranker \
-    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith reranker 2>/dev/null || true
+  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile qwen38 --profile longwriter --profile reranker \
+    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
   systemctl stop ai-station-ui-gateway 2>/dev/null || true
   systemctl stop ai-station-gateway 2>/dev/null || true
@@ -286,7 +290,7 @@ cmd_restart() {
     profile="$(ai_last_or_default_profile)"
   fi
   if ! ai_is_heavy_profile "$profile"; then
-    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith)" >&2
+    echo "ERROR: invalid profile '$profile' (general|coder|reasoning|vision|ornith|qwen38|longwriter)" >&2
     exit 2
   fi
 
@@ -891,6 +895,8 @@ cmd_logs() {
     reasoning) ai_compose --profile reasoning logs -f --tail=200 llm-reasoning ;;
     vision) ai_compose --profile vision logs -f --tail=200 llm-vision ;;
     ornith) ai_compose --profile ornith logs -f --tail=200 llm-ornith ;;
+    qwen38) ai_compose --profile qwen38 logs -f --tail=200 llm-qwen38 ;;
+    longwriter) ai_compose --profile longwriter logs -f --tail=200 llm-longwriter ;;
     embedder) ai_compose logs -f --tail=200 embedder ;;
     webui) ai_compose logs -f --tail=200 open-webui ;;
     *) echo "Unknown log target: $target" >&2; exit 2 ;;

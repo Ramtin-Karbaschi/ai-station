@@ -51,6 +51,26 @@ model_list:
       id: Ornith-1.5-35B-Q4_K_M
       mode: chat
 
+  - model_name: Qwen3.8-27B-UD-Q4_K_M
+    litellm_params:
+      model: openai/Qwen3.8-27B-UD-Q4_K_M
+      api_base: http://host.docker.internal:8888/v1
+      api_key: "not-needed"
+      timeout: 600
+    model_info:
+      id: Qwen3.8-27B-UD-Q4_K_M
+      mode: chat
+
+  - model_name: LongWriter-Zero-32B-Q4_K_M
+    litellm_params:
+      model: openai/LongWriter-Zero-32B-Q4_K_M
+      api_base: http://host.docker.internal:8888/v1
+      api_key: "not-needed"
+      timeout: 600
+    model_info:
+      id: LongWriter-Zero-32B-Q4_K_M
+      mode: chat
+
   - model_name: Qwen3-Embedding-0.6B-Q8_0
     litellm_params:
       model: openai/ai-station-embedding

@@ -1,7 +1,8 @@
 # ComfyUI media studio on AI Station
 
-ComfyUI is the experimental **music, video, and still-image** UI next to
-Open WebUI. Chat stays on Open WebUI (`:3000`) and LiteLLM
+ComfyUI is the retained **music, video, and still-image** UI next to
+Open WebUI. It is never experimental and must never be deleted. Chat
+stays on Open WebUI (`:3000`) and LiteLLM
 (`http://127.0.0.1:4000/v1`). Media jobs use ComfyUI on
 `http://127.0.0.1:8188`.
 
@@ -41,8 +42,9 @@ Windows Manager: 39 start, 40 stop and restore coder, 41 open ComfyUI,
 ## Models
 
 Weights live under `/srv/ai-station/models/comfyui/` and are listed in
-`config/model-manifest.json` under profile `experimental-comfyui`.
-They are not part of `core` or `all`.
+`config/model-manifest.json` under profile `experimental-comfyui`
+(historical name). They are retained operator models: never experimental
+and never deleted. They are not part of `core` or `all`.
 
 ~~~bash
 ai models install experimental-comfyui-music3-dit-int8
@@ -110,11 +112,14 @@ Restart `comfyui-media-experimental` after changing `media` so the
 bind mount moves. Windows Manager options 43–46 open or set folders.
 See [ADR-016](../adr/ADR-016-operator-console-and-selectable-outputs.md).
 
-## Uninstall
+## Stop the overlay
+
+Stopping ComfyUI does **not** remove weights.
 
 ~~~bash
 ./scripts/uninstall-comfyui-experimental.sh
-# optional: quarantine weights (does not delete)
-./scripts/uninstall-comfyui-experimental.sh --remove-weights
 ai models use coder
 ~~~
+
+`--remove-weights` is refused. MiniMax Music 3, MiniMax H3, and FLUX.2
+must never be deleted.

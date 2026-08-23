@@ -188,6 +188,77 @@ providers:
     fallback_provider: llama-cpp-general
     lifecycle_command: "ai models use ornith"
 
+  llama-cpp-qwen38:
+    id: llama-cpp-qwen38
+    engine: llama.cpp
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-qwen38
+    profile: qwen38
+    port: 8087
+    endpoint: http://127.0.0.1:8087/v1
+    health_endpoint: http://127.0.0.1:8087/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - qwen38-27b
+    model_aliases:
+      - local-qwen38
+    capabilities:
+      - chat
+      - tools
+      - json_schema
+      - vision
+      - reasoning
+    latency_class: interactive
+    stability_class: production
+    minimum_vram_mib: 17000
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 18000
+    kv_cache_mib_per_1k_context: 220
+    default_context: 8192
+    max_context: 32768
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use qwen38"
+
+  llama-cpp-longwriter:
+    id: llama-cpp-longwriter
+    engine: llama.cpp
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: llm-longwriter
+    profile: longwriter
+    port: 8088
+    endpoint: http://127.0.0.1:8088/v1
+    health_endpoint: http://127.0.0.1:8088/v1/models
+    metrics_endpoint: null
+    catalog_ids:
+      - longwriter-zero-32b
+    model_aliases:
+      - local-longwriter
+    capabilities:
+      - chat
+      - longform
+    latency_class: batch
+    stability_class: production
+    minimum_vram_mib: 19000
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 20000
+    kv_cache_mib_per_1k_context: 250
+    default_context: 8192
+    max_context: 16384
+    required_features:
+      - nvidia_cuda
+    fallback_provider: llama-cpp-general
+    lifecycle_command: "ai models use longwriter"
+
   llama-cpp-embedder:
     id: llama-cpp-embedder
     engine: llama.cpp
@@ -257,8 +328,8 @@ providers:
     id: comfyui-media-experimental
     engine: comfyui
     deployment_type: compose
-    classification: experimental
-    experimental: true
+    classification: production_default
+    experimental: false
     heavy: true
     resource_group: gpu-heavy
     service: comfyui-experimental
@@ -276,7 +347,7 @@ providers:
       - image-to-video
       - reference-to-video
     latency_class: batch
-    stability_class: experimental
+    stability_class: production
     minimum_vram_mib: 20000
     minimum_ram_mib: 16384
     minimum_storage_mib: 80000

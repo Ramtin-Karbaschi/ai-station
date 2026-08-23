@@ -107,6 +107,12 @@ def quarantine(
 ) -> None:
     manifest = load_json(root / "config/model-manifest.json")
     model = manifest_model(manifest, model_id)
+    if model.get("operator_retained"):
+        raise SystemExit(
+            "ERROR: refusing to quarantine a retained operator model. "
+            "Ornith 1.5, Qwen3.8, LongWriter-Zero, and ComfyUI "
+            "(MiniMax Music 3, MiniMax H3, FLUX.2) must never be deleted."
+        )
     source = model_path(data_root, model)
     if not source.is_file():
         raise SystemExit(f"ERROR: model is not installed: {source}")

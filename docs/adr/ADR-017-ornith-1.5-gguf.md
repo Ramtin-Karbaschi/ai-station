@@ -1,8 +1,13 @@
 # ADR-017: Replace Ornith 1.0 GGUF with Ornith 1.5 in the Optional Profile
 
-- Status: Accepted
+- Status: Accepted (amended 2026-08-23)
 - Date: 2026-08-22
 - Supersedes weight pin in [ADR-008](ADR-008-optional-ornith-heavy-profile.md)
+
+## 2026-08-23 amendment
+
+Ornith 1.5 is a retained operator model: never experimental and never
+deleted. Coder remains the OpenCode default.
 
 ## Context
 

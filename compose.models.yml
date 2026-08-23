@@ -1,5 +1,5 @@
 # On-demand llama.cpp runtimes.
-# Only one heavy profile (general|coder|reasoning|vision|ornith) may be active on ~24GB VRAM.
+# Only one heavy profile (general|coder|reasoning|vision|ornith|qwen38|longwriter) may be active on ~24GB VRAM.
 # Always start heavy profiles via: scripts/ai models use <profile>
 # or: docker compose --profile <name> up -d
 
@@ -168,6 +168,64 @@ services:
       - "127.0.0.1:${ORNITH_LLM_PORT:-8086}:8086"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8086/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  llm-qwen38:
+    <<: *llama-common
+    profiles: ["qwen38"]
+    container_name: ai-station-llm-qwen38
+    command:
+      - -m
+      - /models/${LLM_QWEN38_MODEL_FILE:-qwen38/qwen3.8-27b-ud-q4_k_m.gguf}
+      - --mmproj
+      - /models/${LLM_QWEN38_MMPROJ_FILE:-qwen38/mmproj-f16.gguf}
+      - --alias
+      - ai-station-qwen38
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8087"
+      - -ngl
+      - "999"
+      - -c
+      - "${LLM_QWEN38_CONTEXT:-8192}"
+      - --parallel
+      - "${LLM_QWEN38_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${QWEN38_LLM_PORT:-8087}:8087"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8087/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  llm-longwriter:
+    <<: *llama-common
+    profiles: ["longwriter"]
+    container_name: ai-station-llm-longwriter
+    command:
+      - -m
+      - /models/${LLM_LONGWRITER_MODEL_FILE:-longwriter/longwriter-zero-32b-q4_k_m.gguf}
+      - --alias
+      - ai-station-longwriter
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8088"
+      - -ngl
+      - "${LLM_LONGWRITER_GPU_LAYERS:-999}"
+      - -c
+      - "${LLM_LONGWRITER_CONTEXT:-8192}"
+      - --parallel
+      - "${LLM_LONGWRITER_PARALLEL:-1}"
+    ports:
+      - "127.0.0.1:${LONGWRITER_LLM_PORT:-8088}:8088"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8088/v1/models >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 30

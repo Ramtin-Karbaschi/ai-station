@@ -1,14 +1,16 @@
 # Technology Evaluation Matrix
 
 Date: 2026-07-23
-Updated: 2026-07-24, 2026-08-19, 2026-08-22
+Updated: 2026-07-24, 2026-08-19, 2026-08-22, 2026-08-23
 Status: Phase 0–5 decisions recorded. Production stack marked "running
 today". SGLang local trial failed to serve (OOM). Retrieval/document
 baselines committed under `benchmarks/results/`. Remaining "requires
 benchmark" cells are for components not yet justified to install.
-2026-08-22 addendum: ComfyUI v0.33.3 adopted as an **experimental**
-media-generation studio for MiniMax Music3 and H3 (ADR-015). It is not
-a chat engine and is not promoted. NVFP4 under WSL2 remains unverified.
+2026-08-23 addendum: the operator classified Ornith 1.5, Qwen3.8,
+LongWriter-Zero Q4, and ComfyUI (MiniMax Music 3 + MiniMax H3 + FLUX.2)
+as retained production artifacts: never experimental and never deleted.
+`operator_retained` on the manifest blocks `ai models remove`. ComfyUI
+overlay filenames stay historical; the provider is `production_default`.
 Second 2026-08-22 addendum: ADR-016 keeps `ai` + Windows Manager as the
 operator console, adds selectable output roots, and wraps Graphify's
 existing HTML export on loopback `:4174`. No second admin product.
@@ -144,11 +146,11 @@ Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1
 | UI | Native MiniMax H3 and Music3 nodes; Open WebUI cannot run those workflows | Comfy-Org/ComfyUI v0.30.0+; Open WebUI `image_generation` is still-image only | v0.33.3 pin 2026-08-22 | confirmed from upstream |
 | H3 official serve | SGLang example uses `--num-gpus 4`; full BF16 ~124 GB | MiniMax-H3 model card | fetched 2026-08-22 | confirmed |
 | 24 GiB pack | Comfy-Org pruned INT8 ConvRot + quantized Qwen3-VL encoder | Comfy-Org/MiniMax-H3; Comfy docs | fetched 2026-08-22 | documented |
-| Music3 local smoke | INT8 DiT + tiled VAE decode, 16 s, 30 steps, success in 185.7 s, ~13 GiB VRAM observed | `benchmarks/results/20260822/comfyui/music3-smoke.json` | 2026-08-22 | confirmed; still experimental, not promoted |
-| H3 local smoke | FL2VA T2V from ComfyUI UI, success in 488 s, ~18 GiB VRAM observed | `benchmarks/results/20260822/comfyui/browser-smoke.json` | 2026-08-22 | confirmed; still experimental, not promoted |
+| Music3 local smoke | INT8 DiT + tiled VAE decode, 16 s, 30 steps, success in 185.7 s, ~13 GiB VRAM observed | `benchmarks/results/20260822/comfyui/music3-smoke.json` | 2026-08-22 | confirmed; retained production media |
+| H3 local smoke | FL2VA T2V from ComfyUI UI, success in 488 s, ~18 GiB VRAM observed | `benchmarks/results/20260822/comfyui/browser-smoke.json` | 2026-08-22 | confirmed; retained production media |
 | NVFP4 | Hardware profile: NVFP4 unverified under WSL2 dxgkrnl | `config/hardware-profile.json`; ADR-015 | 2026-08-22 | fallback INT8 encoder named, not assumed |
 | Overlap | Media generation, not chat. Does not replace llama.cpp / LiteLLM | ADR-015 | 2026-08-22 | decision |
-| Classification | experimental, off by default | ADR-015 | 2026-08-22 | decision |
+| Classification | retained production media; GPU-exclusive overlay; never delete | ADR-015 amended 2026-08-23 | 2026-08-23 | decision |
 
 ## 2026-08-22 addendum: Ornith 1.5 and FLUX.2-dev
 
@@ -156,10 +158,33 @@ Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1
 |---|---|---|---|---|
 | Ornith 1.5 GGUF | Official llama.cpp artifact `Ornith-1.5-35B-Q4_K_M.gguf`, 21.7 GB, MIT, architecture `qwen35moe` | `ornith-ai/Ornith-1.5-35B-A3B-GGUF` revision `fbbaed45c2f0e200276ffa51701a24d45dc7f57e` | fetched 2026-08-22 | confirmed |
 | Ornith serve | Vendor recipes are vLLM/SGLang on large GPUs; station keeps llama.cpp | Ornith 1.5 model card; ADR-002 | fetched 2026-08-22 | confirmed |
-| Classification | optional_profile; does not replace coder | ADR-017 | 2026-08-22 | decision |
+| Classification | retained coding profile; never delete; does not replace coder | ADR-017 amended 2026-08-23 | 2026-08-23 | decision |
 | FLUX.2-dev origin | 32B rectified flow, FLUX Non-Commercial License, HF gated BF16 | [black-forest-labs/FLUX.2-dev](https://huggingface.co/black-forest-labs/FLUX.2-dev) | fetched 2026-08-22 | confirmed |
 | Official Comfy-Org FP8 DiT | `flux2_dev_fp8mixed.safetensors` 35.4 GB; exceeds 24 GiB VRAM | `Comfy-Org/flux2-dev` revision `ab9055628ea245000e610f2aa2c96f4746093546` | fetched 2026-08-22 | confirmed |
 | 24 GiB path | city96 Q4_K_M GGUF 20.1 GB + Comfy-Org FP4 TE 12.3 GB + VAE 321 MiB | `city96/FLUX.2-dev-gguf`; ADR-018 | fetched 2026-08-22 | documented; live image smoke required |
 | Remote text encoder | BFL Diffusers consumer example calls Hugging Face HTTP | FLUX.2-dev card | fetched 2026-08-22 | rejected for station default |
 | Open WebUI img | `ENABLE_IMAGE_GENERATION` stays false | ADR-015 / ADR-018 | 2026-08-22 | decision |
-| Classification | experimental still-image on existing ComfyUI overlay | ADR-018 | 2026-08-22 | decision |
+| Classification | retained still-image on existing ComfyUI overlay; never delete | ADR-018 amended 2026-08-23 | 2026-08-23 | decision |
+
+## 2026-08-22 addendum: Qwen3.8-27B GGUF
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Official weights | `Qwen/Qwen3.8-27B` BF16 safetensors, Apache-2.0, native VL, thinking on by default | Hugging Face model card | fetched 2026-08-22 | confirmed |
+| Serve path | Official tree is not llama.cpp-loadable and will not fit 24 GiB | model card; ADR-002 | 2026-08-22 | confirmed |
+| GGUF pin | Unsloth `Qwen3.8-27B-UD-Q4_K_M.gguf` 16.46 GB + `mmproj-F16.gguf` 885 MiB | `unsloth/Qwen3.8-27B-GGUF` revision `4ca720788d1e01f1bff70c033e0d0028fd02e502` | fetched 2026-08-22 | confirmed via `HfApi.get_paths_info` |
+| Architecture | GGUF `qwen35` dense hybrid; pinned llama.cpp b9859 already contains `llama_model_qwen35` | libllama.so.0.0.9859 strings; ADR-019 | 2026-08-22 | confirmed in pinned image; live GGUF load is a separate smoke |
+| Overlap | Different class from `general` (MoE text) and `vision` (32B VL, no tools) | ADR-019 | 2026-08-22 | decision |
+| Classification | retained VL+tools profile; never delete; does not replace general/coder/vision | ADR-019 amended 2026-08-23 | 2026-08-23 | decision |
+
+## 2026-08-23 addendum: LongWriter-Zero-32B Q4_K_M
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Origin | THU-KEG LongWriter-Zero-32B, Apache-2.0, Qwen2.5-32B RL writing fine-tune | [THU-KEG/LongWriter-Zero-32B](https://huggingface.co/THU-KEG/LongWriter-Zero-32B); [mradermacher GGUF](https://huggingface.co/mradermacher/LongWriter-Zero-32B-GGUF) | fetched 2026-08-23 | confirmed |
+| Q8_0 live smoke | `-ngl 40` loaded; ~2.7 tok/s; 24030 / 24463 MiB used | this GPU 2026-08-23 | 2026-08-23 | confirmed; rejected |
+| Q4_K_M pin | `LongWriter-Zero-32B.Q4_K_M.gguf` 18.49 GiB | revision `4ed85f5410b2a3c16414e9e36e4b9810ee380fb1` SHA-256 `b4beb52b144dd8f02f274c3172c642102fe2153cdd0313cae5166ed48c51af67` | fetched 2026-08-23 | confirmed |
+| Q4_K_M live smoke | `-ngl 999`; LiteLLM `:4000` paragraph 5.696 s / 22.47 tok/s; 23975 / 24463 MiB used | this GPU 2026-08-23 | 2026-08-23 | confirmed; accepted |
+| Q5_K_M | 21.67 GiB; too tight with KV on 24 GiB | same repo | fetched 2026-08-23 | confirmed; not pinned |
+| Architecture | Card lists `qwen2`; pinned llama.cpp already serves Qwen2 | model card; ADR-003 | 2026-08-23 | confirmed |
+| Classification | retained writing profile; ngl 999; never delete; does not replace general/reasoning | ADR-020 amended 2026-08-23 | 2026-08-23 | decision |

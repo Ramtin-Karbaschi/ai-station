@@ -4,6 +4,28 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Retained models:** Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and
+  ComfyUI MiniMax Music 3 / MiniMax H3 / FLUX.2 are never experimental
+  and must never be deleted. Manifest marks them `operator_retained`;
+  `ai models remove` refuses them. Bytes were restored after the
+  incorrect 2026-08-23 disk-lighten; SHA-256 matched the manifest.
+- **Recommended models:** `docs/MODELS.md` lists every manifest pack
+  with GiB sizes and measured performance. The Git application size
+  excluding model weights is documented there.
+- **Compose unit:** one Docker Compose project. `ai start` is the
+  operator entry. `COMPOSE_FILE` consistently includes
+  `compose.models.yml`.
+- **ADR-019 Accepted:** optional `qwen38` llama.cpp profile pins Unsloth
+  Qwen3.8-27B UD-Q4_K_M GGUF plus F16 mmproj (native vision + tools +
+  thinking). Does not replace `general`, `coder`, or `vision`. Official
+  BF16 safetensors are not downloaded.
+- **ADR-020 Amended:** optional `longwriter` llama.cpp profile pins
+  mradermacher LongWriter-Zero-32B **Q4_K_M** after a live Q8_0 smoke
+  on this 24 GiB GPU failed the suitability bar (~2.7 tok/s, 108 MiB
+  free VRAM, CPU offload). Q4_K_M live smoke via LiteLLM `:4000` was
+  5.696 s / 22.47 tok/s. Q8_0 bytes were removed. Does not replace
+  `general` or `reasoning`.
+
 ## 2026-08-22
 
 ### Model download reliability

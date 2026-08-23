@@ -66,6 +66,10 @@ ai start
 
 `make start` and `./scripts/start.sh` are thin wrappers around the same CLI.
 
+`ai start` brings up the single Compose project. Heavy GPU profiles
+and ComfyUI are that same project, selected by profile or overlay,
+not a second stack.
+
 The start flow restores the last heavy profile when `--profile` is omitted,
 then waits for the main local endpoints before reporting readiness.
 

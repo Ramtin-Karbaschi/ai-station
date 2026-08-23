@@ -1,7 +1,16 @@
 # ADR-015: ComfyUI Experimental Media Studio for MiniMax Music3 and H3
 
-- Status: Accepted
+- Status: Accepted (amended 2026-08-23)
 - Date: 2026-08-22
+
+## 2026-08-23 amendment
+
+The operator classified MiniMax Music 3, MiniMax H3, and FLUX.2 as
+**retained production media**: never experimental and never deleted.
+Compose overlay/profile names stay historical (`experimental` in the
+filename and `ai provider start` id). The overlay remains GPU-exclusive
+and is not started by `ai start` because of the one-heavy-GPU rule, not
+because the pack is disposable. `--remove-weights` is refused.
 
 ## Context
 
@@ -51,10 +60,11 @@ SGLang was already rejected for chat promotion after a 24 GiB OOM
 
 Adopt option 3.
 
-- Classification: **experimental**. Isolated Compose overlay
+- Classification: **retained production media** (amended 2026-08-23;
+  originally experimental). Isolated Compose overlay
   `compose.comfyui.experimental.yaml`, profile `comfyui-experimental`,
-  provider `comfyui-media-experimental`. Off by default. Not started by
-  `ai start`.
+  provider `comfyui-media-experimental`. GPU-exclusive. Not started by
+  `ai start`. Weights must never be deleted.
 - Workload class: media generation. Does not replace llama.cpp, LiteLLM
   (`http://127.0.0.1:4000/v1`), or Open WebUI (`:3000`).
 - Bind `127.0.0.1:8188` only. ComfyUI has no application auth; loopback
@@ -84,8 +94,9 @@ ai provider stop comfyui-media-experimental
 ai models use coder
 ~~~
 
-Uninstall: `./scripts/uninstall-comfyui-experimental.sh`
-(`--remove-weights` quarantines, does not delete).
+Uninstall overlay (stops the container only):
+`./scripts/uninstall-comfyui-experimental.sh`.
+`--remove-weights` is refused; these files must never be deleted.
 
 ## Consequences
 
@@ -112,15 +123,16 @@ Chat is unavailable until a llama.cpp profile is restored.
 ai models use coder
 ~~~
 
-Leave overlay, ADR, and manifest in Git. Weights remain under
-`/srv/ai-station` until `--remove-weights` quarantines them.
+Leave overlay, ADR, and manifest in Git. Weights stay under
+`/srv/ai-station`; `--remove-weights` is refused.
 
 ## Acceptance criteria
 
 1. `ai start` does not start ComfyUI.
 2. Overlay publishes only `127.0.0.1:8188`.
-3. Provider is `experimental` + `heavy`; admission against an active
-   llama.cpp provider is `STOP_CONFLICTING_PROVIDER_AND_START`.
+3. Provider is `production_default` + `heavy` (`experimental: false`);
+   admission against an active llama.cpp provider is
+   `STOP_CONFLICTING_PROVIDER_AND_START`. Weights are `operator_retained`.
 4. Manifest files use immutable revisions and SHA-256; profile is
    `experimental-comfyui` only.
 5. Dockerfile `FROM` is digest-pinned and listed in the build lock.

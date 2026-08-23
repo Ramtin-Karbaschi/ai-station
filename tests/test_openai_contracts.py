@@ -22,6 +22,8 @@ CANONICAL_CHAT_MODELS = [
     "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
     "Qwen3-VL-32B-Instruct-Q4_K_M",
     "Ornith-1.5-35B-Q4_K_M",
+    "Qwen3.8-27B-UD-Q4_K_M",
+    "LongWriter-Zero-32B-Q4_K_M",
 ]
 CANONICAL_UTILITY_MODELS = [
     "Qwen3-Embedding-0.6B-Q8_0",
@@ -34,6 +36,8 @@ INVALID_PUBLIC_NAMES = {
     "local-reasoning",
     "local-vision",
     "local-ornith",
+    "local-qwen38",
+    "local-longwriter",
     "coding-qwen3-coder",
     "coding-qwen3-coder-next",
     "thinking-deepseek-r1",
@@ -58,6 +62,7 @@ class CatalogContractTests(unittest.TestCase):
         self.assertEqual(by_id["ornith-1_5-35b"]["port"], 8086)
         self.assertEqual(by_id["ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4")
         self.assertEqual(by_id["ornith-1_5-35b"]["alias"], "local-ornith")
+        self.assertTrue(by_id["ornith-1_5-35b"].get("enabled"))
         self.assertEqual(
             by_id["ornith-1_5-35b"].get("default_system_prefix"), "/no_think"
         )
@@ -71,6 +76,26 @@ class CatalogContractTests(unittest.TestCase):
             "fbbaed45c2f0e200276ffa51701a24d45dc7f57e",
         )
         self.assertNotIn("ornith-1.0-35b-q4", by_manifest)
+        self.assertEqual(by_id["qwen38-27b"]["port"], 8087)
+        self.assertEqual(by_id["qwen38-27b"]["alias"], "local-qwen38")
+        self.assertEqual(by_id["qwen38-27b"]["manifest_id"], "qwen38-27b-q4")
+        self.assertTrue(by_id["qwen38-27b"].get("supports_tools"))
+        self.assertTrue(by_id["qwen38-27b"].get("supports_vision"))
+        self.assertTrue(by_id["qwen38-27b"].get("supports_json_schema"))
+        self.assertEqual(by_id["qwen38-27b"].get("default_system_prefix"), "")
+        self.assertTrue(by_id["qwen38-27b"].get("enabled"))
+        self.assertEqual(
+            by_manifest["qwen38-27b-q4"]["revision"],
+            "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+        )
+        self.assertEqual(
+            by_manifest["qwen38-27b-q4"]["sha256"],
+            "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482",
+        )
+        self.assertEqual(
+            by_manifest["qwen38-27b-mmproj-f16"]["filename"],
+            "mmproj-F16.gguf",
+        )
         self.assertFalse(
             any(item["id"].startswith("experimental-sglang-qwen") for item in manifest["models"])
         )
@@ -112,6 +137,93 @@ class CatalogContractTests(unittest.TestCase):
         self.assertEqual(registry["models"]["local-ornith"]["status"], "optional")
         self.assertEqual(registry["models"]["local-coder"]["status"], "production")
 
+    def test_qwen38_provider_is_optional_and_does_not_replace_defaults(self) -> None:
+        providers = yaml.safe_load(
+            (ROOT / "config/providers.yaml").read_text(encoding="utf-8")
+        )
+        qwen38 = providers["providers"]["llama-cpp-qwen38"]
+        general = providers["providers"]["llama-cpp-general"]
+        vision = providers["providers"]["llama-cpp-vision"]
+        self.assertEqual(qwen38["classification"], "optional_profile")
+        self.assertFalse(qwen38["experimental"])
+        self.assertTrue(qwen38["heavy"])
+        self.assertEqual(qwen38["port"], 8087)
+        self.assertEqual(qwen38["fallback_provider"], "llama-cpp-general")
+        self.assertEqual(qwen38["lifecycle_command"], "ai models use qwen38")
+        self.assertEqual(general["classification"], "production_default")
+        self.assertEqual(vision["classification"], "production_default")
+
+        registry = yaml.safe_load(
+            (ROOT / "config/registry/models.yaml").read_text(encoding="utf-8")
+        )
+        self.assertIn("qwen38", registry["runtime_policy"]["heavy_profiles"])
+        self.assertEqual(registry["runtime_policy"]["max_active_heavy_profiles"], 1)
+        self.assertEqual(registry["models"]["local-qwen38"]["status"], "optional")
+        self.assertEqual(registry["models"]["local-general"]["status"], "production")
+
+    def test_qwen38_compose_keeps_vision_mmproj_and_thinking(self) -> None:
+        compose = yaml.safe_load(
+            (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        )
+        cmd = compose["services"]["llm-qwen38"]["command"]
+        self.assertIn("--mmproj", cmd)
+        self.assertEqual(
+            cmd[cmd.index("--mmproj") + 1],
+            "/models/${LLM_QWEN38_MMPROJ_FILE:-qwen38/mmproj-f16.gguf}",
+        )
+        self.assertNotIn("--reasoning", cmd)
+        self.assertEqual(
+            compose["services"]["llm-qwen38"]["ports"],
+            ["127.0.0.1:${QWEN38_LLM_PORT:-8087}:8087"],
+        )
+        lock = yaml.safe_load(
+            (ROOT / "compose.images.lock.yaml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            lock["services"]["llm-qwen38"]["image"],
+            lock["services"]["llm-general"]["image"],
+        )
+
+    def test_longwriter_provider_is_optional_q4_with_full_offload(self) -> None:
+        providers = yaml.safe_load(
+            (ROOT / "config/providers.yaml").read_text(encoding="utf-8")
+        )
+        longwriter = providers["providers"]["llama-cpp-longwriter"]
+        self.assertEqual(longwriter["classification"], "optional_profile")
+        self.assertFalse(longwriter["experimental"])
+        self.assertTrue(longwriter["heavy"])
+        self.assertEqual(longwriter["port"], 8088)
+        self.assertEqual(longwriter["lifecycle_command"], "ai models use longwriter")
+        catalog = json.loads(
+            (ROOT / "config/model-catalog.json").read_text(encoding="utf-8")
+        )
+        by_id = {m["id"]: m for m in catalog["models"]}
+        self.assertEqual(by_id["longwriter-zero-32b"]["public_model_id"], "LongWriter-Zero-32B-Q4_K_M")
+        self.assertTrue(by_id["longwriter-zero-32b"].get("enabled"))
+        self.assertFalse(by_id["longwriter-zero-32b"].get("supports_tools"))
+        manifest = json.loads(
+            (ROOT / "config/model-manifest.json").read_text(encoding="utf-8")
+        )
+        by_manifest = {m["id"]: m for m in manifest["models"]}
+        self.assertEqual(
+            by_manifest["longwriter-zero-32b-q4"]["revision"],
+            "4ed85f5410b2a3c16414e9e36e4b9810ee380fb1",
+        )
+        self.assertEqual(
+            by_manifest["longwriter-zero-32b-q4"]["sha256"],
+            "b4beb52b144dd8f02f274c3172c642102fe2153cdd0313cae5166ed48c51af67",
+        )
+        compose = yaml.safe_load(
+            (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        )
+        cmd = compose["services"]["llm-longwriter"]["command"]
+        self.assertEqual(cmd[cmd.index("-ngl") + 1], "${LLM_LONGWRITER_GPU_LAYERS:-999}")
+        registry = yaml.safe_load(
+            (ROOT / "config/registry/models.yaml").read_text(encoding="utf-8")
+        )
+        self.assertIn("longwriter", registry["runtime_policy"]["heavy_profiles"])
+        self.assertEqual(registry["models"]["local-longwriter"]["status"], "optional")
+
     def test_ornith_compose_disables_reasoning(self) -> None:
         compose = yaml.safe_load(
             (ROOT / "compose.models.yml").read_text(encoding="utf-8")
@@ -141,7 +253,11 @@ class CatalogContractTests(unittest.TestCase):
         )
         compose = yaml.safe_load((ROOT / "compose.yml").read_text(encoding="utf-8"))
 
-        public_ids = [model["public_model_id"] for model in catalog["models"]]
+        public_ids = [
+            model["public_model_id"]
+            for model in catalog["models"]
+            if model.get("enabled") is True
+        ]
         self.assertEqual(
             public_ids,
             CANONICAL_CHAT_MODELS + CANONICAL_UTILITY_MODELS,
@@ -155,6 +271,8 @@ class CatalogContractTests(unittest.TestCase):
                 "local-reasoning",
                 "local-vision",
                 "local-ornith",
+                "local-qwen38",
+                "local-longwriter",
                 "local-embedding",
                 "local-reranker",
             ]

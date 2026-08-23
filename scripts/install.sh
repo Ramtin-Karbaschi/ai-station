@@ -100,7 +100,7 @@ DATA_ROOT="$(realpath -m "$DATA_ROOT")"
 
 EXPECTED_COMPOSE_FILE="$(
     printf '%s' \
-        'compose.yml:compose.hardening.yaml:' \
+        'compose.yml:compose.models.yml:compose.hardening.yaml:' \
         'compose.local-builds.yaml:compose.images.lock.yaml'
 )"
 
@@ -218,6 +218,8 @@ mkdir -p \
     "$DATA_ROOT/models/general" \
     "$DATA_ROOT/models/coder" \
     "$DATA_ROOT/models/ornith" \
+    "$DATA_ROOT/models/qwen38" \
+    "$DATA_ROOT/models/longwriter" \
     "$DATA_ROOT/models/embedding" \
     "$DATA_ROOT/models/reranker" \
     "$DATA_ROOT/models/vision" \

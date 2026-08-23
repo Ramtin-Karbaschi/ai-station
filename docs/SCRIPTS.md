@@ -47,7 +47,7 @@ ai output show
 
 Templates live in `config/clients/opencode/`. Graphify is an optional
 code-graph CLI (`config/clients/graphify/`, [clients/GRAPHIFY.md](clients/GRAPHIFY.md)).
-ComfyUI is the experimental MiniMax music/video studio
+ComfyUI is the retained MiniMax / FLUX.2 media studio
 (`config/clients/comfyui/`, [clients/COMFYUI.md](clients/COMFYUI.md)).
 Do not commit the generated
 Windows `opencode.jsonc` (it contains the project API key). See

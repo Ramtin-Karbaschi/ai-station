@@ -18,7 +18,7 @@ Major components include:
 - httpx;
 - faster-whisper;
 - Hugging Face Hub;
-- ComfyUI (experimental media studio);
+- ComfyUI (retained MiniMax / FLUX.2 media studio);
 - MiniMax Music 3 and MiniMax H3 (Comfy-Org quantized packs);
 - Qwen-family models;
 - model quantizations distributed by their respective publishers.

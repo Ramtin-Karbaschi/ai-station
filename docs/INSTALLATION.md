@@ -24,10 +24,18 @@ This is a canonical-path install, not an arbitrary-path layout:
 A clone may start in any temporary directory. The installer deploys into
 those two roots, preserves `.env`, and keeps model bytes out of Git.
 
-Compose stays repository-relative:
+The station is **one Docker Compose project** named `ai-station`.
+Operator entry is `ai start` (or `make start`). That starts the
+application unit: Open WebUI, LiteLLM, PostgreSQL, Redis, Tika, SearXNG,
+embeddings, and the reranker. Heavy llama.cpp profiles are the **same**
+project with `--profile`. ComfyUI is the same project plus its overlay
+file. Do not `docker run` these services ad hoc, and do not collapse
+llama.cpp, LiteLLM, and Open WebUI into a single container.
+
+Compose stays repository-relative. The canonical file chain is:
 
 ~~~text
-COMPOSE_FILE=compose.yml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
+COMPOSE_FILE=compose.yml:compose.models.yml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
 ~~~
 
 References to `/opt/ai-station` are allowed only in files listed in

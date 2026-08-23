@@ -29,7 +29,7 @@ config/dockerfile-base-lock.json
 ~~~
 
 The current local builds are the Persian-enabled Apache Tika image and
-the experimental ComfyUI media image (`infra/comfyui/Dockerfile`).
+the retained ComfyUI media image (`infra/comfyui/Dockerfile`).
 
 ## Updating the lock
 

@@ -16,7 +16,7 @@ Auth:     Bearer project virtual key
 Model:    canonical public model id
 ~~~
 
-Never configure a client with `:8888`, `:8082`–`:8086`, GGUF paths, or
+Never configure a client with `:8888`, `:8082`–`:8088`, GGUF paths, or
 `local-*` backend aliases. Those are internal implementation details.
 
 ## Create least-privilege project access

@@ -1,6 +1,6 @@
 {
   "name": "comfyui",
-  "classification": "experimental",
+  "classification": "production_default",
   "version": "0.33.3",
   "git_commit": "4da9e2dbead52fc1e68beae33fe3d7ad63b63241",
   "tarball_url": "https://github.com/Comfy-Org/ComfyUI/archive/4da9e2dbead52fc1e68beae33fe3d7ad63b63241.tar.gz",

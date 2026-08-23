@@ -11,7 +11,7 @@ fact across multiple documents.
 | Understand the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Integrate an application | [PLATFORM.md](PLATFORM.md) |
 | Operate or recover it | [OPERATIONS.md](OPERATIONS.md) |
-| Add or remove model bytes | [MODELS.md](MODELS.md) |
+| Recommended models, sizes, performance, and Git size without weights | [MODELS.md](MODELS.md) |
 | See the verified release snapshot | [AI_STATION_CURRENT_STATE.md](ops/AI_STATION_CURRENT_STATE.md) |
 | Configure OpenCode | [OPENCODE.md](clients/OPENCODE.md) |
 | Build a document notebook | [OPENWEBUI.md](clients/OPENWEBUI.md) |
@@ -26,7 +26,9 @@ fact across multiple documents.
 
 - `ARCHITECTURE.md` owns component boundaries and request flows.
 - `PLATFORM.md` owns the LiteLLM application contract and project keys.
-- `MODELS.md` explains management; machine definitions stay in manifest,
+- `MODELS.md` owns the recommended-model list (size + measured
+  performance), the Git application size excluding weights, and
+  add/remove procedures. Machine definitions stay in manifest,
   catalog, provider, and LiteLLM config files.
 - `AI_STATION_CURRENT_STATE.md` is a snapshot, not a timeline or roadmap.
 - ADRs own durable decisions and trade-offs.

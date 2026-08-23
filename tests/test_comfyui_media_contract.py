@@ -47,15 +47,16 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertIn("ai_stop_experimental_gpu_overlays", common)
         self.assertIn("compose.comfyui.experimental.yaml", common)
 
-    def test_provider_is_experimental_heavy_overlay(self) -> None:
+    def test_provider_is_retained_heavy_overlay(self) -> None:
         providers = yaml.safe_load(PROVIDERS.read_text(encoding="utf-8"))
         provider = providers["providers"]["comfyui-media-experimental"]
-        self.assertEqual(provider["classification"], "experimental")
-        self.assertTrue(provider["experimental"])
+        self.assertEqual(provider["classification"], "production_default")
+        self.assertFalse(provider["experimental"])
         self.assertTrue(provider["heavy"])
         self.assertEqual(provider["engine"], "comfyui")
         self.assertEqual(provider["port"], 8188)
         self.assertEqual(provider["health_endpoint"], "http://127.0.0.1:8188/system_stats")
+        self.assertEqual(provider["stability_class"], "production")
         self.assertEqual(
             provider["compose_files"],
             ["compose.yml", "compose.comfyui.experimental.yaml"],
@@ -94,6 +95,7 @@ class ComfyuiMediaContractTests(unittest.TestCase):
             self.assertRegex(model["sha256"], r"^[0-9a-f]{64}$")
             self.assertGreater(model["size_bytes"], 0)
             self.assertTrue(model["destination"].startswith("models/comfyui/"))
+            self.assertTrue(model.get("operator_retained"))
 
     def test_dockerfile_from_is_digest_pinned_in_build_lock(self) -> None:
         dockerfile = DOCKERFILE.read_text(encoding="utf-8")
@@ -109,7 +111,7 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertIn(("infra/comfyui/Dockerfile", 1, image), entries)
         client = json.loads(CLIENT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(client["version"], "0.33.3")
-        self.assertEqual(client["classification"], "experimental")
+        self.assertEqual(client["classification"], "production_default")
         self.assertEqual(client["port"], 8188)
         self.assertEqual(client["listen"], "127.0.0.1")
         self.assertIn(client["git_commit"], dockerfile)
@@ -208,7 +210,8 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         smoke = SMOKE.read_text(encoding="utf-8")
         self.assertIn("compose.comfyui.experimental.yaml", uninstall)
         self.assertIn("--remove-weights", uninstall)
-        self.assertIn("/srv/ai-station/quarantine/", uninstall)
+        self.assertIn("must never be deleted", uninstall)
+        self.assertNotIn("mv \"$TARGET\"", uninstall)
         self.assertNotIn("rm -rf /srv/ai-station/models", uninstall)
         self.assertIn("http://127.0.0.1:8188/system_stats", smoke)
         self.assertIn("runtime/comfyui/smoke", smoke)

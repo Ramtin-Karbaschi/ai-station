@@ -213,14 +213,16 @@ The first Open WebUI user becomes the local administrator.
 
 For application projects, create a key and point any OpenAI-compatible
 client at `http://127.0.0.1:4000/v1` — see [Platform](docs/PLATFORM.md).
-Hardware table: [Models](docs/MODELS.md).
+The station starts as **one Docker Compose project** (`ai start`).
+Recommended models, sizes, measured performance, and the Git
+application size excluding weights: [Models](docs/MODELS.md).
 
 ## Model profiles
 
 | Profile | Roles | Purpose |
 |---|---|---|
 | `core` | General + embedding | Default operation |
-| `all` | Core + coder + ornith + reasoning + vision + reranker | Full workstation pack |
+| `all` | Core + coder + ornith + qwen38 + longwriter + reasoning + vision + reranker | Full workstation pack |
 
 ~~~bash
 ./scripts/provision-models.sh --profile core
@@ -305,10 +307,10 @@ security vulnerabilities through a public issue.
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
 | [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
 | [Open WebUI](docs/clients/OPENWEBUI.md) | Human chat and Knowledge notebooks |
-| [ComfyUI](docs/clients/COMFYUI.md) | Experimental MiniMax music and video studio |
+| [ComfyUI](docs/clients/COMFYUI.md) | Retained MiniMax music/video and FLUX.2 stills |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |
 | [Operations](docs/OPERATIONS.md) | Start, stop, verify |
-| [Models](docs/MODELS.md) | Add, remove, profiles, hardware hints |
+| [Models](docs/MODELS.md) | Recommended packs, sizes, performance, add/remove |
 | [Current state](docs/ops/AI_STATION_CURRENT_STATE.md) | Verified baseline |
 | [ADRs](docs/adr/) | Architecture decisions |
 

@@ -1,0 +1,60 @@
+{
+  "identity": {
+    "elapsed_s": 1.29,
+    "finish_reason": "stop",
+    "model": "Qwen3.8-27B-UD-Q4_K_M",
+    "content_preview": "QWEN38_OK",
+    "content_len": 9,
+    "usage": {
+      "completion_tokens": 16,
+      "prompt_tokens": 67,
+      "total_tokens": 83,
+      "prompt_tokens_details": {
+        "cached_tokens": 42
+      }
+    },
+    "pass": true
+  },
+  "json": {
+    "elapsed_s": 2.845,
+    "finish_reason": "stop",
+    "model": "Qwen3.8-27B-UD-Q4_K_M",
+    "content_preview": "{\"ok\": true}",
+    "content_len": 12,
+    "parsed": {
+      "ok": true
+    },
+    "usage": {
+      "completion_tokens": 44,
+      "prompt_tokens": 61,
+      "total_tokens": 105,
+      "prompt_tokens_details": {
+        "cached_tokens": 42
+      }
+    },
+    "pass": true,
+    "note": "Qwen3.8 thinking is on; JSON smoke used max_tokens=256"
+  },
+  "tools": {
+    "elapsed_s": 3.247,
+    "finish_reason": "tool_calls",
+    "model": "Qwen3.8-27B-UD-Q4_K_M",
+    "content_preview": "The user is asking to call the get_time tool with timezone=UTC.\n",
+    "tool_calls": [
+      {
+        "name": "get_time",
+        "arguments": "{\"timezone\":\"UTC\"}"
+      }
+    ],
+    "usage": {
+      "completion_tokens": 44,
+      "prompt_tokens": 314,
+      "total_tokens": 358,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "pass": true
+  },
+  "overall_pass": true
+}

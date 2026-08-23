@@ -1,8 +1,14 @@
 # ADR-018: FLUX.2-dev Still Images on the Experimental ComfyUI Overlay
 
-- Status: Accepted
+- Status: Accepted (amended 2026-08-23)
 - Date: 2026-08-22
 - Extends [ADR-015](ADR-015-comfyui-minimax-media-studio.md)
+
+## 2026-08-23 amendment
+
+FLUX.2-dev still-image weights are retained production media with MiniMax
+Music 3 / H3: never experimental and never deleted. Overlay filenames
+stay historical. `--remove-weights` is refused.
 
 ## Context
 
@@ -63,10 +69,11 @@ text encoder would violate the one-heavy-GPU and on-box rules.
 
 Adopt option 3.
 
-- Classification remains **experimental**. Same overlay
+- Classification: **retained production media** (amended 2026-08-23;
+  originally experimental). Same overlay
   `compose.comfyui.experimental.yaml`, profile `comfyui-experimental`,
-  provider `comfyui-media-experimental`, loopback `:8188`, off by
-  default, mutually exclusive with llama.cpp.
+  provider `comfyui-media-experimental`, loopback `:8188`, GPU-exclusive
+  and not started by `ai start`, mutually exclusive with llama.cpp.
 - Workload class: still-image generation (FLUX.2-dev) on the existing
   media studio, beside MiniMax music/video. Not a second public API.
 - Weights (manifest profile `experimental-comfyui`, not `core`/`all`):
@@ -95,7 +102,8 @@ ai models install experimental-comfyui-flux2-vae
 # UI: Workflows → flux2-text-to-image.json
 ~~~
 
-Uninstall remains `./scripts/uninstall-comfyui-experimental.sh`.
+Stop the overlay with `./scripts/uninstall-comfyui-experimental.sh`.
+`--remove-weights` is refused.
 
 ## Consequences
 
@@ -118,7 +126,7 @@ llama.cpp.
 
 ~~~bash
 ./scripts/uninstall-comfyui-experimental.sh
-# optional: --remove-weights quarantines the whole ComfyUI model tree
+# --remove-weights is refused; FLUX.2 / MiniMax files stay on disk
 ai models use coder
 ~~~
 

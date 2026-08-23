@@ -1,6 +1,6 @@
 # AI Station Current State
 
-Verified: 2026-08-22
+Verified: 2026-08-23
 
 This file is the concise release snapshot: what is supported now, which
 boundaries are authoritative, and which limitations are still real. Design
@@ -16,6 +16,8 @@ changes in `CHANGELOG.md`.
 4. At most one heavy GPU profile runs at a time.
 5. Models and runtime data live under `/srv/ai-station`, outside Git.
    Add and remove those bytes with `ai models add|install|remove|restore`.
+   Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and ComfyUI MiniMax Music 3 /
+   MiniMax H3 / FLUX.2 are retained: never experimental and never deleted.
 6. Published endpoints bind to loopback.
 7. Docker Compose is the sole supported container runtime.
 
@@ -34,7 +36,7 @@ changes in `CHANGELOG.md`.
 | SearXNG | Local metasearch boundary | Compose | Optional egress |
 | Graphify | Repository code knowledge graph | Pinned Python venv | Optional client tool |
 | OpenCode WSL | Non-root agentic development client | Pinned WSL binary + generated config | Verified developer client |
-| ComfyUI | MiniMax Music 3 / H3 and FLUX.2-dev still images | Isolated Compose overlay, loopback `:8188` | Experimental; off by default (ADR-015, ADR-018) |
+| ComfyUI | MiniMax Music 3 / H3 and FLUX.2-dev still images | Isolated Compose overlay, loopback `:8188` | Retained production media; GPU-exclusive; never delete (ADR-015, ADR-018) |
 
 ## Model capability matrix
 
@@ -42,11 +44,17 @@ changes in `CHANGELOG.md`.
 |---|---|---:|---:|---|
 | `coder` | Qwen3 Coder 30B-A3B | 32768 runtime; 16384 OpenCode cap | Yes | Default OpenCode/build agent |
 | `general` | Qwen3.6 35B-A3B | 8192 | Yes | General chat and tool use |
-| `ornith` | Ornith 1.5 35B | 8192 | Yes | Optional coding agent |
+| `ornith` | Ornith 1.5 35B | 8192 | Yes | Retained coding agent; never delete |
+| `qwen38` | Qwen3.8 27B + mmproj | 8192 | Yes | Retained dense VL + tools + thinking; never delete |
+| `longwriter` | LongWriter-Zero 32B Q4 | 8192 | No | Retained long-form / RL writing; never delete |
 | `reasoning` | DeepSeek-R1 Distill Qwen 32B | 8192 | No | Non-tool reasoning; high latency |
 | `vision` | Qwen3-VL 32B + mmproj | 8192 | No | Multimodal requests |
 | default embedder | Qwen3 Embedding 0.6B Q8 | 8192 | n/a | Retrieval embeddings |
 | CPU reranker | Qwen3 Reranker 0.6B Q8 | n/a | n/a | Open WebUI hybrid RAG |
+
+Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and ComfyUI (MiniMax Music 3,
+MiniMax H3, FLUX.2) are **retained operator models**: never experimental
+and never deleted. `ai models remove` refuses them.
 
 Coder uses symmetric q4_0 KV cache at the shared 32768-token runtime ceiling
 and leaves about 2568 MiB free VRAM on this GPU. OpenCode retains its verified
@@ -55,6 +63,11 @@ model-specific evidence exists (ADR-011).
 The 2026-08-20 DeepSeek probe passed runtime health and LiteLLM warm-up but a
 short chat timed out after 180 seconds; it is therefore not advertised as an
 agentic/tool model.
+
+On 2026-08-23 those retained packs were restored after an incorrect
+disk-lighten. SHA-256 matched the manifest. The public API advertises
+them again. ComfyUI is production media, not experimental. Recommended
+sizes and performance: [MODELS.md](../MODELS.md).
 
 Authoritative definitions:
 
@@ -151,7 +164,7 @@ only slim `health.json` and `*-smoke.json` under
 | ComfyUI | `http://127.0.0.1:8188` | Experimental media UI; off by default |
 | Graphify map | `http://127.0.0.1:4174/` | Optional HTML map; off until `ai graphify view` |
 
-Heavy model ports (`:8082`–`:8086`) are internal diagnostics, not client
+Heavy model ports (`:8082`–`:8088`) are internal diagnostics, not client
 contracts.
 
 ## Quality evidence
@@ -174,11 +187,13 @@ offline gates and parses every PowerShell entrypoint on Windows.
   ComfyUI and llama.cpp cannot share the GPU.
 - SGLang is not a startable provider. The 2026-07-24 trial OOMed; the
   experimental overlay was removed on 2026-08-22 (ADR-002).
-- ComfyUI MiniMax packs are experimental. Music3 INT8 tiled-decode and
+- ComfyUI MiniMax / FLUX.2 packs are retained production media and must
+  never be deleted. Music3 INT8 tiled-decode and
   H3 FL2VA text-to-video smokes passed on 2026-08-22
   (`benchmarks/results/20260822/comfyui/`). NVFP4 encoder speed under
   WSL2 is still unproven. Image-to-video and reference-to-video were
-  not part of that smoke.
+  not part of that smoke. Overlay names remain historical
+  (`comfyui-media-experimental`).
 - DeepSeek is not approved for agentic OpenCode use because its short live
   chat timed out after warm-up.
 - Native Windows Desktop on a WSL UNC worktree is not the verified developer
