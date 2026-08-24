@@ -31,3 +31,11 @@ projects:
   created_at: '2026-08-20T22:07:12.447511+00:00'
   key_alias: opencode
   litellm_key_hash: 5b9a832dd820893c0e391da4b33da153b626e78b4a09febd1cb3e9c29db8ff9c
+- id: company-os
+  models:
+  - Qwen3-Coder-30B-A3B-Instruct-Q4
+  - Qwen3-Embedding-0.6B-Q8_0
+  status: active
+  created_at: '2026-08-24T08:41:24.389684+00:00'
+  key_alias: company-os
+  litellm_key_hash: b08dda565c51043ff83d1f7854e7d939bf493b2fe3bc642ce81ab9ad69375090
