@@ -30,10 +30,11 @@ class N8nContractTests(unittest.TestCase):
         self.assertEqual(service["restart"], "unless-stopped")
         self.assertEqual(
             service["ports"],
-            ["127.0.0.1:${N8N_PORT:-5678}:5678"],
+            ["127.0.0.1:${N8N_PORT:-5678}:${N8N_PORT:-5678}"],
         )
         self.assertNotIn("gpus", service)
         env = service["environment"]
+        self.assertEqual(env["N8N_PORT"], "${N8N_PORT:-5678}")
         self.assertEqual(env["N8N_TEMPLATES_ENABLED"], "false")
         self.assertEqual(env["N8N_DIAGNOSTICS_ENABLED"], "false")
         self.assertEqual(env["N8N_VERSION_NOTIFICATIONS_ENABLED"], "false")
@@ -42,6 +43,8 @@ class N8nContractTests(unittest.TestCase):
         self.assertEqual(env["N8N_COMMUNITY_PACKAGES_ENABLED"], "false")
         health = " ".join(service["healthcheck"]["test"])
         self.assertIn("/healthz", health)
+        self.assertIn("http://127.0.0.1:${N8N_PORT:-5678}/healthz", health)
+        self.assertNotIn("http://127.0.0.1:5678/healthz", health)
         volumes = "\n".join(str(item) for item in service["volumes"])
         self.assertIn("runtime/n8n", volumes)
         self.assertIn("config/clients/n8n/workflows", volumes)

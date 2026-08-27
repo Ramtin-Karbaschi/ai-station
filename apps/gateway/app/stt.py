@@ -84,21 +84,38 @@ def qwen_asr_available() -> bool:
         return False
 
 
-def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
-    boundary = "----ai-station-asr"
-    filename = "audio.wav"
-    body = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
-        "Content-Type: application/octet-stream\r\n\r\n"
-    ).encode("utf-8")
-    body += audio_bytes + f"\r\n--{boundary}\r\n".encode("utf-8")
-    if language:
-        body += (
-            'Content-Disposition: form-data; name="language"\r\n\r\n'
-            f"{language}\r\n"
+ASR_MULTIPART_BOUNDARY = "----ai-station-asr"
+
+
+def _asr_multipart_body(
+    audio_bytes: bytes,
+    language: str | None,
+    *,
+    boundary: str = ASR_MULTIPART_BOUNDARY,
+    filename: str = "audio.wav",
+) -> bytes:
+    parts: list[bytes] = [
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n"
         ).encode("utf-8")
-    body += f"--{boundary}--\r\n".encode("utf-8")
+        + audio_bytes
+    ]
+    if language:
+        parts.append(
+            (
+                f"--{boundary}\r\n"
+                'Content-Disposition: form-data; name="language"\r\n\r\n'
+                f"{language}"
+            ).encode("utf-8")
+        )
+    return b"\r\n".join(parts) + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+
+def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
+    boundary = ASR_MULTIPART_BOUNDARY
+    body = _asr_multipart_body(audio_bytes, language, boundary=boundary)
     req = urllib.request.Request(
         qwen_asr_url() + "/v1/audio/transcriptions",
         data=body,

@@ -278,7 +278,7 @@ services:
     restart: unless-stopped
     environment:
       N8N_HOST: "127.0.0.1"
-      N8N_PORT: "5678"
+      N8N_PORT: "${N8N_PORT:-5678}"
       N8N_PROTOCOL: "http"
       N8N_LISTEN_ADDRESS: "0.0.0.0"
       WEBHOOK_URL: "http://127.0.0.1:${N8N_PORT:-5678}/"
@@ -300,14 +300,14 @@ services:
       - ${AI_STATION_DATA:-/srv/ai-station}/runtime/n8n:/home/node/.n8n
       - ./config/clients/n8n/workflows:/opt/ai-station-n8n-workflows:ro
     ports:
-      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+      - "127.0.0.1:${N8N_PORT:-5678}:${N8N_PORT:-5678}"
     networks:
       - default
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:5678/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+          "node -e \"fetch('http://127.0.0.1:${N8N_PORT:-5678}/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
         ]
       interval: 20s
       timeout: 5s

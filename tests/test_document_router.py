@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import unittest
 
+from email.parser import BytesParser
+from email.policy import default
+
 from apps.gateway.app.document_router import describe_pipeline, extract_document, classify_document
-from apps.gateway.app.stt import Transcript, transcribe
+from apps.gateway.app.stt import ASR_MULTIPART_BOUNDARY, Transcript, _asr_multipart_body, transcribe
 
 
 def _tika_good(_b, _n, _m):
@@ -99,6 +102,42 @@ class SttRouterTests(unittest.TestCase):
         r = transcribe(b"x", qwen_available=True, qwen_fn=qwen, whisper_fn=whisper)
         self.assertEqual(r.engine, "faster-whisper-large-v3")
         self.assertTrue(r.fallback_used)
+
+    def _parse_asr_multipart(self, body: bytes):
+        envelope = (
+            f"Content-Type: multipart/form-data; boundary={ASR_MULTIPART_BOUNDARY}\r\n\r\n"
+        ).encode("utf-8") + body
+        return BytesParser(policy=default).parsebytes(envelope)
+
+    def test_asr_multipart_language_has_own_boundary(self):
+        body = _asr_multipart_body(b"AUDIO", "fa")
+        delimiter = f"--{ASR_MULTIPART_BOUNDARY}\r\n".encode("utf-8")
+        closer = f"--{ASR_MULTIPART_BOUNDARY}--\r\n".encode("utf-8")
+        self.assertTrue(body.startswith(delimiter))
+        self.assertIn(
+            delimiter + b'Content-Disposition: form-data; name="language"\r\n',
+            body,
+        )
+        self.assertTrue(body.endswith(closer))
+        msg = self._parse_asr_multipart(body)
+        parts = list(msg.iter_parts())
+        self.assertEqual(len(parts), 2)
+        self.assertEqual(parts[0].get_param("name", header="content-disposition"), "file")
+        self.assertEqual(parts[0].get_payload(decode=True), b"AUDIO")
+        self.assertEqual(parts[1].get_param("name", header="content-disposition"), "language")
+        self.assertEqual(parts[1].get_payload(decode=True), b"fa")
+
+    def test_asr_multipart_without_language_has_no_empty_part(self):
+        body = _asr_multipart_body(b"AUDIO", None)
+        delimiter = f"--{ASR_MULTIPART_BOUNDARY}\r\n".encode("utf-8")
+        closer = f"--{ASR_MULTIPART_BOUNDARY}--\r\n".encode("utf-8")
+        self.assertEqual(body.count(delimiter), 1)
+        self.assertNotIn(b'name="language"', body)
+        self.assertTrue(body.endswith(closer))
+        msg = self._parse_asr_multipart(body)
+        parts = list(msg.iter_parts())
+        self.assertEqual(len(parts), 1)
+        self.assertEqual(parts[0].get_payload(decode=True), b"AUDIO")
 
 
 class GatewaySttRouteTests(unittest.IsolatedAsyncioTestCase):
