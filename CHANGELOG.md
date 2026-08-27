@@ -4,6 +4,10 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Vision reasoning off:** `llm-vision` now passes `--reasoning off` and
+  `--reasoning-budget 0`, matching `llm-general`. The shared Qwen3.8
+  weights still support thinking; the vision profile must not enter
+  thinking mode for critic/observe calls.
 - **Qwen3.8 context:** general/reasoning now use **262144** with Q4 KV and
   flash-attn. Measured 2026-08-27: 138801-token ingest in 190.4 s at
   22401 MiB VRAM (`benchmarks/results/20260827/qwen38-262144-q4-ingest-128k.json`).

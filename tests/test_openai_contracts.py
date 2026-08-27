@@ -236,6 +236,19 @@ class CatalogContractTests(unittest.TestCase):
         self.assertIn("--reasoning-budget", cmd)
         self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "0")
 
+    def test_vision_compose_disables_reasoning(self) -> None:
+        compose = yaml.safe_load(
+            (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        )
+        cmd = compose["services"]["llm-vision"]["command"]
+        self.assertIn("--mmproj", cmd)
+        self.assertIn("--reasoning", cmd)
+        self.assertEqual(cmd[cmd.index("--reasoning") + 1], "off")
+        self.assertIn("--reasoning-budget", cmd)
+        self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "0")
+        general = compose["services"]["llm-general"]["command"]
+        self.assertEqual(general[general.index("--reasoning") + 1], "off")
+
     def test_reasoning_compose_enables_jinja_for_tools(self) -> None:
         compose = yaml.safe_load(
             (ROOT / "compose.models.yml").read_text(encoding="utf-8")

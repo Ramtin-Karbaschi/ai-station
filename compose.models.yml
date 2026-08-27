@@ -140,6 +140,10 @@ services:
       - /models/${VISION_MMPROJ_FILE:-qwen38/mmproj-f16.gguf}
       - --alias
       - ai-station-vision
+      - --reasoning
+      - "off"
+      - --reasoning-budget
+      - "0"
       - --host
       - 0.0.0.0
       - --port
