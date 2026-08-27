@@ -34,7 +34,10 @@ falls through to Tesseract. Do not add floating tags.
 
 - Tika golden set 2026-07-24: 5/5 public-safe fixtures
   (`benchmarks/results/20260724/documents/tika-golden-v1.json`).
-- PaddleOCR-VL-1.6 is not provisioned on 2026-08-27.
+- PaddleOCR-VL-1.6 weights are pinned; the `ocr-vl` Compose profile is not
+  yet the live default until the local image builds and a golden-set report
+  exists. Until then `paddle_available=false` returns traffic to
+  Tika/Tesseract.
 
 ## Rollback
 

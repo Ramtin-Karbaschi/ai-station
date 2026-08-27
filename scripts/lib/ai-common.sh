@@ -8,9 +8,10 @@ AI_STATE_DIR="${AI_STATE_DIR:-$AI_STATION_DATA/runtime}"
 AI_ACTIVE_PROFILE_FILE="${AI_ACTIVE_PROFILE_FILE:-$AI_STATE_DIR/active-heavy-profile}"
 
 HEAVY_PROFILES=(general coder reasoning vision ornith qwen38 longwriter)
-OPTIONAL_PROFILES=(reranker asr)
+OPTIONAL_PROFILES=(reranker asr ocr-vl)
 EXPERIMENTAL_GPU_OVERLAYS=(
   "comfyui-experimental:compose.comfyui.experimental.yaml:comfyui-experimental"
+  "ocr-vl:compose.local-builds.yaml:ocr-vl"
 )
 
 ai_root() {
@@ -130,7 +131,7 @@ ai_ensure_docker() {
 ai_dump_published_ports() {
   echo "--- loopback listeners ---" >&2
   ss -lntp 2>/dev/null | grep -E \
-    ':(3000|5432|5678|6379|8082|8083|8084|8085|8086|8087|8088|8090|8091|8888|8889|8890|9998)\b' >&2 || true
+    ':(3000|5432|5678|6379|8082|8083|8084|8085|8086|8087|8088|8090|8091|8092|8093|8888|8889|8890|9998)\b' >&2 || true
   echo "--- ai-station containers ---" >&2
   docker ps -a --filter name=ai-station \
     --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' >&2 || true
@@ -194,7 +195,8 @@ ai_prepare_comfyui_runtime_dirs() {
     "$data/models/comfyui/diffusion_models" \
     "$data/models/comfyui/text_encoders" \
     "$data/models/comfyui/vae" \
-    "$data/models/comfyui/loras"
+    "$data/models/comfyui/loras" \
+    "$data/models/comfyui/controlnet"
   python3 - "$data/runtime/comfyui/user/default/comfy.settings.json" <<'PY'
 import json
 import pathlib
@@ -365,6 +367,7 @@ ai_profile_service() {
     longwriter) echo "llm-longwriter" ;;
     reranker) echo "reranker" ;;
     asr) echo "asr-qwen3" ;;
+    ocr-vl) echo "ocr-vl" ;;
     *) return 1 ;;
   esac
 }
@@ -380,6 +383,7 @@ ai_profile_port() {
     longwriter) echo "8088" ;;
     reranker) echo "8091" ;;
     asr) echo "8092" ;;
+    ocr-vl) echo "8093" ;;
     *) return 1 ;;
   esac
 }
@@ -395,6 +399,7 @@ ai_profile_alias() {
     longwriter) echo "local-longwriter" ;;
     reranker) echo "local-reranker" ;;
     asr) echo "local-asr" ;;
+    ocr-vl) echo "local-ocr-vl" ;;
     *) return 1 ;;
   esac
 }

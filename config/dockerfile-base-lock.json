@@ -13,6 +13,13 @@
       "locked": "apache/tika@sha256:ecdd37e204308266b1f8e28569f8516ebd5b96d7a4518a71d3904710b20c03b3",
       "original": "apache/tika:3.3.0.0-full",
       "type": "registry-digest"
+    },
+    {
+      "dockerfile": "infra/paddleocr-vl/Dockerfile",
+      "line": 1,
+      "locked": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime@sha256:7b324d212a4450795b49edba9949b7cdc72429148a64e974334bfe5774d51385",
+      "original": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime",
+      "type": "registry-digest"
     }
   ],
   "generated_at": "2026-07-24T06:50:14.916Z",

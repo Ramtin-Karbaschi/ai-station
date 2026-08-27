@@ -340,6 +340,71 @@ providers:
     required_features: []
     fallback_provider: null
     lifecycle_command: docker compose --profile asr up -d asr-qwen3
+  paddleocr-vl:
+    id: paddleocr-vl
+    engine: paddleocr-vl
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: ocr-vl
+    profile: ocr-vl
+    port: 8093
+    endpoint: http://127.0.0.1:8093
+    health_endpoint: http://127.0.0.1:8093/health
+    metrics_endpoint: null
+    catalog_ids: []
+    model_aliases:
+    - local-ocr-vl
+    capabilities:
+    - document-ocr
+    - layout
+    - table
+    latency_class: batch
+    stability_class: experimental
+    minimum_vram_mib: 4096
+    minimum_ram_mib: 8192
+    minimum_storage_mib: 2048
+    kv_cache_mib_per_1k_context: 0
+    default_context: 1
+    max_context: 1
+    required_features:
+    - nvidia_cuda
+    fallback_provider: null
+    lifecycle_command: docker compose --profile ocr-vl up -d ocr-vl
+  hunyuan3d-2_1:
+    id: hunyuan3d-2_1
+    engine: hunyuan3d
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: true
+    resource_group: gpu-heavy
+    service: hunyuan3d
+    profile: hunyuan3d
+    port: 8094
+    endpoint: http://127.0.0.1:8094
+    health_endpoint: http://127.0.0.1:8094/health
+    metrics_endpoint: null
+    catalog_ids: []
+    model_aliases:
+    - local-3d
+    capabilities:
+    - image-to-3d
+    - text-to-3d
+    latency_class: batch
+    stability_class: experimental
+    minimum_vram_mib: 18000
+    minimum_ram_mib: 16384
+    minimum_storage_mib: 14000
+    kv_cache_mib_per_1k_context: 0
+    default_context: 1
+    max_context: 1
+    required_features:
+    - nvidia_cuda
+    fallback_provider: null
+    lifecycle_command: ai provider start hunyuan3d-2_1
   comfyui-media-experimental:
     id: comfyui-media-experimental
     engine: comfyui

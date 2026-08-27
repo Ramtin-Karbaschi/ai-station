@@ -14,11 +14,12 @@ capabilities:
     model: Z-Image-Turbo
     preferred_format: nvfp4
     workflow: config/clients/comfyui/workflows/z-image-turbo-text-to-image.json
-    status: configured_pending_weights
-    installed: false
+    status: configured_pending_smoke
+    installed: true
   image.generate.interactive:
     label: "Image → Interactive"
     model: FLUX.2-klein-4B
+    workflow: config/clients/comfyui/workflows/flux2-klein-text-to-image.json
     status: configured_pending_weights
     installed: false
   image.edit:

@@ -396,6 +396,726 @@
       "role": "studio_image_edit",
       "sha256": "c9fdc158e46d3b61ef75f21ae866ca2fe808bf4a53643120d1c1e87c19280a4e",
       "size_bytes": 20533762817
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6",
+      "destination": "models/ocr/paddleocr-vl-1.6/model.safetensors",
+      "filename": "model.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr",
+      "sha256": "85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db",
+      "size_bytes": 1917255968
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-tokenizer-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/tokenizer.json",
+      "filename": "tokenizer.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "c8a215a59183d0d0781adc33bacd3ce6162716f7fd568fb30234a74d69803a7d",
+      "size_bytes": 11189060
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-tokenizer-model",
+      "destination": "models/ocr/paddleocr-vl-1.6/tokenizer.model",
+      "filename": "tokenizer.model",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "34ef7db83df785924fb83d7b887b6e822a031c56e15cff40aaf9b982988180df",
+      "size_bytes": 1614363
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-config-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/config.json",
+      "filename": "config.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "ce7f4565f8b1db78532ad5d1b9ebe55c2139d49bd4cb04778b580a08a598f171",
+      "size_bytes": 2059
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-tokenizer-config-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/tokenizer_config.json",
+      "filename": "tokenizer_config.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "1f979337347cc0cb72a6282d8a23ed183539aa81a87a906f022aee2bab83c7c5",
+      "size_bytes": 186947
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-special-tokens-map-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/special_tokens_map.json",
+      "filename": "special_tokens_map.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "d3a125c03103deb2acaf7730791bdbbf196f620e5a2213b664511ff9b4b25bab",
+      "size_bytes": 1151
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-preprocessor-config-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/preprocessor_config.json",
+      "filename": "preprocessor_config.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "111872ab1e8bb7fd040ac5087bfced7ab8f011f02139b088cba294964c3b1d0e",
+      "size_bytes": 641
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-processor-config-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/processor_config.json",
+      "filename": "processor_config.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "1568858960a9760c54431dae693a6152e601ff55cdf6d2eab97a4a99958faea0",
+      "size_bytes": 137
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-generation-config-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/generation_config.json",
+      "filename": "generation_config.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "a6701d78ab3b4d972307cdec3b69d4c13f46e0d5140514f50ab7d84259324b94",
+      "size_bytes": 133
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-added-tokens-json",
+      "destination": "models/ocr/paddleocr-vl-1.6/added_tokens.json",
+      "filename": "added_tokens.json",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "f59f889088e0fe21c523e7cf121bb6dca3b0bb148cb7159fbb4572c74dfc5644",
+      "size_bytes": 25381
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-modeling-paddleocr-vl-py",
+      "destination": "models/ocr/paddleocr-vl-1.6/modeling_paddleocr_vl.py",
+      "filename": "modeling_paddleocr_vl.py",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "c5013dff57ca8b87dc1de64d0fd839a44313de09d230a4fb2d08289d2cad5111",
+      "size_bytes": 103889
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-configuration-paddleocr-vl-py",
+      "destination": "models/ocr/paddleocr-vl-1.6/configuration_paddleocr_vl.py",
+      "filename": "configuration_paddleocr_vl.py",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "753dd93654c3a9c8c85a3eaee1e3092dd12591b0f2dce0305e1abfb7a41ff160",
+      "size_bytes": 8104
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-image-processing-paddleocr-vl-py",
+      "destination": "models/ocr/paddleocr-vl-1.6/image_processing_paddleocr_vl.py",
+      "filename": "image_processing_paddleocr_vl.py",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "a4fa521b9cb16e207f94b7f2d16427771776dfc634420d319fc4916ee58049ec",
+      "size_bytes": 25032
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-processing-paddleocr-vl-py",
+      "destination": "models/ocr/paddleocr-vl-1.6/processing_paddleocr_vl.py",
+      "filename": "processing_paddleocr_vl.py",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "e29cb1e5f275f2bd3ce051bd5c9983a33894e693b2823a0e13d4c07c8c4f9e13",
+      "size_bytes": 12253
+    },
+    {
+      "id": "ocr-paddleocr-vl-1.6-chat-template-jinja",
+      "destination": "models/ocr/paddleocr-vl-1.6/chat_template.jinja",
+      "filename": "chat_template.jinja",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "required_for_runtime": false,
+      "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "revision_is_immutable": true,
+      "role": "document_ocr_sidecar",
+      "sha256": "2f27812dab7f333e471884e0c803d807f11953d5453140dfb1aaba234f872bc8",
+      "size_bytes": 1474
+    },
+    {
+      "id": "studio-flux2-klein-4b",
+      "destination": "models/comfyui/diffusion_models/flux-2-klein-4b.safetensors",
+      "filename": "split_files/diffusion_models/flux-2-klein-4b.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/flux2-klein",
+      "required_for_runtime": false,
+      "revision": "5f526678002e43af5551dadb73ce2e8c91b43afe",
+      "revision_is_immutable": true,
+      "role": "studio_image_interactive",
+      "sha256": "ec3d4e733a771f61c052fb4856c48b336c55eaf2c65487c2a1faeb9bbda7a343",
+      "size_bytes": 7751105712
+    },
+    {
+      "id": "studio-flux2-klein-text-encoder-fp4",
+      "destination": "models/comfyui/text_encoders/qwen_3_4b_fp4_flux2.safetensors",
+      "filename": "split_files/text_encoders/qwen_3_4b_fp4_flux2.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/flux2-klein",
+      "required_for_runtime": false,
+      "revision": "5f526678002e43af5551dadb73ce2e8c91b43afe",
+      "revision_is_immutable": true,
+      "role": "studio_image_interactive_text_encoder",
+      "sha256": "3eab03a77adb0ee5304a4e677d5c10ac22f9049c1d7c894adca4f8bb39206ca8",
+      "size_bytes": 3848213998
+    },
+    {
+      "id": "studio-flux2-klein-vae",
+      "destination": "models/comfyui/vae/flux2-klein-vae.safetensors",
+      "filename": "split_files/vae/flux2-vae.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/flux2-klein",
+      "required_for_runtime": false,
+      "revision": "5f526678002e43af5551dadb73ce2e8c91b43afe",
+      "revision_is_immutable": true,
+      "role": "studio_image_interactive_vae",
+      "sha256": "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3",
+      "size_bytes": 336211292
+    },
+    {
+      "id": "studio-qwen-image-2512-fp8",
+      "destination": "models/comfyui/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors",
+      "filename": "split_files/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/Qwen-Image_ComfyUI",
+      "required_for_runtime": false,
+      "revision": "7beb7b647f04469fbe64ba8adc2bb0d7e5e9f73f",
+      "revision_is_immutable": true,
+      "role": "studio_image_graphic",
+      "sha256": "5dc80554d5d83390046a2f4a94ece06afb7700bf7b0aaf8bde9769793875876b",
+      "size_bytes": 20430679144
+    },
+    {
+      "id": "studio-qwen-image-text-encoder-nvfp4",
+      "destination": "models/comfyui/text_encoders/qwen_2.5_vl_7b_nvfp4.safetensors",
+      "filename": "split_files/text_encoders/qwen_2.5_vl_7b_nvfp4.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/Qwen-Image_ComfyUI",
+      "required_for_runtime": false,
+      "revision": "7beb7b647f04469fbe64ba8adc2bb0d7e5e9f73f",
+      "revision_is_immutable": true,
+      "role": "studio_image_text_encoder",
+      "sha256": "c7bb24d331f5df991bab2ce76a15195b12652e86a69a79823183c6a047407463",
+      "size_bytes": 6114433446
+    },
+    {
+      "id": "studio-qwen-image-vae",
+      "destination": "models/comfyui/vae/qwen_image_vae.safetensors",
+      "filename": "split_files/vae/qwen_image_vae.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/Qwen-Image_ComfyUI",
+      "required_for_runtime": false,
+      "revision": "7beb7b647f04469fbe64ba8adc2bb0d7e5e9f73f",
+      "revision_is_immutable": true,
+      "role": "studio_image_vae",
+      "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f",
+      "size_bytes": 253806246
+    },
+    {
+      "id": "studio-ltx25-distilled-nvfp4",
+      "destination": "models/comfyui/diffusion_models/ltx-2.5-22b-distilled-transformer-nvfp4.safetensors",
+      "filename": "diffusion_models/ltx-2.5-22b-distilled-transformer-nvfp4.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Lightricks/LTX-2.5",
+      "required_for_runtime": false,
+      "revision": "6c7e5e573ac1667efc83407806fe9b0b93730e60",
+      "revision_is_immutable": true,
+      "role": "studio_video_fast",
+      "sha256": "4b94231e734c1950f8f6826cb8bd8715d94be5b3e04f8256ee060c5bc3886c30",
+      "size_bytes": 18721548408
+    },
+    {
+      "id": "studio-ltx25-text-encoder-int8",
+      "destination": "models/comfyui/text_encoders/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+      "filename": "text_encoders/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Lightricks/LTX-2.5",
+      "required_for_runtime": false,
+      "revision": "6c7e5e573ac1667efc83407806fe9b0b93730e60",
+      "revision_is_immutable": true,
+      "role": "studio_video_fast_text_encoder",
+      "sha256": "6ce688a0aa98a5fa36a9f1e6c3f42152a498cc2b53ee8c15674c64244f91487f",
+      "size_bytes": 15372969374
+    },
+    {
+      "id": "studio-ltx25-video-vae",
+      "destination": "models/comfyui/vae/ltx-2.5-video-vae-bf16.safetensors",
+      "filename": "vae/ltx-2.5-video-vae-bf16.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Lightricks/LTX-2.5",
+      "required_for_runtime": false,
+      "revision": "6c7e5e573ac1667efc83407806fe9b0b93730e60",
+      "revision_is_immutable": true,
+      "role": "studio_video_fast_vae",
+      "sha256": "847e14ca7f3355debca0cea4eaa24ac0fbcdf0061da054ac89ca638a869ddba3",
+      "size_bytes": 1472223346
+    },
+    {
+      "id": "studio-ltx25-audio-vae",
+      "destination": "models/comfyui/vae/ltx-2.5-audio-vae-bf16.safetensors",
+      "filename": "vae/ltx-2.5-audio-vae-bf16.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Lightricks/LTX-2.5",
+      "required_for_runtime": false,
+      "revision": "6c7e5e573ac1667efc83407806fe9b0b93730e60",
+      "revision_is_immutable": true,
+      "role": "studio_video_fast_audio_vae",
+      "sha256": "c52733d37f6a7fb7949c3dc0fb468c6cb2169e4d836983a73babb9f0d54837a5",
+      "size_bytes": 364866540
+    },
+    {
+      "id": "studio-h3-controlnet-union",
+      "destination": "models/comfyui/controlnet/MiniMax-H3-Fun-Controlnet-Union.safetensors",
+      "filename": "MiniMax-H3-Fun-Controlnet-Union.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "alibaba-pai/MiniMax-H3-Fun-Controlnet-Union",
+      "required_for_runtime": false,
+      "revision": "6419c27ece80f330826ae4439fa9c5910c475ccf",
+      "revision_is_immutable": true,
+      "role": "studio_video_control",
+      "sha256": "919a48acb525dc8fc70287fcd94ec1f5e5e289a77f1df14d01099c6ce204eb02",
+      "size_bytes": 6806843904
+    },
+    {
+      "id": "studio-ace-step-1.5-turbo-aio",
+      "destination": "models/comfyui/checkpoints/ace_step_1.5_turbo_aio.safetensors",
+      "filename": "checkpoints/ace_step_1.5_turbo_aio.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/ace_step_1.5_ComfyUI_files",
+      "required_for_runtime": false,
+      "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+      "revision_is_immutable": true,
+      "role": "studio_music_fast",
+      "sha256": "67b0f43aa5c51c840bd0228e6a935d8ff416ec87e5df2fc0637da17a561252bc",
+      "size_bytes": 10025478736
+    },
+    {
+      "id": "studio-ace-step-1.5-xl-sft",
+      "destination": "models/comfyui/diffusion_models/acestep_v1.5_xl_sft_bf16.safetensors",
+      "filename": "split_files/diffusion_models/acestep_v1.5_xl_sft_bf16.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/ace_step_1.5_ComfyUI_files",
+      "required_for_runtime": false,
+      "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+      "revision_is_immutable": true,
+      "role": "studio_music_studio",
+      "sha256": "3c05ae268353b3540fb1fd7db4fd77ffbda9802ec641b624e15648e030ecf3ce",
+      "size_bytes": 9974719930
+    },
+    {
+      "id": "studio-ace-step-1.5-text-encoder-4b",
+      "destination": "models/comfyui/text_encoders/qwen_4b_ace15.safetensors",
+      "filename": "split_files/text_encoders/qwen_4b_ace15.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/ace_step_1.5_ComfyUI_files",
+      "required_for_runtime": false,
+      "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+      "revision_is_immutable": true,
+      "role": "studio_music_text_encoder",
+      "sha256": "ffe5ffb855086c2ab55e467e9859fb01894781020a0376484dd19de166b79873",
+      "size_bytes": 8379154232
+    },
+    {
+      "id": "studio-ace-step-1.5-vae",
+      "destination": "models/comfyui/vae/ace_1.5_vae.safetensors",
+      "filename": "split_files/vae/ace_1.5_vae.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/ace_step_1.5_ComfyUI_files",
+      "required_for_runtime": false,
+      "revision": "694a9723ff772285c73f0700caacf944d3f02f8d",
+      "revision_is_immutable": true,
+      "role": "studio_music_vae",
+      "sha256": "6de92e3a862acd287e08b024ac90f0783a8635451b728721a33ff03565bcb2bb",
+      "size_bytes": 337431732
+    },
+    {
+      "id": "studio-infinitetalk-single",
+      "destination": "models/comfyui/loras/infinitetalk_single.safetensors",
+      "filename": "comfyui/infinitetalk_single.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "MeiGen-AI/InfiniteTalk",
+      "required_for_runtime": false,
+      "revision": "d59847ebdacf19245bfca3fb23311c0cada8378a",
+      "revision_is_immutable": true,
+      "role": "studio_avatar_talking",
+      "sha256": "11d4871b75bee91f4fe4d5c9f44ff966221b27a3dcb7558e511ac25a2c0e9925",
+      "size_bytes": 2712714688
+    },
+    {
+      "id": "studio-latentsync-1.6-unet",
+      "destination": "models/avatar/latentsync/latentsync_unet.pt",
+      "filename": "latentsync_unet.pt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "ByteDance/LatentSync-1.6",
+      "required_for_runtime": false,
+      "revision": "c42c7e6c8e9c213626389fa7d9a3c444b8536353",
+      "revision_is_immutable": true,
+      "role": "studio_lip_sync",
+      "sha256": "0a478e89eb660f82da4c35dbdde8a5adfb27f99d1b4e50edd03729e1e98316d3",
+      "size_bytes": 5072222488
+    },
+    {
+      "id": "studio-latentsync-1.6-syncnet",
+      "destination": "models/avatar/latentsync/stable_syncnet.pt",
+      "filename": "stable_syncnet.pt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "ByteDance/LatentSync-1.6",
+      "required_for_runtime": false,
+      "revision": "c42c7e6c8e9c213626389fa7d9a3c444b8536353",
+      "revision_is_immutable": true,
+      "role": "studio_lip_sync_syncnet",
+      "sha256": "77678d13861a02d6e83d0b169962175b6266be773f1f6f85fda2b0182e225118",
+      "size_bytes": 1605328746
+    },
+    {
+      "id": "studio-seedvr2-7b-nvfp4",
+      "destination": "models/comfyui/diffusion_models/seedvr2_7b_sharp_nvfp4.safetensors",
+      "filename": "diffusion_models/seedvr2_7b_sharp_nvfp4.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/SeedVR2",
+      "required_for_runtime": false,
+      "revision": "673340c8a66db62b84e4099def7d01d337ae12dc",
+      "revision_is_immutable": true,
+      "role": "studio_enhance_video",
+      "sha256": "80d57af7722f5a5bd4c01d2ab2688f2bf05e552e59d3d3287257de709db10397",
+      "size_bytes": 4759694792
+    },
+    {
+      "id": "studio-seedvr2-vae",
+      "destination": "models/comfyui/vae/seedvr2_ema_vae_fp16.safetensors",
+      "filename": "vae/seedvr2_ema_vae_fp16.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/SeedVR2",
+      "required_for_runtime": false,
+      "revision": "673340c8a66db62b84e4099def7d01d337ae12dc",
+      "revision_is_immutable": true,
+      "role": "studio_enhance_video_vae",
+      "sha256": "20678548f420d98d26f11442d3528f8b8c94e57ee046ef93dbb7633da8612ca1",
+      "size_bytes": 501324814
+    },
+    {
+      "id": "studio-thinksound",
+      "destination": "models/audio/thinksound/thinksound.ckpt",
+      "filename": "thinksound.ckpt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "FunAudioLLM/ThinkSound",
+      "required_for_runtime": false,
+      "revision": "7f152d1a088f91b21307337060216f0dec8d4a8f",
+      "revision_is_immutable": true,
+      "role": "studio_foley",
+      "sha256": "816fa5f73bd8d566e684cef7a8caf2c698f6da100bca561c0c6b4ae244439ebc",
+      "size_bytes": 21057372552
+    },
+    {
+      "id": "studio-thinksound-vae",
+      "destination": "models/audio/thinksound/vae.ckpt",
+      "filename": "vae.ckpt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "FunAudioLLM/ThinkSound",
+      "required_for_runtime": false,
+      "revision": "7f152d1a088f91b21307337060216f0dec8d4a8f",
+      "revision_is_immutable": true,
+      "role": "studio_foley_vae",
+      "sha256": "8132c32ec65bbba2f1457f2659136c5f2cb31f9902af1c659d78c9f7d3aa619e",
+      "size_bytes": 2521255758
+    },
+    {
+      "id": "studio-thinksound-synchformer",
+      "destination": "models/audio/thinksound/synchformer_state_dict.pth",
+      "filename": "synchformer_state_dict.pth",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "FunAudioLLM/ThinkSound",
+      "required_for_runtime": false,
+      "revision": "7f152d1a088f91b21307337060216f0dec8d4a8f",
+      "revision_is_immutable": true,
+      "role": "studio_foley_sync",
+      "sha256": "8aff082f2df5c3bc52759db0c865c7ee772ae6400b860d1b7e90413f2defb67c",
+      "size_bytes": 950058171
+    },
+    {
+      "id": "studio-fish-s2-pro-00001",
+      "destination": "models/tts/fish-s2-pro/model-00001-of-00002.safetensors",
+      "filename": "model-00001-of-00002.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "fishaudio/s2-pro",
+      "required_for_runtime": false,
+      "revision": "1de9996b6be38b745688de084d87a5633f714e4e",
+      "revision_is_immutable": true,
+      "role": "studio_voice_narration",
+      "sha256": "c4218e8ac93be83b35eee30b4f94cb2e9b5ecff40f3e21611438d2f4f8804aad",
+      "size_bytes": 4986872984
+    },
+    {
+      "id": "studio-fish-s2-pro-00002",
+      "destination": "models/tts/fish-s2-pro/model-00002-of-00002.safetensors",
+      "filename": "model-00002-of-00002.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "fishaudio/s2-pro",
+      "required_for_runtime": false,
+      "revision": "1de9996b6be38b745688de084d87a5633f714e4e",
+      "revision_is_immutable": true,
+      "role": "studio_voice_narration",
+      "sha256": "76738d23465deaac431433232c0762908cc99a6eddc3d49f67307d92680827be",
+      "size_bytes": 4136876104
+    },
+    {
+      "id": "studio-fish-s2-pro-codec",
+      "destination": "models/tts/fish-s2-pro/codec.pth",
+      "filename": "codec.pth",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "fishaudio/s2-pro",
+      "required_for_runtime": false,
+      "revision": "1de9996b6be38b745688de084d87a5633f714e4e",
+      "revision_is_immutable": true,
+      "role": "studio_voice_codec",
+      "sha256": "74fc41c5a7151c6f350af8bd7e5d6e3accfcc7f3dfbfac23afd35af07052bb2f",
+      "size_bytes": 1871099728
+    },
+    {
+      "id": "studio-qwen3-tts-1.7b-customvoice",
+      "destination": "models/tts/qwen3-tts-12hz-1.7b-customvoice/model.safetensors",
+      "filename": "model.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "required_for_runtime": false,
+      "revision": "0c0e3051f131929182e2c023b9537f8b1c68adfe",
+      "revision_is_immutable": true,
+      "role": "studio_voice_clone",
+      "sha256": "38b1d5971bdbd982b561cccec982669a53b0537c3cf5e9bd4778ed07bb2f5137",
+      "size_bytes": 3833402552
+    },
+    {
+      "id": "studio-qwen3-tts-1.7b-voicedesign",
+      "destination": "models/tts/qwen3-tts-12hz-1.7b-voicedesign/model.safetensors",
+      "filename": "model.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "required_for_runtime": false,
+      "revision": "5ecdb67327fd37bb2e042aab12ff7391903235d3",
+      "revision_is_immutable": true,
+      "role": "studio_voice_design",
+      "sha256": "391e8db219f292c515297cdceeb43e4eae67cdde35fa57e79a6a8a532fca0522",
+      "size_bytes": 3833402552
+    },
+    {
+      "id": "studio-qwen3-tts-tokenizer",
+      "destination": "models/tts/qwen3-tts-tokenizer/model.safetensors",
+      "filename": "speech_tokenizer/model.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "required_for_runtime": false,
+      "revision": "0c0e3051f131929182e2c023b9537f8b1c68adfe",
+      "revision_is_immutable": true,
+      "role": "studio_voice_tokenizer",
+      "sha256": "836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258",
+      "size_bytes": 682293092
+    },
+    {
+      "id": "studio-hunyuan3d-dit-fp16",
+      "destination": "models/hunyuan3d/hunyuan3d-dit-v2-1/model.fp16.ckpt",
+      "filename": "hunyuan3d-dit-v2-1/model.fp16.ckpt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "required_for_runtime": false,
+      "revision": "0b94677654c57bb9a6b6845cd7b704ccf551d327",
+      "revision_is_immutable": true,
+      "role": "studio_3d_dit",
+      "sha256": "6b519fc7242f78e9b5f47ea4d55668fe3d944a2d27332f4ca68d29a6ff603f5e",
+      "size_bytes": 7366389768
+    },
+    {
+      "id": "studio-hunyuan3d-vae-fp16",
+      "destination": "models/hunyuan3d/hunyuan3d-vae-v2-1/model.fp16.ckpt",
+      "filename": "hunyuan3d-vae-v2-1/model.fp16.ckpt",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "required_for_runtime": false,
+      "revision": "0b94677654c57bb9a6b6845cd7b704ccf551d327",
+      "revision_is_immutable": true,
+      "role": "studio_3d_vae",
+      "sha256": "5cbe97f25e6e7abd4bccc80ab07524ec0c86d24118486a9ba49bb5dfb070288a",
+      "size_bytes": 655648152
+    },
+    {
+      "id": "studio-hunyuan3d-paint-unet",
+      "destination": "models/hunyuan3d/hunyuan3d-paintpbr-v2-1/unet/diffusion_pytorch_model.bin",
+      "filename": "hunyuan3d-paintpbr-v2-1/unet/diffusion_pytorch_model.bin",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "required_for_runtime": false,
+      "revision": "0b94677654c57bb9a6b6845cd7b704ccf551d327",
+      "revision_is_immutable": true,
+      "role": "studio_3d_paint",
+      "sha256": "675a1b5cd0098b2002637c443946529c03c5cd54427f40245263350feb3dd5b8",
+      "size_bytes": 3925293863
+    },
+    {
+      "id": "studio-hunyuan3d-image-encoder",
+      "destination": "models/hunyuan3d/hunyuan3d-paintpbr-v2-1/image_encoder/model.safetensors",
+      "filename": "hunyuan3d-paintpbr-v2-1/image_encoder/model.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "tencent/Hunyuan3D-2.1",
+      "required_for_runtime": false,
+      "revision": "0b94677654c57bb9a6b6845cd7b704ccf551d327",
+      "revision_is_immutable": true,
+      "role": "studio_3d_image_encoder",
+      "sha256": "ae616c24393dd1854372b0639e5541666f7521cbe219669255e865cb7f89466a",
+      "size_bytes": 1264217240
     }
   ],
   "profiles": {
@@ -412,7 +1132,7 @@
       "description": "Superseded local model bytes may still exist on disk until replacement acceptance and deletion evidence are recorded; they are no longer in the production manifest."
     },
     "studio-2026": {
-      "description": "Local AI Studio 2026 additions (Z-Image, Qwen Image Edit, later LTX/ACE/avatar). Off-by-default. Not retained until local acceptance."
+      "description": "Local AI Studio 2026 additions (Z-Image, Qwen Image, LTX-2.5, ACE-Step, avatar, SeedVR, ThinkSound, Fish S2, Qwen3-TTS, Hunyuan3D, PaddleOCR-VL). Off-by-default. Not retained until local acceptance."
     }
   },
   "schema_version": 1

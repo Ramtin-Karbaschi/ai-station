@@ -4,3 +4,29 @@ services:
     build:
       context: "./infra/tika-fa"
       dockerfile: "Dockerfile"
+  ocr-vl:
+    profiles: ["ocr-vl"]
+    build:
+      context: "./infra/paddleocr-vl"
+      dockerfile: "Dockerfile"
+    image: ai-station/paddleocr-vl:1.6
+    container_name: ai-station-ocr-vl
+    restart: "no"
+    gpus: all
+    environment:
+      PADDLEOCR_VL_MODEL_DIR: /models/ocr/paddleocr-vl-1.6
+      PADDLEOCR_VL_DEVICE: cuda
+    volumes:
+      - ${AI_STATION_DATA:-/srv/ai-station}/models/ocr/paddleocr-vl-1.6:/models/ocr/paddleocr-vl-1.6:ro
+    ports:
+      - "127.0.0.1:${PADDLEOCR_VL_PORT:-8093}:8093"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8093/health')\" >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
