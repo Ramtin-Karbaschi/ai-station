@@ -39,6 +39,57 @@ class WindowsManagerContractTests(unittest.TestCase):
             r"opt\ai-station\AI Station\AI Station Manager.ps1", installer
         )
         self.assertIn("Remove-Item", installer)
+        self.assertIn("never\n# duplicate the control panel", installer.replace("\r\n", "\n"))
+
+    def test_desktop_manager_ps1_is_documented_as_trampoline(self) -> None:
+        installer = (
+            ROOT / "install/windows/Install-AIStation.ps1"
+        ).read_text(encoding="utf-8")
+        self.assertIn("$Canonical =", installer)
+        self.assertIn("AI Station Manager.ps1", installer)
+        self.assertIn("& `$Canonical @args", installer)
+        self.assertNotIn("function Show-Menu", installer)
+
+    def test_cmd_files_honor_wsl_distro_override(self) -> None:
+        for path in (
+            ROOT / "AI Station/AI Station.cmd",
+            ROOT / "AI Station/AI Station Manager.cmd",
+        ):
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("AI_STATION_WSL_DISTRO", text)
+            self.assertIn("Ubuntu", text)
+
+    def test_manager_menu_does_not_label_comfyui_experimental(self) -> None:
+        text = MANAGER.read_text(encoding="utf-8")
+        self.assertIn("Media studio (ComfyUI)", text)
+        self.assertNotIn("experimental ComfyUI", text)
+
+    def test_start_banner_lists_always_on_and_on_demand_urls(self) -> None:
+        start = (ROOT / "scripts/ai").read_text(encoding="utf-8")
+        self.assertIn("ai_print_service_directory", start)
+        for needle in (
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:4000/v1",
+            "http://127.0.0.1:4000/ui",
+            "http://127.0.0.1:8889",
+            "http://127.0.0.1:9998",
+            "http://127.0.0.1:8090/v1",
+            "http://127.0.0.1:8091/v1",
+            "http://127.0.0.1:8092/v1",
+            "http://127.0.0.1:8188",
+            "http://127.0.0.1:5678",
+            "http://127.0.0.1:4174/",
+            "http://127.0.0.1:4096",
+            "Qwen3.8-27B-UD-Q4_K_M",
+            "LongWriter-Zero-32B-Q4_K_M",
+        ):
+            self.assertIn(needle, start)
+
+    def test_installer_starts_via_ai_not_raw_compose_up(self) -> None:
+        installer = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
+        self.assertIn("./scripts/install-systemd.sh", installer)
+        self.assertIn("./scripts/ai start", installer)
+        self.assertNotIn("docker compose up -d --remove-orphans", installer)
 
     def test_admin_alias_is_gone(self) -> None:
         self.assertFalse((ROOT / "AI Station/AI Station Admin.cmd").exists())
@@ -74,6 +125,8 @@ class WindowsManagerContractTests(unittest.TestCase):
             '@("graphify", "view")',
             '@("output", "set", "media", $folder)',
             "http://127.0.0.1:4174",
+            '@("n8n", "start")',
+            "http://127.0.0.1:5678",
         ):
             self.assertIn(needle, text)
 

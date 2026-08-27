@@ -1,0 +1,21 @@
+{
+  "identity": {
+    "model": "Qwen3-VL-32B-Instruct-Q4_K_M",
+    "http": 200,
+    "elapsed_s": 0.485,
+    "pass": true,
+    "finish_reason": "stop",
+    "content_preview": "PONG",
+    "tool_names": [],
+    "usage": {
+      "completion_tokens": 3,
+      "prompt_tokens": 16,
+      "total_tokens": 19,
+      "prompt_tokens_details": {
+        "cached_tokens": 3
+      }
+    }
+  },
+  "tools": null,
+  "pass": true
+}

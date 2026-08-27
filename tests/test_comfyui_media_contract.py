@@ -47,6 +47,17 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertIn("ai_stop_experimental_gpu_overlays", common)
         self.assertIn("compose.comfyui.experimental.yaml", common)
 
+    def test_compose_chain_includes_comfyui_overlay_without_remove_orphans(self) -> None:
+        env = (ROOT / ".env.example").read_text(encoding="utf-8")
+        self.assertIn("compose.comfyui.experimental.yaml", env)
+        start = CLI.read_text(encoding="utf-8")
+        common = COMMON.read_text(encoding="utf-8")
+        self.assertIn('ai_retry_compose --profile "$profile" up -d "$service"', start)
+        self.assertNotIn("env -u COMPOSE_FILE docker compose", start)
+        self.assertNotIn("env -u COMPOSE_FILE docker compose", common)
+        self.assertNotIn("--remove-orphans", start)
+        self.assertNotIn("--remove-orphans", common)
+
     def test_provider_is_retained_heavy_overlay(self) -> None:
         providers = yaml.safe_load(PROVIDERS.read_text(encoding="utf-8"))
         provider = providers["providers"]["comfyui-media-experimental"]
@@ -62,6 +73,25 @@ class ComfyuiMediaContractTests(unittest.TestCase):
             ["compose.yml", "compose.comfyui.experimental.yaml"],
         )
         self.assertIsNone(provider.get("fallback_provider"))
+        ocr = providers["providers"]["paddleocr-vl"]
+        self.assertTrue(ocr["heavy"])
+        self.assertEqual(ocr["profile"], "ocr-vl")
+        self.assertEqual(
+            ocr["compose_files"],
+            ["compose.yml", "compose.local-builds.yaml"],
+        )
+        hunyuan = providers["providers"]["hunyuan3d-2_1"]
+        self.assertTrue(hunyuan["heavy"])
+        self.assertEqual(hunyuan["engine"], "comfyui")
+        self.assertEqual(hunyuan["service"], "comfyui-experimental")
+        self.assertEqual(
+            hunyuan["compose_files"],
+            ["compose.yml", "compose.comfyui.experimental.yaml"],
+        )
+        self.assertEqual(
+            hunyuan["lifecycle_command"],
+            "ai provider start comfyui-media-experimental",
+        )
 
     def test_manifest_pins_comfy_org_files_outside_core(self) -> None:
         data = json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -163,6 +193,58 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         self.assertIn("flux2-vae.safetensors", flux_blob)
         self.assertIn("SaveImage", flux_blob)
         self.assertNotIn('"type": "minimax"', flux_blob)
+        klein = json.loads(
+            (WORKFLOWS / "flux2-klein-text-to-image.json").read_text(encoding="utf-8")
+        )
+        klein_blob = json.dumps(klein)
+        self.assertIn("prompt", klein)
+        self.assertIn("flux-2-klein-4b.safetensors", klein_blob)
+        self.assertIn("EmptyFlux2LatentImage", klein_blob)
+        z_image = json.loads(
+            (WORKFLOWS / "z-image-turbo-text-to-image.json").read_text(encoding="utf-8")
+        )
+        z_blob = json.dumps(z_image)
+        self.assertIn("z_image_turbo_nvfp4.safetensors", z_blob)
+        self.assertIn("EmptySD3LatentImage", z_blob)
+        edit = json.loads(
+            (WORKFLOWS / "qwen-image-edit-2511.json").read_text(encoding="utf-8")
+        )
+        edit_blob = json.dumps(edit)
+        self.assertIn("qwen_image_edit_2511_fp8mixed.safetensors", edit_blob)
+        self.assertIn("TextEncodeQwenImageEdit", edit_blob)
+        self.assertIn('"type": "qwen_image"', edit_blob)
+        graphic = json.loads(
+            (WORKFLOWS / "qwen-image-2512-text-to-image.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        graphic_blob = json.dumps(graphic)
+        self.assertIn("qwen_image_2512_fp8_e4m3fn.safetensors", graphic_blob)
+        self.assertIn("qwen_2.5_vl_7b_nvfp4.safetensors", graphic_blob)
+        caps = yaml.safe_load(
+            (ROOT / "config/studio/capabilities.yaml").read_text(encoding="utf-8")
+        )
+        self.assertIn("image.edit", caps["capabilities"])
+        self.assertTrue(caps["capabilities"]["image.edit"]["installed"])
+        self.assertTrue(caps["capabilities"]["video.generate.fast"]["installed"])
+        self.assertIsNone(
+            caps["capabilities"]["video.generate.fast"].get("blocked_reason")
+        )
+        hunyuan_wf = json.dumps(
+            json.loads((WORKFLOWS / "hunyuan3d-2.1-image-to-3d.json").read_text(encoding="utf-8"))
+        )
+        self.assertIn("hunyuan_3d_v2.1.safetensors", hunyuan_wf)
+        self.assertIn("SaveGLB", hunyuan_wf)
+        self.assertEqual(
+            caps["capabilities"]["threed.image"].get("provider"),
+            "comfyui-media-experimental",
+        )
+        for name, cap in caps["capabilities"].items():
+            workflow = cap.get("workflow")
+            if workflow:
+                self.assertTrue(
+                    (ROOT / workflow).is_file(), f"{name} missing {workflow}"
+                )
         music = json.loads((WORKFLOWS / "music3-text-to-music.json").read_text(encoding="utf-8"))
         music_blob = json.dumps(music)
         self.assertIn("VAEDecodeAudioTiled", music_blob)
@@ -225,6 +307,11 @@ class ComfyuiMediaContractTests(unittest.TestCase):
         )
         self.assertIn("Status: Accepted", flux_adr)
         self.assertIn("Do **not** enable Open WebUI", flux_adr)
+
+    def test_live_ops_waits_for_comfyui_before_smoke(self) -> None:
+        text = (ROOT / "scripts/live-ops-smoke.sh").read_text(encoding="utf-8")
+        self.assertIn('ai_wait_url "http://127.0.0.1:8188/system_stats"', text)
+        self.assertIn("comfyui-media-smoke.sh", text)
 
 
 if __name__ == "__main__":

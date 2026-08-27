@@ -373,19 +373,22 @@ providers:
     - nvidia_cuda
     fallback_provider: null
     lifecycle_command: docker compose --profile ocr-vl up -d ocr-vl
+    compose_files:
+    - compose.yml
+    - compose.local-builds.yaml
   hunyuan3d-2_1:
     id: hunyuan3d-2_1
-    engine: hunyuan3d
+    engine: comfyui
     deployment_type: compose
     classification: optional_profile
     experimental: false
     heavy: true
     resource_group: gpu-heavy
-    service: hunyuan3d
-    profile: hunyuan3d
-    port: 8094
-    endpoint: http://127.0.0.1:8094
-    health_endpoint: http://127.0.0.1:8094/health
+    service: comfyui-experimental
+    profile: comfyui-experimental
+    port: 8188
+    endpoint: http://127.0.0.1:8188
+    health_endpoint: http://127.0.0.1:8188/system_stats
     metrics_endpoint: null
     catalog_ids: []
     model_aliases:
@@ -397,14 +400,17 @@ providers:
     stability_class: experimental
     minimum_vram_mib: 18000
     minimum_ram_mib: 16384
-    minimum_storage_mib: 14000
+    minimum_storage_mib: 7000
     kv_cache_mib_per_1k_context: 0
     default_context: 1
     max_context: 1
     required_features:
     - nvidia_cuda
     fallback_provider: null
-    lifecycle_command: ai provider start hunyuan3d-2_1
+    lifecycle_command: ai provider start comfyui-media-experimental
+    compose_files:
+    - compose.yml
+    - compose.comfyui.experimental.yaml
   comfyui-media-experimental:
     id: comfyui-media-experimental
     engine: comfyui

@@ -21,6 +21,8 @@ services:
     image: "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289"
   "llm-vision":
     image: "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289"
+  "n8n":
+    image: "docker.n8n.io/n8nio/n8n@sha256:bd48276080055f7ccdd2c76b11a19933add48d25e71a59397334bc171e146ff4"
   "open-webui":
     image: "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0"
   "postgres":
@@ -29,7 +31,11 @@ services:
     image: "redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99"
   "reranker":
     image: "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289"
+  "asr-qwen3":
+    image: "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289"
   "searxng":
     image: "searxng/searxng@sha256:969e3d79c400b26b7b83c023ef48300d9e122e0828ef7160daac990b1ac27d7c"
   "tika":
+    pull_policy: "build"
+  "ocr-vl":
     pull_policy: "build"

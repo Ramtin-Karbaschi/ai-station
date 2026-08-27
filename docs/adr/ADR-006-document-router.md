@@ -1,7 +1,8 @@
 # ADR-006: Document Router — Tika Default, PaddleOCR-VL for Hard Pages
 
-- Status: Accepted (PaddleOCR-VL-1.6 not yet provisioned; production is
-  Tika + Tesseract fas+eng)
+- Status: Accepted (PaddleOCR-VL-1.6 weights and local image exist;
+  production stays Tika + Tesseract until a golden-set report and the
+  `ocr-vl` GPU profile can run)
 - Date: 2026-07-23
 - Updated: 2026-08-27
 
@@ -28,16 +29,18 @@ Option 3. Rerankers are never part of this pipeline.
 
 PaddleOCR-VL arrives as an isolated, digest-pinned, localhost-only,
 off-by-default profile. Until that image and weights exist, the router
-falls through to Tesseract. Do not add floating tags.
+falls through to Tesseract. Do not add floating tags. Weights and the
+local `ai-station/paddleocr-vl:1.6` image now exist; keep the profile
+off while llama.cpp occupies the GPU.
 
 ## Evidence
 
 - Tika golden set 2026-07-24: 5/5 public-safe fixtures
   (`benchmarks/results/20260724/documents/tika-golden-v1.json`).
-- PaddleOCR-VL-1.6 weights are pinned; the `ocr-vl` Compose profile is not
-  yet the live default until the local image builds and a golden-set report
-  exists. Until then `paddle_available=false` returns traffic to
-  Tika/Tesseract.
+- PaddleOCR-VL-1.6 weights are on disk and the local image is built.
+  The `ocr-vl` Compose profile is not the live default until a golden-set
+  report exists and the GPU is free. Until then `paddle_available=false`
+  returns traffic to Tika/Tesseract.
 
 ## Rollback
 

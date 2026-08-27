@@ -99,10 +99,19 @@ def is_retryable_download_error(exc: BaseException) -> bool:
     return any(needle in text for needle in needles)
 
 
-def _auth_headers(token: str | None) -> list[str]:
-    if not token:
-        return []
-    return ["-H", f"Authorization: Bearer {token}"]
+def _write_http_auth_conf(token: str, *, kind: str) -> pathlib.Path:
+    prefix = "ai-station-aria2-" if kind == "aria2" else "ai-station-curl-"
+    suffix = ".conf" if kind == "aria2" else ".cfg"
+    handle, name = tempfile.mkstemp(prefix=prefix, suffix=suffix)
+    path = pathlib.Path(name)
+    if kind == "aria2":
+        body = f"header=Authorization: Bearer {token}\n"
+    else:
+        body = f'header = "Authorization: Bearer {token}"\n'
+    os.write(handle, body.encode("utf-8"))
+    os.close(handle)
+    os.chmod(path, 0o600)
+    return path
 
 
 def resolve_download_url(
@@ -125,10 +134,13 @@ def resolve_download_url(
         "--connect-timeout",
         "30",
         "--max-time",
-        "60",
-        *_auth_headers(token),
+        "12",
         url,
     ]
+    auth_conf: pathlib.Path | None = None
+    if token:
+        auth_conf = _write_http_auth_conf(token, kind="curl")
+        command[1:1] = ["-K", str(auth_conf)]
     try:
         completed = subprocess.run(
             command,
@@ -138,6 +150,9 @@ def resolve_download_url(
         )
     except (OSError, subprocess.CalledProcessError):
         return url
+    finally:
+        if auth_conf is not None:
+            auth_conf.unlink(missing_ok=True)
 
     resolved = completed.stdout.strip()
     return resolved or url
@@ -168,9 +183,8 @@ def http_resume_download(
                 "--file-allocation=none",
                 "--max-tries=40",
                 "--retry-wait=5",
-                "--timeout=60",
+                "--timeout=120",
                 "--connect-timeout=30",
-                "--lowest-speed-limit=8192",
                 "--allow-overwrite=true",
                 "--auto-file-renaming=false",
                 f"--user-agent={user_agent}",
@@ -182,17 +196,7 @@ def http_resume_download(
                 dest.name,
             ]
             if token:
-                handle, name = tempfile.mkstemp(
-                    prefix="ai-station-aria2-",
-                    suffix=".conf",
-                )
-                auth_conf = pathlib.Path(name)
-                os.write(
-                    handle,
-                    f"header=Authorization: Bearer {token}\n".encode("utf-8"),
-                )
-                os.close(handle)
-                os.chmod(auth_conf, 0o600)
+                auth_conf = _write_http_auth_conf(token, kind="aria2")
                 command.insert(1, f"--conf-path={auth_conf}")
             command.append(source)
         else:
@@ -216,17 +220,7 @@ def http_resume_download(
                 user_agent,
             ]
             if token:
-                handle, name = tempfile.mkstemp(
-                    prefix="ai-station-curl-",
-                    suffix=".cfg",
-                )
-                auth_conf = pathlib.Path(name)
-                os.write(
-                    handle,
-                    f'header = "Authorization: Bearer {token}"\n'.encode("utf-8"),
-                )
-                os.close(handle)
-                os.chmod(auth_conf, 0o600)
+                auth_conf = _write_http_auth_conf(token, kind="curl")
                 command.extend(["-K", str(auth_conf)])
             command.extend(["-o", str(dest), source])
 
@@ -515,6 +509,23 @@ def install_model(
     )
 
 
+def install_models(
+    models: list[dict[str, Any]],
+    data_root: pathlib.Path,
+    cache_dir: pathlib.Path,
+    token: str | None,
+) -> list[str]:
+    """Install each model. A gated or failed id does not abort the queue."""
+    failures: list[str] = []
+    for model in models:
+        try:
+            install_model(model, data_root, cache_dir, token)
+        except Exception as exc:
+            print(f"ERROR: {model['id']}: {exc}", file=sys.stderr)
+            failures.append(str(model["id"]))
+    return failures
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -629,21 +640,18 @@ def main() -> int:
     cache_dir = data_root / "cache" / "huggingface"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    for model in models:
-        install_model(
-            model,
-            data_root,
-            cache_dir,
-            token,
-        )
+    failures_list = install_models(models, data_root, cache_dir, token)
+    failures = len(failures_list)
 
     print()
+    if failures_list:
+        print("MODELS FAILED: " + ", ".join(failures_list))
     print(
         "MODELS INSTALLED: "
         + (", ".join(args.model_ids) if args.model_ids else f"profile={args.profile}")
     )
 
-    return 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

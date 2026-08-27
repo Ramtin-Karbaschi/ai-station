@@ -443,6 +443,46 @@ class ModelManagementTests(unittest.TestCase):
             )
         )
 
+    def test_queue_continues_after_one_failed_id(self) -> None:
+        provisioner = _load_provisioner()
+        called: list[str] = []
+
+        def fake_install(model, *_args, **_kwargs):
+            called.append(model["id"])
+            if model["id"] == "gated":
+                raise RuntimeError("403 gated")
+
+        with patch.object(provisioner, "install_model", fake_install):
+            failures = provisioner.install_models(
+                [{"id": "gated"}, {"id": "ok"}],
+                Path("/tmp"),
+                Path("/tmp"),
+                None,
+            )
+        self.assertEqual(called, ["gated", "ok"])
+        self.assertEqual(failures, ["gated"])
+
+    def test_url_resolver_does_not_put_token_in_argv(self) -> None:
+        provisioner = _load_provisioner()
+        seen: list[list[str]] = []
+
+        def fake_run(command, **_kwargs):
+            seen.append(list(command))
+            class Result:
+                stdout = "https://huggingface.co/resolved"
+            return Result()
+
+        with patch.object(provisioner.subprocess, "run", side_effect=fake_run):
+            provisioner.resolve_download_url(
+                "https://huggingface.co/org/name/resolve/abc/file.bin",
+                token="hf_test_token_not_for_argv",
+            )
+        self.assertEqual(len(seen), 1)
+        blob = " ".join(seen[0])
+        self.assertNotIn("hf_test_token_not_for_argv", blob)
+        self.assertNotIn("Authorization", blob)
+        self.assertIn("-K", seen[0])
+
     def test_provision_models_exports_hub_timeouts(self) -> None:
         script = (ROOT / "scripts/provision-models.sh").read_text(encoding="utf-8")
         self.assertIn("HF_HUB_DOWNLOAD_TIMEOUT", script)

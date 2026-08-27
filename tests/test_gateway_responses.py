@@ -9,7 +9,7 @@ import httpx
 from apps.gateway.app import main as gateway_main
 
 
-MODEL = "Qwen3-Coder-30B-A3B-Instruct-Q4"
+MODEL = "Ornith-1.5-35B-Q4_K_M"
 
 
 class ResponsesConversionTests(unittest.TestCase):

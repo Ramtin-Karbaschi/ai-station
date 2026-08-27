@@ -148,10 +148,9 @@ cmd_models_use() {
   fi
 
   echo "Switching heavy model profile -> ${profile}"
-  if [[ "$current" == "comfyui-experimental" || "$current" == "sglang-experimental" ]]; then
-    # sglang-experimental is retired; still clear a stale profile name.
-    echo "Stopping experimental overlay: $current"
-    ai_stop_experimental_gpu_overlays
+  ai_stop_experimental_gpu_overlays
+  if [[ "$current" == "comfyui-experimental" || "$current" == "ocr-vl" || "$current" == "sglang-experimental" ]]; then
+    echo "Stopped GPU overlay: $current"
     ai_set_active_heavy_profile ""
     current=""
   fi

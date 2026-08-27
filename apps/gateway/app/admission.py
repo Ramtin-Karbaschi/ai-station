@@ -332,6 +332,23 @@ def admit(
             budget=budget,
         )
 
+    if not provider.get("heavy"):
+        reasons.append("CPU provider; VRAM budget does not apply")
+        reasons.append("RAM/storage budgets satisfied")
+        return AdmissionDecision(
+            decision="START",
+            provider_id=provider_id,
+            requested_context=requested_context,
+            effective_context=requested_context,
+            required_vram_mib=0,
+            free_vram_mib=free_vram_mib,
+            free_ram_mib=free_ram_mib,
+            free_storage_mib=free_storage_mib,
+            active_heavy=list(active_heavy),
+            reasons=reasons,
+            budget=budget,
+        )
+
     required_full = estimate_required_vram_mib(provider, requested_context)
     conflicts = [pid for pid in active_heavy if pid != provider_id]
 

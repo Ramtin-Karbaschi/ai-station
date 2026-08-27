@@ -1,0 +1,148 @@
+{
+  "name": "AI Station Tika then summarize",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Station Tika then LiteLLM\n\nUses local Apache Tika (`http://tika:9998/tika`) then LiteLLM (`http://llm-gateway:4000/v1/chat/completions`).\n\nReplace the sample text in Set document, or change Tika Extract to send a binary file body (`Accept: text/plain`).\n\nAttach the n8n project Header Auth credential to LiteLLM Summarize. Canonical model: `Qwen3.8-27B-UD-Q4_K_M`. Never call `:8888`.",
+        "height": 340,
+        "width": 440
+      },
+      "id": "note-tika-summarize",
+      "name": "Station notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-240, -100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-tika-summarize",
+      "name": "When clicking Test workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [280, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "document",
+              "name": "document",
+              "value": "AI Station is a local inference platform. llama.cpp is the inference core, LiteLLM is the only application API, and OpenCode is the developer client.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-document",
+      "name": "Set document",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://tika:9998/tika",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "text/plain"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.document }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "http-tika-extract",
+      "name": "Tika Extract",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://llm-gateway:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"Qwen3.8-27B-UD-Q4_K_M\", \"messages\": [ { \"role\": \"system\", \"content\": \"Summarize the extracted document in five short bullets.\" }, { \"role\": \"user\", \"content\": {{ JSON.stringify($json.data || $json) }} } ], \"max_tokens\": 256 }",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-litellm-summarize",
+      "name": "LiteLLM Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 80]
+    }
+  ],
+  "connections": {
+    "When clicking Test workflow": {
+      "main": [
+        [
+          {
+            "node": "Set document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set document": {
+      "main": [
+        [
+          {
+            "node": "Tika Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tika Extract": {
+      "main": [
+        [
+          {
+            "node": "LiteLLM Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

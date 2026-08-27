@@ -73,7 +73,7 @@ Evidence sources are listed per candidate at the end of this document.
 | Long-context analysis | capped at 8K | raise per-model context after KV-budget benchmarks |
 | Structured output (JSON schema) | llama.cpp grammars (unverified here) | contract tests in Phase 1; SGLang xgrammar in Phase 2 trial |
 | Tool-calling agents | disabled everywhere | enable + contract-test on llama.cpp first |
-| Embeddings | llama.cpp embedder (GPU) | retain; evaluate CPU placement to free VRAM |
+| Embeddings | llama.cpp embedder (CPU) | ADR-022: CPU so RAG coexists with one heavy GPU profile |
 | Reranking | CPU llama.cpp reranker | wired into Open WebUI hybrid RAG (ADR-005 2026-08-22) |
 | Multimodal (vision) | llama.cpp + mmproj | retain (GGUF path is the only verified one) |
 | Batch reasoning | not served | postpone |
@@ -122,6 +122,7 @@ below — it is not assumed here.
 | pgvector / Qdrant | 2026 comparison literature with recall-pinned benchmarks; Qdrant official docs (hybrid, sparse, RRF) |
 | Docling | official docs (pipelines, model catalog); independent table-extraction comparison (Docling vs Marker) |
 | llama.cpp quantized KV cache (2026-08-19) | official `tools/server/README.md` (upstream master, fetched 2026-08-19); pinned image `--help` output run directly on this host; ggml-org/llama.cpp Discussion #20969 ("TurboQuant", corrected 2026-04-01); ggml-org/llama.cpp Issue #20866 (asymmetric K/V CPU-fallback, closed 2026-03-24); arXiv 2601.14277 (quantization quality survey); this repo's own local benchmark under `benchmarks/results/20260819/opencode-context/` |
+| n8n (2026-08-23) | official Docker install docs (stable 2.35.6); GitHub n8n-io/n8n Sustainable Use License; ADR-021 |
 
 Community reports are treated as directional only; nothing is adopted
 without a local benchmark under this repository's harness.
@@ -188,3 +189,14 @@ Local fixture smoke 2026-08-19: `graphify extract --code-only` wrote 2 nodes / 1
 | Q5_K_M | 21.67 GiB; too tight with KV on 24 GiB | same repo | fetched 2026-08-23 | confirmed; not pinned |
 | Architecture | Card lists `qwen2`; pinned llama.cpp already serves Qwen2 | model card; ADR-003 | 2026-08-23 | confirmed |
 | Classification | retained writing profile; ngl 999; never delete; does not replace general/reasoning | ADR-020 amended 2026-08-23 | 2026-08-23 | decision |
+
+## 2026-08-23 addendum: n8n optional automation client
+
+| Item | Finding | Source | Version / date | Confidence |
+|---|---|---|---|---|
+| Product | Visual workflow engine; not an inference server | n8n docs; GitHub n8n-io/n8n | fetched 2026-08-23 | confirmed |
+| Image | `docker.n8n.io/n8nio/n8n`; documented stable `2.35.6` | n8n Docker install docs | 2026-08-23 | confirmed from upstream docs |
+| License | Sustainable Use License (fair-code) | n8n LICENSE | fetched 2026-08-23 | confirmed |
+| GPU | CPU Node.js; GPU only if a workflow calls LiteLLM | architecture; ADR-021 | 2026-08-23 | decision |
+| Overlap | Event-driven automation, not RAG chat, not coding agent, not media | ADR-021 vs ADR-009 / ADR-015 | 2026-08-23 | decision |
+| Classification | optional_profile; loopback `:5678`; off by default | ADR-021 | 2026-08-23 | decision |

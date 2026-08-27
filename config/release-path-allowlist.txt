@@ -15,6 +15,8 @@ config/install-layout.env
 config/registry/models.yaml
 config/registry/projects.yaml
 config/gateway/litellm.yaml
+compose.yml
+CHANGELOG.md
 config/clients/opencode/opencode.jsonc.template
 config/skills/ai-station-client-integration/SKILL.md
 config/skills/ai-station-operations/SKILL.md
@@ -68,11 +70,14 @@ docs/adr/ADR-012-graphify-code-knowledge-graph.md
 docs/adr/ADR-013-opencode-desktop-wsl-and-preview-verification.md
 docs/adr/ADR-009-opencode-local-client.md
 docs/clients/OPENCODE.md
+docs/clients/N8N.md
 infra/systemd/ai-station-opencode.service
 infra/systemd/ai-station-gateway.service
 infra/systemd/ai-station-ui-gateway.service
 scripts/configure-opencode-desktop.ps1
+scripts/graphify_view.py
 scripts/install-systemd.sh
+scripts/operator_output.py
 apps/gateway/app/admission.py
 apps/gateway/app/providers.py
 apps/ui-gateway/ui_gateway.py
@@ -80,3 +85,5 @@ docs/research/INFERENCE_BENCHMARK_REPORT.md
 tests/test_openai_contracts.py
 tests/test_opencode_client_contract.py
 tests/test_opencode_failure_regression.py
+tests/README.md
+tests/test_operator_output.py

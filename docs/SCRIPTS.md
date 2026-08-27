@@ -7,7 +7,7 @@ install, release, or incident recovery.
 
 | Entry | Purpose |
 |---|---|
-| **`scripts/ai`** (`/usr/local/bin/ai`) | **Only** platform control plane: start/stop/restart/status/models/provider/projects/opencode/graphify/output/test/logs/verify/backup/disk/… |
+| **`scripts/ai`** (`/usr/local/bin/ai`) | **Only** platform control plane: start/stop/restart/status/models/provider/projects/opencode/graphify/n8n/output/test/logs/verify/backup/disk/… |
 
 Windows launchers call the same script:
 
@@ -16,8 +16,9 @@ Windows launchers call the same script:
 | `AI Station/AI Station.cmd` → `.ps1` | `ai start` (restores last heavy profile, else `general`) |
 | `AI Station/AI Station Manager.cmd` | `ai <action>` (same verbs as the Manager menu, including `opencode configure`) |
 
-Desktop copies are trampolines into `/opt/ai-station`. Do not keep a second
-full `AI Station Manager.ps1` on the Desktop.
+Desktop copies are trampolines into `/opt/ai-station`. A Desktop file
+named `AI Station Manager.ps1` is allowed only as that trampoline (no
+`Show-Menu`). Do not keep a second full control panel on the Desktop.
 
 Compat shims (kept so old Desktop shortcuts / Makefile paths still work; they only `exec` `ai`):
 
@@ -49,6 +50,8 @@ Templates live in `config/clients/opencode/`. Graphify is an optional
 code-graph CLI (`config/clients/graphify/`, [clients/GRAPHIFY.md](clients/GRAPHIFY.md)).
 ComfyUI is the retained MiniMax / FLUX.2 media studio
 (`config/clients/comfyui/`, [clients/COMFYUI.md](clients/COMFYUI.md)).
+n8n is the optional workflow client (`config/clients/n8n/`,
+[clients/N8N.md](clients/N8N.md)).
 Do not commit the generated
 Windows `opencode.jsonc` (it contains the project API key). See
 [clients/OPENCODE.md](clients/OPENCODE.md).
@@ -56,12 +59,12 @@ Windows `opencode.jsonc` (it contains the project API key). See
 Internal helpers used by `ai start` (not user-facing):
 
 - `scripts/lib/ai-common.sh`, `ai-models.sh`, `ai-opencode.sh`, `ai-graphify.sh`,
-  `ai-output.sh`
+  `ai-n8n.sh`, `ai-output.sh`
 - `scripts/operator_output.py`, `scripts/graphify_view.py`
 
 - `scripts/compose-ai-station.sh`
 - `scripts/ensure-litellm-db.sh` / `sync-litellm-db-url.sh` / `ensure-wsl-idle-timeout.sh`
-- `scripts/verify.sh` / `verify-startup-stability.sh`
+- `scripts/verify.sh` / `verify-startup-stability.sh` / `live-ops-smoke.sh`
 - `scripts/backup.sh` / `reset-openwebui-password.sh`
 
 Offline quality has one reproducible entrypoint:

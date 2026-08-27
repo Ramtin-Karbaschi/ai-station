@@ -12,12 +12,18 @@ pick capabilities (Image → Fast, Video → Draft), not raw model names.
 ## Decision
 
 - Capability map: `config/studio/capabilities.yaml`.
-- Shared ComfyUI core (`comfyui-media-experimental`) unless a workload
-  cannot share that process (Hunyuan3D 2.1 is an isolated overlay).
-- Admission: one heavy GPU workload. Starting ComfyUI or Hunyuan3D stops
-  the active llama.cpp heavy profile, and the reverse.
-- New engines arrive off-by-default with health, start/stop, workflow
-  JSON, and a smoke path. `installed: false` until local acceptance.
+- Shared ComfyUI core (`comfyui-media-experimental`) for media including
+  Hunyuan3D 2.1 via the official Comfy-Org checkpoint
+  `studio-hunyuan3d-2_1-comfy-checkpoint`. Do not invent a second
+  unpinned Hunyuan container. `ai provider start hunyuan3d-2_1` starts
+  the same ComfyUI overlay.
+- Admission: one heavy GPU workload. Starting ComfyUI stops the active
+  llama.cpp heavy profile, and the reverse.
+- New engines arrive off-by-default. `installed: true` means the pinned
+  weights size-match the manifest on this workstation.
+  `configured_pending_smoke` means no local ComfyUI smoke yet.
+  `production` requires that smoke. `installed: false` is unused now that
+  LTX-2.5 NVFP4 size-matches on this workstation.
 - Prefer official publisher, then official GGUF, then Comfy-Org repack,
   then a trusted quant. Blackwell NVFP4 is preferred when official and
   verified on this RTX 5090 Laptop.

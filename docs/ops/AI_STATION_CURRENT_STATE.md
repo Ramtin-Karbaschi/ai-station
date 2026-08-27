@@ -1,7 +1,8 @@
 # AI Station Current State
 
-Verified: 2026-08-27 (DOCKER_CONTEXT=default; `make verify` and `make audit`
-passed with Errors 0 / Warnings 0 after operator groups `docker,aidev`)
+Verified: 2026-08-27 (DOCKER_CONTEXT=default; `make check`, `make verify`,
+and `make audit` passed with Errors 0 / Warnings 0 /
+`RELEASE AUDIT PASSED`. Open WebUI `:3000` healthy on `halfvec(4096)`.)
 
 This file is the concise release snapshot: what is supported now, which
 boundaries are authoritative, and which limitations are still real. Design
@@ -51,8 +52,8 @@ changes in `CHANGELOG.md`.
 | `longwriter` | LongWriter-Zero 32B Q4 | 8192 | No | Retained long-form / RL writing; never delete |
 | `reasoning` | Qwen3.8 27B thinking route | 262144 | Yes | Reasoning with shared Qwen3.8 bytes |
 | `vision` | Qwen3.8 27B + mmproj | 4096 | Yes | Multimodal requests |
-| default embedder | Qwen3 Embedding 8B Q4_K_M **live on `:8090`** (`n_embd` 4096). Knowledge `document_chunk` rebuilt 67/67 at 4096-d. 0.6B GGUF deleted. | 8192 | n/a | CPU (ADR-022). Exact cosine scan (no ANN index above 2000-d). |
-| CPU reranker | Qwen3 Reranker 4B Q6_K **live on `:8091`** (`n_params` 4.41B). SHA-256 matches the manifest. `/v1/rerank` returns HTTP 200 but scores are degenerate (~1e-18–1e-30) and ranking order is wrong on a loopback/API probe. | n/a | n/a | Do not accept RAG quality yet. Convert from official `Qwen/Qwen3-Reranker-4B` or restore 0.6B. |
+| default embedder | Qwen3 Embedding 8B Q4_K_M **live on `:8090`** (`n_embd` 4096). Knowledge `document_chunk` is **`halfvec(4096)`**, 67 chunks / 7 collections. 0.6B GGUF deleted. | 8192 | n/a | CPU (ADR-022). Exact cosine; sentinel HNSW on `subvector(...,4000)` so Open WebUI can start (pgvector HNSW max 4000-d). |
+| CPU reranker | Qwen3 Reranker 4B Q6_K **live on `:8091`**. Official `Qwen/Qwen3-Reranker-4B` conversion via llama.cpp `4fc4ec55` then Q6_K (ADR-024). Loopback-binding ranked above Paris/cake distractors. 0.6B GGUF deleted. | n/a | n/a | CPU hybrid RAG |
 
 Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and ComfyUI (MiniMax Music 3,
 MiniMax H3, FLUX.2) are **retained operator models**: never experimental
@@ -170,6 +171,7 @@ only slim `health.json` and `*-smoke.json` under
 | Tika | `http://127.0.0.1:9998` | Open WebUI/documents |
 | Embedding | `http://127.0.0.1:8090/v1` | Internal retrieval (CPU, ADR-022) |
 | Reranker | `http://127.0.0.1:8091/v1` | Open WebUI hybrid RAG (CPU) |
+| Speech / ASR | `http://127.0.0.1:8092/v1` | Qwen3-ASR-1.7B (CPU, ADR-027); Whisper fallback via host gateway |
 | ComfyUI | `http://127.0.0.1:8188` | Retained media UI; off until `ai provider start comfyui-media-experimental` |
 | n8n | `http://127.0.0.1:5678` | Optional workflow UI; off until `ai n8n start` |
 | Graphify map | `http://127.0.0.1:4174/` | Optional HTML map; off until `ai graphify view` |
@@ -206,23 +208,30 @@ process gained groups `docker` and `aidev`. Heavy chat is Qwen3.8 on
 Still open on this workstation:
 
 - Live `:8090` returns **4096-d** embeddings. Open WebUI
-  `document_chunk` is `vector(4096)` (67/67). The 0.6B embedding GGUF was
-  deleted after the cosine smoke hit the Station notebook fixture.
+  `document_chunk` is **`halfvec(4096)`** (67 chunks, 7 collections). Compose sets
+  `PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH=4096` and
+  `PGVECTOR_USE_HALFVEC=true`. Open WebUI `:3000` is healthy. A sentinel
+  HNSW index on `subvector(vector,1,4000)` named `idx_document_chunk_vector`
+  exists because pgvector cannot HNSW-index 4096-d halfvec (max 4000).
+  Retrieval is exact cosine. The 0.6B embedding GGUF was deleted after the
+  cosine smoke hit the Station notebook fixture.
   Record: `benchmarks/results/20260827/deleted-qwen3-embedding-0.6b.json`.
-- Live `:8091` is the 4B GGUF and SHA-256 matches, but a relevance probe
-  ranked "Paris" above loopback-binding text. Treat QuantFactory GGUF as
-  **not accepted** until an official `Qwen/Qwen3-Reranker-4B` conversion
-  beats the 0.6B baseline. Do not delete 0.6B rerank bytes yet.
+- Live `:8091` is the official Qwen 4B Q6_K conversion. The 0.6B
+  reranker GGUF was deleted after that conversion ranked
+  loopback-binding above distractors.
 - Qwen3.8 general is **262144** with Q4 KV + flash-attn (138801-token
   ingest). Vision stays 4096 until a separate mmproj probe.
-- PaddleOCR-VL-1.6 is routed in code (Tika first; Tesseract fallback) but
-  has no live `:predict` service yet. Qwen3-ASR-1.7B Q8 + mmproj and
-  Comfy-Org Z-Image-Turbo NVFP4 / Qwen-Image-Edit-2511 are SHA-pinned in
-  the manifest (`studio-2026` / `all`). LTX-2.5 is Hugging Face gated
-  until the operator accepts the Lightricks license. Other studio engines
-  (FLUX.2-klein, Qwen Image 2512, InfiniteTalk, LatentSync, SeedVR2,
-  ThinkSound, Fish S2 Pro, Qwen3-TTS, Hunyuan3D 2.1, ACE-Step 1.5, H3
-  ControlNet Union) are not pinned yet.
+- PaddleOCR-VL-1.6 weights are on disk and image `ai-station/paddleocr-vl:1.6`
+  is built. Do not start profile `ocr-vl` while Qwen3.8 occupies the GPU.
+  Qwen3-ASR-1.7B is healthy on `:8092` and is started by `ai start`.
+  Host gateway `:8888` still needs `systemctl restart ai-station-gateway`
+  (root unit) before `/v1/audio/transcriptions` is live (currently 404).
+- Studio 2026: **70/70** manifest ids size-match on disk (**361.62 GiB**).
+  LTX-2.5 NVFP4 is on disk. Hunyuan3D 2.1 is the official Comfy-Org
+  checkpoint (`studio-hunyuan3d-2_1-comfy-checkpoint`, SHA-256 verified);
+  `ai provider start hunyuan3d-2_1` starts the shared ComfyUI overlay.
+  Capability map marks new packs `configured_pending_smoke`, not
+  production, until a local smoke. Fish S2 Pro is local/personal use.
 - Superseded LLM/VL bytes (Qwen3.6, Qwen3-Coder, DeepSeek-R1 Distill,
   Qwen3-VL-32B + mmproj) are gone from `/srv`. Keep Ornith, Qwen3.8,
   LongWriter, MiniMax Music 3 / H3, and FLUX.2.

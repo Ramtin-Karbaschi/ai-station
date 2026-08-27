@@ -29,6 +29,15 @@
       "locked_image": "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
       "source_type": "registry"
     },
+    "n8n": {
+      "build": null,
+      "configured_image": "docker.n8n.io/n8nio/n8n:2.35.6",
+      "container_id": null,
+      "current_image_id": "sha256:bd48276080055f7ccdd2c76b11a19933add48d25e71a59397334bc171e146ff4",
+      "lock_policy": "digest",
+      "locked_image": "docker.n8n.io/n8nio/n8n@sha256:bd48276080055f7ccdd2c76b11a19933add48d25e71a59397334bc171e146ff4",
+      "source_type": "registry"
+    },
     "open-webui": {
       "build": null,
       "configured_image": "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0",
@@ -80,7 +89,7 @@
   "summary": {
     "local_artifact_services": 0,
     "local_build_services": 1,
-    "registry_digest_services": 6,
-    "total_services": 7
+    "registry_digest_services": 7,
+    "total_services": 8
   }
 }

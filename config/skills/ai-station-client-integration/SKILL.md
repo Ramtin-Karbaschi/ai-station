@@ -45,7 +45,7 @@ client = OpenAI(
     api_key=os.environ["LLM_API_KEY"],
 )
 response = client.chat.completions.create(
-    model="Qwen3-Coder-30B-A3B-Instruct-Q4",
+    model="Ornith-1.5-35B-Q4_K_M",
     messages=[{"role": "user", "content": "Explain this function."}],
 )
 ~~~
@@ -71,7 +71,7 @@ OpenCode runs inside WSL as the dedicated non-root `aidev` user; Windows
 Manager launches that same runtime. One provider (`ai-station`) keeps all
 picker models visible. Coder is default. Use `doctor` for read-only checks and
 `acceptance` when a real edit-and-test proof is authorized. General and Ornith
-are also tool-capable. DeepSeek is selectable for non-tool reasoning and
+are also tool-capable. Qwen3.8 Reasoning is selectable for non-tool reasoning and
 should not back build/debug agents.
 
 ## Diagnose client failures

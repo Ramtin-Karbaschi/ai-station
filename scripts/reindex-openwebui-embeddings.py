@@ -113,7 +113,11 @@ def main() -> int:
 
     psql("DROP INDEX IF EXISTS idx_document_chunk_vector;")
     psql("ALTER TABLE document_chunk DROP COLUMN IF EXISTS vector;")
-    psql(f"ALTER TABLE document_chunk ADD COLUMN vector vector({live_dim});")
+    # Open WebUI v0.10.2 requires HALFVEC when dim > 2000.
+    if live_dim > 2000:
+        psql(f"ALTER TABLE document_chunk ADD COLUMN vector halfvec({live_dim});")
+    else:
+        psql(f"ALTER TABLE document_chunk ADD COLUMN vector vector({live_dim});")
 
     if count == 0:
         print("No chunks; schema updated only.")
@@ -145,9 +149,18 @@ def main() -> int:
         print(f"Re-embedded {updated}/{len(items)}")
 
     if live_dim > 2000:
+        # pgvector HNSW max is 4000-d for halfvec. 4096 cannot be indexed.
+        # Open WebUI still CREATE INDEXes USING hnsw on the full column unless
+        # an index named idx_document_chunk_vector already uses method hnsw.
         print(
-            f"Skip ANN index: pgvector ivfflat/hnsw cap is 2000-d; live dim is {live_dim}. "
-            "Exact cosine scan is used (acceptable for small Knowledge collections)."
+            f"Skip full-width ANN: pgvector HNSW max is 4000-d halfvec; live dim is {live_dim}. "
+            "Installing a sentinel HNSW on subvector(..., 4000) so Open WebUI startup "
+            "does not fail; queries keep using exact cosine."
+        )
+        psql(
+            "CREATE INDEX idx_document_chunk_vector ON document_chunk "
+            "USING hnsw ((subvector(vector, 1, 4000)::halfvec(4000)) halfvec_cosine_ops) "
+            "WITH (m = 16, ef_construction = 64);"
         )
     else:
         psql(

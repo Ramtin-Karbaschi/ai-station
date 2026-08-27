@@ -180,6 +180,11 @@ class CatalogContractTests(unittest.TestCase):
             lock["services"]["llm-qwen38"]["image"],
             lock["services"]["llm-general"]["image"],
         )
+        self.assertEqual(
+            lock["services"]["asr-qwen3"]["image"],
+            lock["services"]["llm-general"]["image"],
+        )
+        self.assertEqual(lock["services"]["ocr-vl"]["pull_policy"], "build")
 
     def test_longwriter_provider_is_optional_q4_with_full_offload(self) -> None:
         providers = yaml.safe_load(

@@ -1,7 +1,7 @@
 {
   "engine": "comfyui",
   "provider_id": "comfyui-media-experimental",
-  "checked_at": "2026-08-23T07:36:45Z",
+  "checked_at": "2026-08-23T14:10:19Z",
   "health_url": "http://127.0.0.1:8188/system_stats",
   "ok": true,
   "generate": false

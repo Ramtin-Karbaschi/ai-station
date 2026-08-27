@@ -192,6 +192,7 @@ ai_prepare_comfyui_runtime_dirs() {
     "$data/runtime/comfyui/input" \
     "$data/runtime/comfyui/output" \
     "$data/runtime/comfyui/user/default/workflows" \
+    "$data/models/comfyui/checkpoints" \
     "$data/models/comfyui/diffusion_models" \
     "$data/models/comfyui/text_encoders" \
     "$data/models/comfyui/vae" \

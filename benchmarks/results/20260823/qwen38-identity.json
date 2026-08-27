@@ -1,0 +1,17 @@
+{
+  "model": "Qwen3.8-27B-UD-Q4_K_M",
+  "http": 200,
+  "elapsed_s": 1.18,
+  "pass": true,
+  "finish_reason": "length",
+  "content_preview": "We need to respond to user: \"Reply with the single token PONG.\"",
+  "tool_names": [],
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 60,
+    "total_tokens": 76,
+    "prompt_tokens_details": {
+      "cached_tokens": 42
+    }
+  }
+}

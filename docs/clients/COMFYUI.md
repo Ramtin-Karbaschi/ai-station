@@ -23,8 +23,8 @@ H3-Context-IR and 2K regenerate APIs are not wired.
 
 ## Start and stop
 
-At most one heavy GPU provider. Starting ComfyUI stops llama.cpp and the
-GPU embedder.
+At most one heavy GPU provider. Starting ComfyUI stops llama.cpp. The
+CPU embedder (ADR-022) stays up.
 
 ~~~bash
 ai models stop
@@ -61,6 +61,15 @@ list after start:
 - `h3-image-to-video.json` — needs a first-frame image in Load Image
 - `h3-reference-to-video.json` — needs a reference image in Load Image
 - `flux2-text-to-image.json` — FLUX.2-dev Q4 GGUF still image, 768², CLIP on CPU
+- `z-image-turbo-text-to-image.json` — Image → Fast (weights on disk; pending smoke)
+- `flux2-klein-text-to-image.json` — Image → Interactive (weights on disk; pending smoke)
+- `qwen-image-edit-2511.json` — Image → Edit (weights on disk; pending smoke)
+- `qwen-image-2512-text-to-image.json` — Image → Graphic / Text (weights on disk; pending smoke)
+
+Capability names (not raw model names) live in
+`config/studio/capabilities.yaml` (ADR-028). LTX-2.5 NVFP4 weights are
+size-matched on disk; pending ComfyUI smoke. Hunyuan3D 2.1 uses the
+official Comfy-Org checkpoint on this same overlay.
 
 The stock ComfyUI canvas is Flux.2 FP8, which this station does not ship
 (35 GB DiT exceeds 24 GiB). On start, AI Station replaces that canvas

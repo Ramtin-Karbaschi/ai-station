@@ -35,6 +35,8 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertEqual(env["RAG_TOP_K_RERANKER"], "3")
         self.assertEqual(env["RAG_FULL_CONTEXT"], "False")
         self.assertEqual(env["VECTOR_DB"], "pgvector")
+        self.assertEqual(env["PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH"], "4096")
+        self.assertEqual(env["PGVECTOR_USE_HALFVEC"], "true")
         self.assertIn("function_calling", env["DEFAULT_MODEL_PARAMS"])
         self.assertIn("default", env["DEFAULT_MODEL_PARAMS"])
         self.assertIn('"max_tokens": 4096', env["DEFAULT_MODEL_PARAMS"])
@@ -51,6 +53,16 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertIn("ai_wait_compose_service reranker healthy 180", start)
         self.assertIn("http://127.0.0.1:8091/v1/models|Reranker", start)
         self.assertIn("http://127.0.0.1:8091/v1/models", verify)
+        self.assertIn("ai_retry_compose --profile asr up -d asr-qwen3", start)
+        self.assertIn("ai_wait_compose_service asr-qwen3 healthy 180", start)
+        self.assertIn("http://127.0.0.1:8092/v1/models", verify)
+        self.assertIn("http://127.0.0.1:8888/v1/audio/transcriptions", verify)
+        self.assertIn("Host Gateway unified STT route", verify)
+        reindex = (ROOT / "scripts/reindex-openwebui-embeddings.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("halfvec", reindex)
+        self.assertIn("subvector(vector, 1, 4000)", reindex)
 
     def test_reranker_stays_cpu_and_production(self) -> None:
         providers = yaml.safe_load(PROVIDERS.read_text(encoding="utf-8"))

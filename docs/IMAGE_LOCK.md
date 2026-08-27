@@ -28,8 +28,12 @@ in:
 config/dockerfile-base-lock.json
 ~~~
 
-The current local builds are the Persian-enabled Apache Tika image and
-the retained ComfyUI media image (`infra/comfyui/Dockerfile`).
+The current local builds are the Persian-enabled Apache Tika image,
+PaddleOCR-VL-1.6 (`infra/paddleocr-vl/Dockerfile`, Compose profile
+`ocr-vl`), and the retained ComfyUI media image
+(`infra/comfyui/Dockerfile`). n8n is a registry image
+(`docker.n8n.io/n8nio/n8n`) gated by Compose profile `n8n` and pinned in
+the same lock file.
 
 ## Updating the lock
 

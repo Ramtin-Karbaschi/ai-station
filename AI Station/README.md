@@ -12,7 +12,9 @@ stale after an upgrade.
 | **AI Station Manager.cmd** | Control panel: lifecycle, models, API keys, logs, backup |
 
 The `.cmd` files pass typed arguments into WSL. They do not keep a second
-copy of the PowerShell panel on the Desktop.
+full copy of the PowerShell panel on the Desktop. If
+`Desktop\AI Station\AI Station Manager.ps1` exists, it must only re-enter
+the WSL copy.
 
 In addition to lifecycle operations, the panel provides catalog / install /
 add / quarantine / restore, offline tests, Graphify, the Graphify map
@@ -26,6 +28,10 @@ client; option 32 repairs its pinned runtime and config.
 |---|---|---|
 | Open WebUI | http://127.0.0.1:3000 | Human chat, documents, RAG notebooks |
 | LiteLLM Admin UI | http://127.0.0.1:4000/ui | Application API keys |
+| LiteLLM API | http://127.0.0.1:4000/v1 | Apps and OpenCode |
+| ComfyUI | http://127.0.0.1:8188 | Media studio; Manager 39 then 41 |
+| n8n | http://127.0.0.1:5678 | Optional workflows; Manager 49 then 51 |
+| Graphify map | http://127.0.0.1:4174/ | Optional HTML map; Manager 42 |
 
 Open WebUI **Workspace > Knowledge** is the notebook: one collection per
 topic, then attach it to a chat. Manager option 22 (`ai projects`) is a

@@ -16,13 +16,15 @@ ai start --profile general
 ai restart
 ai models use coder
 ai models catalog
-ai models add coder-qwen3-30b-a3b-q4
-ai projects create my-app --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0
+ai models add coder-ornith-1_5-35b
+ai projects create my-app --models Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M
+ai projects update opencode --models Ornith-1.5-35B-Q4_K_M,Qwen3.8-27B-UD-Q4_K_M,Qwen3.8-27B-Reasoning-UD-Q4_K_M
 ai projects list
 ai opencode configure
 ai opencode test
 ai graphify extract --code-only
 ai graphify view
+ai n8n start
 ai output show
 ai verify
 ai verify --stability 45
@@ -68,7 +70,8 @@ ai start
 
 `ai start` brings up the single Compose project. Heavy GPU profiles
 and ComfyUI are that same project, selected by profile or overlay,
-not a second stack.
+not a second stack. n8n is the same project with Compose profile
+`n8n` and is not started here.
 
 The start flow restores the last heavy profile when `--profile` is omitted,
 then waits for the main local endpoints before reporting readiness.
@@ -84,10 +87,12 @@ ai status
 The status command displays:
 
 - containers;
-- systemd services;
-- endpoint checks;
-- disk usage;
-- Docker disk usage.
+- endpoint probes (always-on and on-demand URLs, OK or DOWN);
+- the service directory (addresses even when a tool is off);
+- active heavy profile and free VRAM.
+
+Disk and Docker usage are `ai disk`. systemd unit detail is `systemctl status
+ai-station-gateway ai-station-ui-gateway`.
 
 ## Verification
 

@@ -264,6 +264,7 @@ All default ports bind to `127.0.0.1`. `ai start` prints this directory.
 | Apache Tika | `http://127.0.0.1:9998` |
 | Embedding (CPU) | `http://127.0.0.1:8090/v1` |
 | Reranker (CPU) | `http://127.0.0.1:8091/v1` |
+| Speech / ASR (CPU) | `http://127.0.0.1:8092/v1` |
 
 **On demand**
 

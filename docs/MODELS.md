@@ -74,21 +74,21 @@ Studio 2026 additions are not production until a local smoke exists (ADR-028):
 
 | Pack | Manifest ids | Size (GiB) | Status |
 |---|---|---:|---|
-| Z-Image-Turbo NVFP4 | `studio-z-image-turbo-nvfp4`, `studio-z-image-text-encoder-fp4`, `studio-z-image-vae` | 7.75 | Official Comfy-Org pin; DiT/TE/VAE on disk |
-| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Official Comfy-Org pin; download in progress |
-| FLUX.2-klein-4B | `studio-flux2-klein-4b`, `studio-flux2-klein-text-encoder-fp4`, `studio-flux2-klein-vae` | 11.12 | Official Comfy-Org pin |
-| Qwen-Image-2512 | `studio-qwen-image-2512-fp8`, `studio-qwen-image-text-encoder-nvfp4`, `studio-qwen-image-vae` | 24.96 | Official Comfy-Org pin |
-| LTX-2.5 distilled NVFP4 | `studio-ltx25-distilled-nvfp4`, `studio-ltx25-text-encoder-int8`, `studio-ltx25-video-vae`, `studio-ltx25-audio-vae` | 33.43 | Official Lightricks pin (HF gated; this token can read it) |
-| H3 ControlNet Union | `studio-h3-controlnet-union` | 6.34 | Official alibaba-pai pin |
-| ACE-Step 1.5 | `studio-ace-step-1.5-turbo-aio`, `studio-ace-step-1.5-xl-sft`, `studio-ace-step-1.5-text-encoder-4b`, `studio-ace-step-1.5-vae` | 26.72 | Official Comfy-Org pin |
-| InfiniteTalk | `studio-infinitetalk-single` | 2.53 | Official MeiGen ComfyUI pack |
-| LatentSync 1.6 | `studio-latentsync-1.6-unet`, `studio-latentsync-1.6-syncnet` | 6.22 | Official ByteDance pin |
-| SeedVR2-7B NVFP4 | `studio-seedvr2-7b-nvfp4`, `studio-seedvr2-vae` | 4.90 | Official Comfy-Org pin; 3B not kept |
-| ThinkSound | `studio-thinksound`, `studio-thinksound-vae`, `studio-thinksound-synchformer` | 22.85 | Official FunAudioLLM pin |
-| Fish Audio S2 Pro | `studio-fish-s2-pro-00001`, `studio-fish-s2-pro-00002`, `studio-fish-s2-pro-codec` | 10.23 | Official fishaudio pin; local/personal use; check LICENSE.md before any commercial use |
-| Qwen3-TTS 1.7B | `studio-qwen3-tts-1.7b-customvoice`, `studio-qwen3-tts-1.7b-voicedesign`, `studio-qwen3-tts-tokenizer` | 7.77 | Official Qwen 12Hz CustomVoice + VoiceDesign |
-| Hunyuan3D 2.1 | `studio-hunyuan3d-dit-fp16`, `studio-hunyuan3d-vae-fp16`, `studio-hunyuan3d-paint-unet`, `studio-hunyuan3d-image-encoder` | 12.31 | Official Tencent pin; isolated GPU-exclusive provider |
-| PaddleOCR-VL-1.6 | `ocr-paddleocr-vl-1.6` plus sidecars `ocr-paddleocr-vl-1.6-tokenizer-json`, `ocr-paddleocr-vl-1.6-tokenizer-model`, `ocr-paddleocr-vl-1.6-config-json`, `ocr-paddleocr-vl-1.6-tokenizer-config-json`, `ocr-paddleocr-vl-1.6-special-tokens-map-json`, `ocr-paddleocr-vl-1.6-preprocessor-config-json`, `ocr-paddleocr-vl-1.6-processor-config-json`, `ocr-paddleocr-vl-1.6-generation-config-json`, `ocr-paddleocr-vl-1.6-added-tokens-json`, `ocr-paddleocr-vl-1.6-modeling-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-configuration-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-image-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-chat-template-jinja` | 1.80 | Official PaddlePaddle pin; Compose profile `ocr-vl` |
+| Z-Image-Turbo NVFP4 | `studio-z-image-turbo-nvfp4`, `studio-z-image-text-encoder-fp4`, `studio-z-image-vae` | 7.75 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Official Comfy-Org pin; DiT on disk; shares TE/VAE with 2512; pending ComfyUI smoke |
+| FLUX.2-klein-4B | `studio-flux2-klein-4b`, `studio-flux2-klein-text-encoder-fp4`, `studio-flux2-klein-vae` | 11.12 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| Qwen-Image-2512 | `studio-qwen-image-2512-fp8`, `studio-qwen-image-text-encoder-nvfp4`, `studio-qwen-image-vae` | 24.96 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| LTX-2.5 distilled NVFP4 | `studio-ltx25-distilled-nvfp4`, `studio-ltx25-text-encoder-int8`, `studio-ltx25-video-vae`, `studio-ltx25-audio-vae` | 33.43 | Official Lightricks NVFP4 pin; size-matched on disk; pending ComfyUI smoke |
+| H3 ControlNet Union | `studio-h3-controlnet-union` | 6.34 | Official alibaba-pai pin; on disk; pending ComfyUI smoke |
+| ACE-Step 1.5 | `studio-ace-step-1.5-turbo-aio`, `studio-ace-step-1.5-xl-sft`, `studio-ace-step-1.5-text-encoder-4b`, `studio-ace-step-1.5-vae` | 26.72 | Official Comfy-Org pin; on disk; pending ComfyUI smoke |
+| InfiniteTalk | `studio-infinitetalk-single` | 2.53 | Official MeiGen ComfyUI pack; on disk; pending ComfyUI smoke |
+| LatentSync 1.6 | `studio-latentsync-1.6-unet`, `studio-latentsync-1.6-syncnet` | 6.22 | Official ByteDance pin; on disk; pending ComfyUI smoke |
+| SeedVR2-7B NVFP4 | `studio-seedvr2-7b-nvfp4`, `studio-seedvr2-vae` | 4.90 | Official Comfy-Org pin; 3B not kept; on disk; pending ComfyUI smoke |
+| ThinkSound | `studio-thinksound`, `studio-thinksound-vae`, `studio-thinksound-synchformer` | 22.85 | Official FunAudioLLM pin; on disk; pending ComfyUI smoke |
+| Fish Audio S2 Pro | `studio-fish-s2-pro-00001`, `studio-fish-s2-pro-00002`, `studio-fish-s2-pro-codec` | 10.23 | Official fishaudio pin; on disk; local/personal use; check LICENSE.md before any commercial use |
+| Qwen3-TTS 1.7B | `studio-qwen3-tts-1.7b-customvoice`, `studio-qwen3-tts-1.7b-voicedesign`, `studio-qwen3-tts-tokenizer` | 7.77 | Official Qwen 12Hz CustomVoice + VoiceDesign; on disk; pending smoke |
+| Hunyuan3D 2.1 | `studio-hunyuan3d-2_1-comfy-checkpoint` | 6.86 | Official Comfy-Org `hunyuan_3d_v2.1.safetensors`; SHA-256 verified 2026-08-27; runs on the shared ComfyUI overlay; pending smoke |
+| PaddleOCR-VL-1.6 | `ocr-paddleocr-vl-1.6` plus sidecars `ocr-paddleocr-vl-1.6-tokenizer-json`, `ocr-paddleocr-vl-1.6-tokenizer-model`, `ocr-paddleocr-vl-1.6-config-json`, `ocr-paddleocr-vl-1.6-tokenizer-config-json`, `ocr-paddleocr-vl-1.6-special-tokens-map-json`, `ocr-paddleocr-vl-1.6-preprocessor-config-json`, `ocr-paddleocr-vl-1.6-processor-config-json`, `ocr-paddleocr-vl-1.6-generation-config-json`, `ocr-paddleocr-vl-1.6-added-tokens-json`, `ocr-paddleocr-vl-1.6-modeling-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-configuration-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-image-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-chat-template-jinja` | 1.80 | Official PaddlePaddle pin; weights on disk; image `ai-station/paddleocr-vl:1.6` built; profile `ocr-vl` off while llama.cpp holds the GPU |
 
 ### Pack totals (weights only)
 
@@ -101,8 +101,8 @@ Studio 2026 additions are not production until a local smoke exists (ADR-028):
 | ComfyUI MiniMax H3 | 62.73 |
 | ComfyUI FLUX.2-dev | 30.45 |
 | Speech (Qwen3-ASR 1.7B Q8 + mmproj) | 2.35 |
-| Studio 2026 + OCR (pinned, not all accepted) | 198.10 |
-| **All manifest weights** | **367.07** |
+| Studio 2026 + OCR (pinned, not all accepted) | 192.66 |
+| **All manifest weights** | **361.62** |
 
 Evidence files: `benchmarks/results/20260823/` (LiteLLM and ComfyUI
 smokes). Hardware planning remains in the table above, not a guarantee
@@ -122,11 +122,11 @@ Model GGUF and safetensors are **not** in Git. They live under
 
 Current production-plus-studio manifest total after Qwen3.8/Ornith
 consolidation plus pinned (not yet all locally accepted) studio/ASR/OCR
-weights: **367.07 GiB**.
+weights: **361.62 GiB**.
 
 The official project size **without AI model weights** is the Git
 application: about **1.2 MiB** of tracked source. The current manifest
-weight set is **367.07 GiB** under `/srv/ai-station` and is provisioned
+weight set is **361.62 GiB** under `/srv/ai-station` and is provisioned
 separately with `ai models install` / `make models-core`.
 
 ## Manifest fields

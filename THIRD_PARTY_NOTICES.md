@@ -19,8 +19,11 @@ Major components include:
 - faster-whisper;
 - Hugging Face Hub;
 - ComfyUI (retained MiniMax / FLUX.2 media studio);
+- n8n (optional local workflow client; Sustainable Use License);
 - MiniMax Music 3 and MiniMax H3 (Comfy-Org quantized packs);
 - Qwen-family models;
+- Fish Audio S2 Pro (local/personal use; review upstream LICENSE.md
+  before any commercial use);
 - model quantizations distributed by their respective publishers.
 
 ## User responsibility

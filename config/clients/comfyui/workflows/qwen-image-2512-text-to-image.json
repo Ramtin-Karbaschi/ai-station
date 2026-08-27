@@ -1,0 +1,85 @@
+{
+  "id": "ai-station-qwen-image-2512-text-to-image",
+  "revision": 0,
+  "last_node_id": 8,
+  "last_link_id": 8,
+  "nodes": [],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4,
+  "station_profile": "studio-2026",
+  "name": "Qwen-Image-2512 graphic text to image (AI Station)",
+  "models": [
+    "qwen_image_2512_fp8_e4m3fn.safetensors",
+    "qwen_2.5_vl_7b_nvfp4.safetensors",
+    "qwen_image_vae.safetensors"
+  ],
+  "prompt": {
+    "1": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "qwen_image_2512_fp8_e4m3fn.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "2": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen_2.5_vl_7b_nvfp4.safetensors",
+        "type": "qwen_image",
+        "device": "cpu"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    "4": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["2", 0],
+        "text": "A clean product poster of a matte black ceramic mug on a wooden desk, sharp typography-friendly negative space, soft window light, no watermark."
+      }
+    },
+    "5": {
+      "class_type": "EmptySD3LatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "6": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": ["1", 0],
+        "positive": ["4", 0],
+        "negative": ["4", 0],
+        "latent_image": ["5", 0],
+        "seed": 42,
+        "steps": 8,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1
+      }
+    },
+    "7": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": ["6", 0],
+        "vae": ["3", 0]
+      }
+    },
+    "8": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": ["7", 0],
+        "filename_prefix": "ai-station-qwen-image-2512"
+      }
+    }
+  }
+}

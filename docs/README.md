@@ -17,6 +17,7 @@ fact across multiple documents.
 | Build a document notebook | [OPENWEBUI.md](clients/OPENWEBUI.md) |
 | Use the code graph | [GRAPHIFY.md](clients/GRAPHIFY.md) |
 | Generate music or video | [COMFYUI.md](clients/COMFYUI.md) |
+| Automate workflows | [N8N.md](clients/N8N.md) |
 | Diagnose a failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Find the correct script | [SCRIPTS.md](SCRIPTS.md) |
 | Review security boundaries | [THREAT_MODEL.md](security/THREAT_MODEL.md) |

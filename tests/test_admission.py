@@ -55,6 +55,17 @@ class AdmissionTests(unittest.TestCase):
                     "max_context": 1,
                     "fallback_provider": None,
                 },
+                "n8n": {
+                    "id": "n8n",
+                    "heavy": False,
+                    "minimum_vram_mib": 0,
+                    "minimum_ram_mib": 1024,
+                    "minimum_storage_mib": 512,
+                    "kv_cache_mib_per_1k_context": 0,
+                    "default_context": 1,
+                    "max_context": 1,
+                    "fallback_provider": None,
+                },
             },
         }
         self.hardware = {
@@ -165,6 +176,20 @@ class AdmissionTests(unittest.TestCase):
         )
         self.assertEqual(decision.decision, "STOP_CONFLICTING_PROVIDER_AND_START")
         self.assertEqual(decision.stop_providers, ["llama-cpp-general"])
+
+    def test_non_heavy_starts_when_vram_is_below_gpu_margin(self) -> None:
+        decision = admit(
+            "n8n",
+            registry=self.registry,
+            hardware=self.hardware,
+            free_vram_mib=400,
+            free_ram_mib=40000,
+            free_storage_mib=500000,
+            active_heavy=["llama-cpp-general"],
+        )
+        self.assertEqual(decision.decision, "START")
+        self.assertEqual(decision.stop_providers, [])
+        self.assertEqual(decision.required_vram_mib, 0)
 
     def test_estimate_kv_budget(self) -> None:
         provider = get_provider(self.registry, "llama-cpp-general")

@@ -39,12 +39,16 @@ automatic RAG injection. Station default is `function_calling=default`.
 ## Retrieval path
 
 ~~~text
-upload → Tika/OCR → Qwen3 Embedding 8B (:8090, 4096-d) → pgvector
+upload → Tika/OCR → Qwen3 Embedding 8B (:8090, 4096-d) → pgvector halfvec(4096)
 query  → hybrid BM25 + vectors → CPU Qwen3 Reranker 4B (:8091) → top 3 chunks
 
-Do not mix 1024-d rows from the retired 0.6B embedder with 4096-d
-vectors. Rebuild every Knowledge collection after the 8B switch. Leave
-the 0.6B GGUFs on disk until that reindex is accepted.
+Do not mix 1024-d or 1536-d rows from retired embedders with 4096-d
+vectors. Rebuild every Knowledge collection after an embedding-width
+change (`scripts/reindex-openwebui-embeddings.py`). Open WebUI v0.10.2
+requires `PGVECTOR_USE_HALFVEC=true` above 2000-d. pgvector cannot
+HNSW-index 4096-d halfvec (max 4000), so the reindex script installs a
+sentinel HNSW on `subvector(vector,1,4000)` named
+`idx_document_chunk_vector`. Retrieval is exact cosine at 67 rows.
 ~~~
 
 Hybrid search and the CPU reranker start with `ai start`. They do not

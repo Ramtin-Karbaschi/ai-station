@@ -37,6 +37,7 @@ required_files = [
     "docs/clients/OPENCODE.md",
     "docs/clients/OPENWEBUI.md",
     "docs/clients/COMFYUI.md",
+    "docs/clients/N8N.md",
     "docs/ops/AI_STATION_CURRENT_STATE.md",
     "docs/adr/README.md",
     "docs/assets/ai-station-banner.svg",

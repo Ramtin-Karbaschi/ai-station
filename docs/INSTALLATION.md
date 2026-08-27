@@ -35,7 +35,7 @@ llama.cpp, LiteLLM, and Open WebUI into a single container.
 Compose stays repository-relative. The canonical file chain is:
 
 ~~~text
-COMPOSE_FILE=compose.yml:compose.models.yml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
+COMPOSE_FILE=compose.yml:compose.models.yml:compose.comfyui.experimental.yaml:compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml
 ~~~
 
 References to `/opt/ai-station` are allowed only in files listed in
@@ -125,8 +125,12 @@ Day-to-day management: `Desktop\AI Station\AI Station Manager.cmd`.
 Open WebUI: `http://127.0.0.1:3000`. Apps: `http://127.0.0.1:4000/v1`.
 
 The Desktop `.cmd` files always run the panel in WSL
-(`/opt/ai-station/AI Station/`). Do not keep a full copy of
-`AI Station Manager.ps1` on the Desktop; it goes stale after upgrades.
+(`/opt/ai-station/AI Station/`). The installer may leave
+`Desktop\AI Station\AI Station Manager.ps1` as a **10-line trampoline**
+into that WSL copy so old pinned files keep working. Do not keep a
+**full** copy of the control panel on the Desktop; it goes stale after
+upgrades. Override the WSL distro with `AI_STATION_WSL_DISTRO` if it is
+not named `Ubuntu`.
 
 Pack and bootstrap notes: [install/README.md](../install/README.md).
 

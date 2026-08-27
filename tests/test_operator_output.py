@@ -54,6 +54,7 @@ class OperatorOutputTests(unittest.TestCase):
         html = graphify_view.station_map_html(3, 4, "/srv/x", "/srv/y", "/srv/z", True)
         self.assertIn("GRAPH_TREE.html", html)
         self.assertIn("http://127.0.0.1:3000", html)
+        self.assertIn("http://127.0.0.1:5678", html)
         self.assertIn("graph.html", html)
         self.assertNotIn("0.0.0.0", html)
 

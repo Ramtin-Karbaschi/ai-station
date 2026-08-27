@@ -1,0 +1,12 @@
+{
+  "elapsed_s": 1.463,
+  "n_results": 2,
+  "http": 200,
+  "pass": true,
+  "body_keys": [
+    "model",
+    "object",
+    "results",
+    "usage"
+  ]
+}

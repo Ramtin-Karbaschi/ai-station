@@ -28,7 +28,7 @@ live ADR.
 | [021](ADR-021-optional-n8n-automation-client.md) | n8n is an optional CPU workflow client; LiteLLM stays the only API | Accepted |
 | [022](ADR-022-cpu-embedder-coexistence.md) | Embedder is CPU-only so RAG coexists with one heavy GPU profile | Accepted |
 | [023](ADR-023-qwen38-ornith-production-defaults.md) | Qwen3.8 + Ornith 1.5 replace Qwen3.6/Coder/DeepSeek/VL-32B | Accepted |
-| [024](ADR-024-embedding-8b-reranker-quality.md) | Embedding 8B (4096-d) live; 4B reranker not quality-accepted | Accepted |
+| [024](ADR-024-embedding-8b-reranker-quality.md) | Embedding 8B (4096-d) live; official 4B Q6_K reranker accepted | Accepted |
 | [025](ADR-025-qwen38-max-context.md) | Probe 262144 then 131072; advertise only the measured window | Accepted |
 | [026](ADR-026-superseded-model-deletion.md) | Delete superseded bytes after acceptance, not permanent quarantine | Accepted |
 | [027](ADR-027-asr-primary-fallback.md) | Qwen3-ASR-1.7B primary; faster-whisper-large-v3 fallback | Accepted |

@@ -1,0 +1,17 @@
+{
+  "model": "LongWriter-Zero-32B-Q4_K_M",
+  "http": 200,
+  "elapsed_s": 0.976,
+  "pass": true,
+  "finish_reason": "length",
+  "content_preview": " <think>\nThe user's request is straightforward: reply with the single token \"",
+  "tool_names": [],
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 265,
+    "total_tokens": 281,
+    "prompt_tokens_details": {
+      "cached_tokens": 254
+    }
+  }
+}

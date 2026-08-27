@@ -15,11 +15,15 @@ Reranker 0.6B to Embedding 8B Q4_K_M and Reranker 4B Q6_K.
 - Embeddings: `/v1/embeddings` returns length **4096**. Manifest SHA-256
   `3fcd3febec8b3fd64435204db75bf0dd73b91e8d0661e0331acfe7e7c3120b85`.
 - Open WebUI `document_chunk` was rebuilt from `vector(1536)` to
-  `vector(4096)` (67 chunks, 1 Knowledge collection). Backup:
-  `/srv/ai-station/backups/document_chunk-20260827T080224Z.sql`.
+  **`halfvec(4096)`** (67 chunks, 7 Knowledge collections). Compose sets
+  `PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH=4096` and
+  `PGVECTOR_USE_HALFVEC=true` (Open WebUI v0.10.2 requires HALFVEC above
+  2000-d). pgvector HNSW cannot index 4096-d halfvec (max 4000); a
+  sentinel HNSW on `subvector(vector,1,4000)` named
+  `idx_document_chunk_vector` lets Open WebUI start. Queries use exact
+  cosine (acceptable at 67 rows).
   A cosine probe for "Station notebook smoke loopback binding" returned
-  the smoke fixture at ~0.64. pgvector HNSW/IVFFlat cannot index >2000-d;
-  this workstation uses exact cosine scan (acceptable at 67 rows).
+  the smoke fixture at ~0.64.
 - QuantFactory 4B GGUF produced garbage scores (~1e-18) and ranked a
   Paris distractor above the loopback passage.
 - Official conversion: `Qwen/Qwen3-Reranker-4B` revision

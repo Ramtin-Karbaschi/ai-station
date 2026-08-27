@@ -13,9 +13,16 @@ All notable project changes should be recorded in this file.
   Qwen3-ASR-1.7B is primary; faster-whisper-large-v3 stays the fallback
   (ADR-027).
 - **Local AI Studio:** capability map in `config/studio/capabilities.yaml`.
-  Z-Image-Turbo NVFP4 and Qwen-Image-Edit-2511 are pinned in the
-  manifest (`studio-2026` profile). LTX-2.5 NVFP4 is gated on Hugging
-  Face until the operator accepts the Lightricks license.
+  All 70 studio-era manifest ids size-match (**361.62 GiB**), including
+  LTX-2.5 NVFP4 and Hunyuan3D 2.1 Comfy-Org checkpoint. New packs stay
+  `configured_pending_smoke` until a local ComfyUI smoke. Fish S2 Pro is
+  local/personal use.
+- **Open WebUI RAG:** Knowledge is `halfvec(4096)` with
+  `PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH=4096` and
+  `PGVECTOR_USE_HALFVEC=true`. A sentinel HNSW on `subvector(...,4000)`
+  satisfies Open WebUI's index check (pgvector HNSW max is 4000-d).
+  Retrieval stays exact cosine. The previous default 1536 restarted the
+  UI after the 8B embedding migration.
 - **Compose orphans:** `COMPOSE_FILE` includes
   `compose.comfyui.experimental.yaml` so option 1 / `ai start` no longer
   warns that `ai-station-comfyui-experimental` is an orphan. Overlay

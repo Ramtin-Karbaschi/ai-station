@@ -1,0 +1,19 @@
+{
+  "model": "Ornith-1.5-35B-Q4_K_M",
+  "http": 200,
+  "elapsed_s": 0.901,
+  "pass": true,
+  "finish_reason": "tool_calls",
+  "content_preview": "",
+  "tool_names": [
+    "get_time"
+  ],
+  "usage": {
+    "completion_tokens": 26,
+    "prompt_tokens": 279,
+    "total_tokens": 305,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  }
+}

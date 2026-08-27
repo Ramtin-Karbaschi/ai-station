@@ -3,8 +3,8 @@
     {
       "dockerfile": "infra/comfyui/Dockerfile",
       "line": 1,
-      "locked": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime@sha256:7b324d212a4450795b49edba9949b7cdc72429148a64e974334bfe5774d51385",
-      "original": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime",
+      "locked": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime@sha256:1f57418aedd9a4d0d3a59646619e1d4f82cacc33817247cead4f749e1f452d4b",
+      "original": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime",
       "type": "registry-digest"
     },
     {
@@ -17,11 +17,11 @@
     {
       "dockerfile": "infra/paddleocr-vl/Dockerfile",
       "line": 1,
-      "locked": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime@sha256:7b324d212a4450795b49edba9949b7cdc72429148a64e974334bfe5774d51385",
-      "original": "pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime",
+      "locked": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime@sha256:1f57418aedd9a4d0d3a59646619e1d4f82cacc33817247cead4f749e1f452d4b",
+      "original": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime",
       "type": "registry-digest"
     }
   ],
-  "generated_at": "2026-07-24T06:50:14.916Z",
+  "generated_at": "2026-08-27T13:40:00.000Z",
   "schema_version": 1
 }

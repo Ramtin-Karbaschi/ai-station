@@ -189,7 +189,11 @@ def station_map_html(
       </a>
       <a class="card" href="http://127.0.0.1:8188">
         <strong>ComfyUI</strong>
-        Experimental media UI (off by default).
+        Media studio (off by default).
+      </a>
+      <a class="card" href="http://127.0.0.1:5678">
+        <strong>n8n</strong>
+        Optional workflows (off by default).
       </a>
     </div>
     <div class="note">

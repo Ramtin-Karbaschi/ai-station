@@ -67,12 +67,20 @@ class SttRouterTests(unittest.TestCase):
         self.assertEqual(r.engine, "faster-whisper-large-v3")
 
 
-class GatewaySttRouteTests(unittest.TestCase):
-    def test_host_gateway_exposes_transcriptions(self) -> None:
+class GatewaySttRouteTests(unittest.IsolatedAsyncioTestCase):
+    async def test_host_gateway_exposes_transcriptions(self) -> None:
+        import httpx
+
         from apps.gateway.app import main as gateway_main
 
         paths = {getattr(route, "path", None) for route in gateway_main.app.routes}
         self.assertIn("/v1/audio/transcriptions", paths)
+        transport = httpx.ASGITransport(app=gateway_main.app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            empty = await client.post("/v1/audio/transcriptions", content=b"")
+        self.assertEqual(empty.status_code, 400)
 
 
 if __name__ == "__main__":

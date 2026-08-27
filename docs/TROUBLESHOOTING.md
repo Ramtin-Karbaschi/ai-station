@@ -29,6 +29,11 @@ Common causes:
 - required secret values are missing;
 - Tika or the embedding service has not started;
 - the CPU reranker on `:8091` is down (hybrid RAG needs it);
+- Knowledge vectors are 4096-d `halfvec` and Open WebUI is missing
+  `PGVECTOR_USE_HALFVEC=true` (restart loop: VECTOR_LENGTH 1536, or
+  HNSW "more than 4000 dimensions"). Re-run
+  `scripts/reindex-openwebui-embeddings.py` so
+  `idx_document_chunk_vector` exists as HNSW on `subvector(...,4000)`;
 - the Open WebUI persistent volume contains incompatible state;
 - port 3000 is already in use.
 
@@ -386,7 +391,13 @@ short prompt is an output-cap problem; `length` on a long RAG thread is the
 
 ## Whisper failure
 
+Station transcription is `POST http://127.0.0.1:8888/v1/audio/transcriptions`
+(Qwen3-ASR on `:8092` first; faster-whisper-large-v3 for timestamps or
+when Qwen is down). Open WebUI still keeps a local Whisper cache for
+its own audio path.
+
 ~~~bash
+curl -fsS http://127.0.0.1:8092/v1/models
 docker exec -it ai-station-open-webui-1 \
   find /app/backend/data/cache/whisper/models \
   -maxdepth 2 \

@@ -130,11 +130,15 @@ function Show-Menu {
     Write-Host "  35  Disk/Docker usage    36  Open in VS Code"
     Write-Host "  37  Git status           38  Reset WebUI password"
     Write-Host ""
-    Write-Host " Media studio (experimental ComfyUI)"
+    Write-Host " Media studio (ComfyUI)"
     Write-Host "  39  Start MiniMax media  40  Stop media / restore coder"
     Write-Host "  41  Open ComfyUI         43  Open media output"
     Write-Host "  44  Set media output     45  Set export folder"
     Write-Host "  46  Open export folder"
+    Write-Host ""
+    Write-Host " Automation (optional n8n)"
+    Write-Host "  49  Start n8n            50  Stop n8n"
+    Write-Host "  51  Open n8n"
     Write-Host ""
     Write-Host "   0  Exit"
     Write-Host ""
@@ -209,7 +213,7 @@ while ($true) {
             "23" {
                 $projectId = Read-SafeId "Project id (for example inventory-api)"
                 if ($null -eq $projectId) { Wait-ForEnter; continue }
-                $defaultModels = "Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0"
+                $defaultModels = "Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M"
                 $models = (Read-Host "Models CSV [$defaultModels]").Trim()
                 if (-not $models) { $models = $defaultModels }
                 if ($models -notmatch '^[A-Za-z0-9._,-]+$') {
@@ -313,6 +317,9 @@ while ($true) {
             }
             "47" { [void](Invoke-AIStation @("models", "stop")); Wait-ForEnter }
             "48" { [void](Invoke-AIStation @("models", "use", "longwriter")); Wait-ForEnter }
+            "49" { [void](Invoke-AIStation @("n8n", "start")); Wait-ForEnter }
+            "50" { [void](Invoke-AIStation @("n8n", "stop")); Wait-ForEnter }
+            "51" { Start-Process "http://127.0.0.1:5678" }
             default { Write-Host "Unknown selection." -ForegroundColor Yellow; Start-Sleep -Seconds 1 }
         }
     } catch {

@@ -16,6 +16,29 @@ check_url() {
   fi
 }
 
+check_post_route_not_404() {
+  local url="$1"
+  local label="$2"
+  local status
+  status="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 -X POST "$url" 2>/dev/null || true)"
+  case "$status" in
+    400|415|422)
+      echo "OK: $label"
+      ;;
+    404|000|"")
+      echo "FAIL: $label ($url returned ${status:-000})"
+      fail=1
+      ;;
+    2*|3*)
+        echo "OK: $label"
+      ;;
+    *)
+      echo "FAIL: $label ($url returned $status)"
+      fail=1
+      ;;
+  esac
+}
+
 if [[ -f /srv/ai-station/runtime/active-heavy-profile ]]; then
   active_profile="$(tr -d '[:space:]' </srv/ai-station/runtime/active-heavy-profile)"
 fi
@@ -28,6 +51,8 @@ check_url http://127.0.0.1:9998/tika "Apache Tika"
 check_url "http://127.0.0.1:8889/search?q=test&format=json" "SearXNG"
 check_url http://127.0.0.1:8090/v1/models "Embedding Server"
 check_url http://127.0.0.1:8091/v1/models "Reranker Server"
+check_url http://127.0.0.1:8092/v1/models "Qwen3-ASR"
+check_post_route_not_404 http://127.0.0.1:8888/v1/audio/transcriptions "Host Gateway unified STT route"
 
 # Gateways must stay on loopback. The host gateway may additionally expose its
 # TCP proxy on the exact docker0 bridge address so containers can reach the

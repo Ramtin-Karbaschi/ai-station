@@ -1,0 +1,9 @@
+{
+  "tested_at": "2026-08-27T09:50:00Z",
+  "endpoint": "http://127.0.0.1:8092/v1/audio/transcriptions",
+  "engine": "qwen3-asr-1.7b",
+  "http_status": 200,
+  "fixture": "0.4s 16kHz mono 440Hz wav tone",
+  "note": "CPU profile asr is healthy. Host gateway :8888 still returns 404 for this path until systemctl restart ai-station-gateway (root unit).",
+  "response_type": "transcript.text.done"
+}
