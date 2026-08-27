@@ -17,17 +17,15 @@ from apps.gateway.app import main as gateway_main
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_CHAT_MODELS = [
-    "Qwen3.6-35B-A3B-UD-Q4_K_M",
-    "Qwen3-Coder-30B-A3B-Instruct-Q4",
-    "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
-    "Qwen3-VL-32B-Instruct-Q4_K_M",
-    "Ornith-1.5-35B-Q4_K_M",
     "Qwen3.8-27B-UD-Q4_K_M",
+    "Ornith-1.5-35B-Q4_K_M",
+    "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
+    "Qwen3.8-27B-Vision-UD-Q4_K_M",
     "LongWriter-Zero-32B-Q4_K_M",
 ]
 CANONICAL_UTILITY_MODELS = [
-    "Qwen3-Embedding-0.6B-Q8_0",
-    "Qwen3-Reranker-0.6B-Q8_0",
+    "Qwen3-Embedding-8B-Q4_K_M",
+    "Qwen3-Reranker-4B-Q6_K",
 ]
 INVALID_PUBLIC_NAMES = {
     "general-qwen3.6",
@@ -52,19 +50,18 @@ class CatalogContractTests(unittest.TestCase):
             (ROOT / "config/model-catalog.json").read_text(encoding="utf-8")
         )
         by_id = {m["id"]: m for m in catalog["models"]}
-        self.assertTrue(by_id["general-qwen3_6-35b-a3b"].get("supports_tools"))
-        self.assertTrue(by_id["coder-qwen3-coder-30b-a3b"].get("supports_tools"))
-        self.assertTrue(
-            by_id["general-qwen3_6-35b-a3b"].get("supports_json_schema")
-        )
-        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_tools"))
-        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_json_schema"))
-        self.assertEqual(by_id["ornith-1_5-35b"]["port"], 8086)
-        self.assertEqual(by_id["ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4")
-        self.assertEqual(by_id["ornith-1_5-35b"]["alias"], "local-ornith")
-        self.assertTrue(by_id["ornith-1_5-35b"].get("enabled"))
+        self.assertTrue(by_id["general-qwen38-27b"].get("supports_tools"))
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("supports_tools"))
+        self.assertTrue(by_id["general-qwen38-27b"].get("supports_json_schema"))
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("supports_json_schema"))
+        self.assertEqual(by_id["coder-ornith-1_5-35b"]["port"], 8083)
         self.assertEqual(
-            by_id["ornith-1_5-35b"].get("default_system_prefix"), "/no_think"
+            by_id["coder-ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4"
+        )
+        self.assertEqual(by_id["coder-ornith-1_5-35b"]["alias"], "local-coder")
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("enabled"))
+        self.assertEqual(
+            by_id["coder-ornith-1_5-35b"].get("default_system_prefix"), "/no_think"
         )
         self.assertNotIn("ornith-1_0-35b", by_id)
         manifest = json.loads(
@@ -76,14 +73,14 @@ class CatalogContractTests(unittest.TestCase):
             "fbbaed45c2f0e200276ffa51701a24d45dc7f57e",
         )
         self.assertNotIn("ornith-1.0-35b-q4", by_manifest)
-        self.assertEqual(by_id["qwen38-27b"]["port"], 8087)
-        self.assertEqual(by_id["qwen38-27b"]["alias"], "local-qwen38")
-        self.assertEqual(by_id["qwen38-27b"]["manifest_id"], "qwen38-27b-q4")
-        self.assertTrue(by_id["qwen38-27b"].get("supports_tools"))
-        self.assertTrue(by_id["qwen38-27b"].get("supports_vision"))
-        self.assertTrue(by_id["qwen38-27b"].get("supports_json_schema"))
-        self.assertEqual(by_id["qwen38-27b"].get("default_system_prefix"), "")
-        self.assertTrue(by_id["qwen38-27b"].get("enabled"))
+        self.assertEqual(by_id["vision-qwen38-27b"]["port"], 8085)
+        self.assertEqual(by_id["vision-qwen38-27b"]["alias"], "local-vision")
+        self.assertEqual(by_id["vision-qwen38-27b"]["manifest_id"], "qwen38-27b-q4")
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_tools"))
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_vision"))
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_json_schema"))
+        self.assertEqual(by_id["vision-qwen38-27b"].get("default_system_prefix"), "")
+        self.assertTrue(by_id["vision-qwen38-27b"].get("enabled"))
         self.assertEqual(
             by_manifest["qwen38-27b-q4"]["revision"],
             "4ca720788d1e01f1bff70c033e0d0028fd02e502",
@@ -134,7 +131,7 @@ class CatalogContractTests(unittest.TestCase):
         )
         self.assertIn("ornith", registry["runtime_policy"]["heavy_profiles"])
         self.assertEqual(registry["runtime_policy"]["max_active_heavy_profiles"], 1)
-        self.assertEqual(registry["models"]["local-ornith"]["status"], "optional")
+        self.assertEqual(registry["models"]["local-ornith"]["status"], "compatibility")
         self.assertEqual(registry["models"]["local-coder"]["status"], "production")
 
     def test_qwen38_provider_is_optional_and_does_not_replace_defaults(self) -> None:
@@ -158,7 +155,7 @@ class CatalogContractTests(unittest.TestCase):
         )
         self.assertIn("qwen38", registry["runtime_policy"]["heavy_profiles"])
         self.assertEqual(registry["runtime_policy"]["max_active_heavy_profiles"], 1)
-        self.assertEqual(registry["models"]["local-qwen38"]["status"], "optional")
+        self.assertEqual(registry["models"]["local-qwen38"]["status"], "compatibility")
         self.assertEqual(registry["models"]["local-general"]["status"], "production")
 
     def test_qwen38_compose_keeps_vision_mmproj_and_thinking(self) -> None:
@@ -270,8 +267,6 @@ class CatalogContractTests(unittest.TestCase):
                 "local-coder",
                 "local-reasoning",
                 "local-vision",
-                "local-ornith",
-                "local-qwen38",
                 "local-longwriter",
                 "local-embedding",
                 "local-reranker",

@@ -1,96 +1,67 @@
 model_list:
-  # Heavy chat/vision models route through the host gateway so selection
-  # transparently auto-switches the single active GPU runtime.
-  - model_name: Qwen3.6-35B-A3B-UD-Q4_K_M
-    litellm_params:
-      model: openai/Qwen3.6-35B-A3B-UD-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: Qwen3.6-35B-A3B-UD-Q4_K_M
-      mode: chat
-
-  - model_name: Qwen3-Coder-30B-A3B-Instruct-Q4
-    litellm_params:
-      model: openai/Qwen3-Coder-30B-A3B-Instruct-Q4
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: Qwen3-Coder-30B-A3B-Instruct-Q4
-      mode: chat
-
-  - model_name: DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
-    litellm_params:
-      model: openai/DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
-      mode: chat
-
-  - model_name: Qwen3-VL-32B-Instruct-Q4_K_M
-    litellm_params:
-      model: openai/Qwen3-VL-32B-Instruct-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: Qwen3-VL-32B-Instruct-Q4_K_M
-      mode: chat
-
-  - model_name: Ornith-1.5-35B-Q4_K_M
-    litellm_params:
-      model: openai/Ornith-1.5-35B-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: Ornith-1.5-35B-Q4_K_M
-      mode: chat
-
-  - model_name: Qwen3.8-27B-UD-Q4_K_M
-    litellm_params:
-      model: openai/Qwen3.8-27B-UD-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: Qwen3.8-27B-UD-Q4_K_M
-      mode: chat
-
-  - model_name: LongWriter-Zero-32B-Q4_K_M
-    litellm_params:
-      model: openai/LongWriter-Zero-32B-Q4_K_M
-      api_base: http://host.docker.internal:8888/v1
-      api_key: "not-needed"
-      timeout: 600
-    model_info:
-      id: LongWriter-Zero-32B-Q4_K_M
-      mode: chat
-
-  - model_name: Qwen3-Embedding-0.6B-Q8_0
-    litellm_params:
-      model: openai/ai-station-embedding
-      api_base: http://embedder:8090/v1
-      api_key: "not-needed"
-      timeout: 120
-    model_info:
-      id: Qwen3-Embedding-0.6B-Q8_0
-      mode: embedding
-
-  - model_name: Qwen3-Reranker-0.6B-Q8_0
-    litellm_params:
-      model: openai/ai-station-reranker
-      api_base: http://reranker:8091/v1
-      api_key: "not-needed"
-      timeout: 120
-    model_info:
-      id: Qwen3-Reranker-0.6B-Q8_0
-      mode: rerank
-
+- model_name: Qwen3.8-27B-UD-Q4_K_M
+  litellm_params:
+    model: openai/Qwen3.8-27B-UD-Q4_K_M
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 600
+  model_info:
+    id: Qwen3.8-27B-UD-Q4_K_M
+    mode: chat
+- model_name: Ornith-1.5-35B-Q4_K_M
+  litellm_params:
+    model: openai/Ornith-1.5-35B-Q4_K_M
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 600
+  model_info:
+    id: Ornith-1.5-35B-Q4_K_M
+    mode: chat
+- model_name: Qwen3.8-27B-Reasoning-UD-Q4_K_M
+  litellm_params:
+    model: openai/Qwen3.8-27B-Reasoning-UD-Q4_K_M
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 600
+  model_info:
+    id: Qwen3.8-27B-Reasoning-UD-Q4_K_M
+    mode: chat
+- model_name: Qwen3.8-27B-Vision-UD-Q4_K_M
+  litellm_params:
+    model: openai/Qwen3.8-27B-Vision-UD-Q4_K_M
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 600
+  model_info:
+    id: Qwen3.8-27B-Vision-UD-Q4_K_M
+    mode: chat
+- model_name: LongWriter-Zero-32B-Q4_K_M
+  litellm_params:
+    model: openai/LongWriter-Zero-32B-Q4_K_M
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 600
+  model_info:
+    id: LongWriter-Zero-32B-Q4_K_M
+    mode: chat
+- model_name: Qwen3-Embedding-8B-Q4_K_M
+  litellm_params:
+    model: openai/ai-station-embedding
+    api_base: http://embedder:8090/v1
+    api_key: not-needed
+    timeout: 120
+  model_info:
+    id: Qwen3-Embedding-8B-Q4_K_M
+    mode: embedding
+- model_name: Qwen3-Reranker-4B-Q6_K
+  litellm_params:
+    model: openai/ai-station-reranker
+    api_base: http://reranker:8091/v1
+    api_key: not-needed
+    timeout: 120
+  model_info:
+    id: Qwen3-Reranker-4B-Q6_K
+    mode: rerank
 litellm_settings:
   drop_params: true
   set_verbose: false
@@ -101,12 +72,10 @@ litellm_settings:
   cache: false
   disable_spend_logs: false
   disable_error_logs: false
-
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL
   store_model_in_db: false
-  # Keep chat serving if Postgres briefly flaps (WSL/Docker restart races).
   allow_requests_on_db_unavailable: true
   disable_spend_logs: false
   disable_master_key_return: true

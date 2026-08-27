@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "runtime_policy": {
     "max_active_heavy_models": 1,
     "execution_mode": "serial_queue",
@@ -8,9 +8,9 @@
   },
   "models": [
     {
-      "id": "general-qwen3_6-35b-a3b",
-      "display_name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
-      "public_model_id": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "id": "general-qwen38-27b",
+      "display_name": "Qwen3.8-27B-UD-Q4_K_M",
+      "public_model_id": "Qwen3.8-27B-UD-Q4_K_M",
       "alias": "local-general",
       "role": "general",
       "family": "qwen",
@@ -25,13 +25,14 @@
       "supports_vision": false,
       "supports_tools": true,
       "default_system_prefix": "/no_think",
-      "manifest_id": "general-qwen3.6-35b-a3b-q4",
-      "supports_json_schema": true
+      "manifest_id": "qwen38-27b-q4",
+      "supports_json_schema": true,
+      "note": "Primary general chat/tools route. Shares the single Qwen3.8 GGUF with reasoning and vision profiles."
     },
     {
-      "id": "coder-qwen3-coder-30b-a3b",
-      "display_name": "Qwen3-Coder-30B-A3B-Instruct-Q4",
-      "public_model_id": "Qwen3-Coder-30B-A3B-Instruct-Q4",
+      "id": "coder-ornith-1_5-35b",
+      "display_name": "Ornith-1.5-35B-Q4_K_M",
+      "public_model_id": "Ornith-1.5-35B-Q4_K_M",
       "alias": "local-coder",
       "role": "coder",
       "family": "qwen",
@@ -45,17 +46,18 @@
       "heavy": true,
       "supports_vision": false,
       "supports_tools": true,
-      "default_system_prefix": "",
-      "manifest_id": "coder-qwen3-30b-a3b-q4",
-      "supports_json_schema": true
+      "default_system_prefix": "/no_think",
+      "manifest_id": "ornith-1.5-35b-q4",
+      "supports_json_schema": true,
+      "note": "Default coding and OpenCode model; replaces Qwen3-Coder in the active runtime."
     },
     {
-      "id": "reasoning-deepseek-r1-32b",
-      "display_name": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
-      "public_model_id": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
+      "id": "reasoning-qwen38-27b",
+      "display_name": "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
+      "public_model_id": "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
       "alias": "local-reasoning",
       "role": "reasoning",
-      "family": "deepseek",
+      "family": "qwen",
       "kind": "chat",
       "profile": "reasoning",
       "service": "llm-reasoning",
@@ -65,15 +67,16 @@
       "enabled": true,
       "heavy": true,
       "supports_vision": false,
-      "supports_tools": false,
+      "supports_tools": true,
       "default_system_prefix": "",
-      "note": "Weights stored under models/thinking/",
-      "manifest_id": "reasoning-deepseek-r1-32b-q4"
+      "manifest_id": "qwen38-27b-q4",
+      "supports_json_schema": true,
+      "note": "Thinking/reasoning route backed by the same Qwen3.8 model bytes as general."
     },
     {
-      "id": "vision-qwen3-vl-32b",
-      "display_name": "Qwen3-VL-32B-Instruct-Q4_K_M",
-      "public_model_id": "Qwen3-VL-32B-Instruct-Q4_K_M",
+      "id": "vision-qwen38-27b",
+      "display_name": "Qwen3.8-27B-Vision-UD-Q4_K_M",
+      "public_model_id": "Qwen3.8-27B-Vision-UD-Q4_K_M",
       "alias": "local-vision",
       "role": "vision",
       "family": "qwen",
@@ -86,53 +89,12 @@
       "enabled": true,
       "heavy": true,
       "supports_vision": true,
-      "supports_tools": false,
-      "default_system_prefix": "",
-      "manifest_id": "vision-qwen3-vl-32b-q4"
-    },
-    {
-      "id": "ornith-1_5-35b",
-      "display_name": "Ornith-1.5-35B-Q4_K_M",
-      "public_model_id": "Ornith-1.5-35B-Q4_K_M",
-      "alias": "local-ornith",
-      "role": "ornith",
-      "family": "qwen",
-      "kind": "chat",
-      "profile": "ornith",
-      "service": "llm-ornith",
-      "port": 8086,
-      "backend_model": "ai-station-ornith",
-      "base_url": "http://127.0.0.1:8086/v1",
-      "enabled": true,
-      "heavy": true,
-      "supports_vision": false,
-      "supports_tools": true,
-      "default_system_prefix": "/no_think",
-      "manifest_id": "ornith-1.5-35b-q4",
-      "supports_json_schema": true,
-      "note": "Retained coding profile. Never experimental. Never delete. Does not replace coder."
-    },
-    {
-      "id": "qwen38-27b",
-      "display_name": "Qwen3.8-27B-UD-Q4_K_M",
-      "public_model_id": "Qwen3.8-27B-UD-Q4_K_M",
-      "alias": "local-qwen38",
-      "role": "qwen38",
-      "family": "qwen",
-      "kind": "vision",
-      "profile": "qwen38",
-      "service": "llm-qwen38",
-      "port": 8087,
-      "backend_model": "ai-station-qwen38",
-      "base_url": "http://127.0.0.1:8087/v1",
-      "enabled": true,
-      "heavy": true,
-      "supports_vision": true,
       "supports_tools": true,
       "default_system_prefix": "",
       "manifest_id": "qwen38-27b-q4",
+      "mmproj_manifest_id": "qwen38-27b-mmproj-f16",
       "supports_json_schema": true,
-      "note": "Retained dense VL+tools profile. Never experimental. Never delete. Does not replace general or vision."
+      "note": "Vision route backed by shared Qwen3.8 weights plus mmproj loaded only for this profile."
     },
     {
       "id": "longwriter-zero-32b",
@@ -156,9 +118,9 @@
       "note": "Retained long-form writing / RL profile. Never experimental. Never delete. Q8_0 was rejected on this 24 GiB GPU; Q4_K_M is the pin."
     },
     {
-      "id": "embedding-qwen3-0_6b",
-      "display_name": "Qwen3-Embedding-0.6B-Q8_0",
-      "public_model_id": "Qwen3-Embedding-0.6B-Q8_0",
+      "id": "embedding-qwen3-8b",
+      "display_name": "Qwen3-Embedding-8B-Q4_K_M",
+      "public_model_id": "Qwen3-Embedding-8B-Q4_K_M",
       "alias": "local-embedding",
       "role": "embedding",
       "family": "qwen",
@@ -170,12 +132,13 @@
       "base_url": "http://127.0.0.1:8090/v1",
       "enabled": true,
       "heavy": false,
-      "manifest_id": "embedding-qwen3-0.6b-q8"
+      "manifest_id": "embedding-qwen3-8b-q4_k_m",
+      "note": "CPU-only Qwen3 8B embedding model; started with ai start so RAG can coexist with one heavy GPU profile (ADR-022)"
     },
     {
-      "id": "reranker-qwen3-0_6b",
-      "display_name": "Qwen3-Reranker-0.6B-Q8_0",
-      "public_model_id": "Qwen3-Reranker-0.6B-Q8_0",
+      "id": "reranker-qwen3-4b",
+      "display_name": "Qwen3-Reranker-4B-Q6_K",
+      "public_model_id": "Qwen3-Reranker-4B-Q6_K",
       "alias": "local-reranker",
       "role": "reranker",
       "family": "qwen",
@@ -187,8 +150,8 @@
       "base_url": "http://127.0.0.1:8091/v1",
       "enabled": true,
       "heavy": false,
-      "manifest_id": "reranker-qwen3-0.6b-q8",
-      "note": "CPU-only; started with ai start for Open WebUI hybrid RAG"
+      "manifest_id": "reranker-qwen3-4b-q6_k",
+      "note": "CPU-only Qwen3 4B reranker; started with ai start for Open WebUI hybrid RAG"
     }
   ]
 }
