@@ -4,6 +4,43 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Qwen3.8 context:** general/reasoning now use **262144** with Q4 KV and
+  flash-attn. Measured 2026-08-27: 138801-token ingest in 190.4 s at
+  22401 MiB VRAM (`benchmarks/results/20260827/qwen38-262144-q4-ingest-128k.json`).
+- **Document intelligence:** Tika first, PaddleOCR-VL-1.6 when available,
+  Tesseract fallback. Rerankers are never in the OCR path (ADR-006).
+- **Speech:** `POST /v1/audio/transcriptions` on the host gateway.
+  Qwen3-ASR-1.7B is primary; faster-whisper-large-v3 stays the fallback
+  (ADR-027).
+- **Local AI Studio:** capability map in `config/studio/capabilities.yaml`.
+  Z-Image-Turbo NVFP4 and Qwen-Image-Edit-2511 are pinned in the
+  manifest (`studio-2026` profile). LTX-2.5 NVFP4 is gated on Hugging
+  Face until the operator accepts the Lightricks license.
+- **Compose orphans:** `COMPOSE_FILE` includes
+  `compose.comfyui.experimental.yaml` so option 1 / `ai start` no longer
+  warns that `ai-station-comfyui-experimental` is an orphan. Overlay
+  start/stop use the same project chain. `--remove-orphans` is still
+  forbidden (it would delete chat or media containers).
+- **Chat output cap:** Open WebUI `DEFAULT_MODEL_PARAMS.max_tokens` is 4096
+  (was 1024). Mid-sentence cuts were `finish_reason=length` on the client
+  output budget, not the 8192 context window. LiteLLM has no second cap.
+- **ADR-022 Accepted:** the 0.6B embedder runs CPU-only (`gpus: []`,
+  `-ngl 0`) so Open WebUI RAG stays up beside one heavy GPU chat
+  profile. The GPU embedder had been exiting 0 after a CUDA error.
+  ComfyUI start no longer stops the embedder.
+- **Service directory:** `ai start` and `ai status` print always-on vs
+  on-demand loopback URLs (Open WebUI, LiteLLM API/Admin, SearXNG, Tika,
+  embedding, reranker, ComfyUI, n8n, Graphify, OpenCode). README local
+  endpoints match. Windows Manager labels ComfyUI as the media studio,
+  not experimental.
+- **Live ops:** `scripts/live-ops-smoke.sh` sequentially probed every
+  catalog chat profile through LiteLLM `:4000`, CPU embed/rerank, and
+  workstation tools. Summary:
+  `benchmarks/results/20260823/live-ops-summary.json`.
+- **ADR-021 Accepted:** optional n8n workflow client on loopback
+  `:5678`. CPU-only, off by default, digest-pinned. Workflows call
+  LiteLLM `:4000/v1` only. Does not replace OpenCode, Open WebUI, or
+  ComfyUI.
 - **Retained models:** Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and
   ComfyUI MiniMax Music 3 / MiniMax H3 / FLUX.2 are never experimental
   and must never be deleted. Manifest marks them `operator_retained`;

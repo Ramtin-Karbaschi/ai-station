@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.gateway.app.admission import admit
 from apps.gateway.app.paths import PROJECT_DIR
+from apps.gateway.app.stt import transcribe_station_audio
 from apps.gateway.app.providers import (
     heavy_services,
     provider_for_catalog_model,
@@ -658,6 +659,31 @@ async def admission_dry_run(request: Request) -> dict[str, Any]:
     context = body.get("context")
     decision = admit(str(provider_id), context=context)
     return decision.to_dict()
+
+
+@app.post("/v1/audio/transcriptions")
+async def audio_transcriptions(request: Request) -> dict[str, Any]:
+    audio = await request.body()
+    language = request.query_params.get("language")
+    want_timestamps = request.query_params.get("timestamps") in {"1", "true", "yes"}
+    if not audio:
+        raise HTTPException(status_code=400, detail="Empty audio body")
+    result = await asyncio.to_thread(
+        transcribe_station_audio,
+        audio,
+        language=language,
+        want_timestamps=want_timestamps,
+    )
+    payload: dict[str, Any] = {
+        "text": result.text,
+        "engine": result.engine,
+        "fallback_used": result.fallback_used,
+    }
+    if result.language:
+        payload["language"] = result.language
+    if result.timestamps:
+        payload["segments"] = result.timestamps
+    return payload
 
 
 @app.post("/v1/chat/completions")

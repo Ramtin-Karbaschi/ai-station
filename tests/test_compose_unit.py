@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_COMPOSE_FILE = (
-    "compose.yml:compose.models.yml:compose.hardening.yaml:"
-    "compose.local-builds.yaml:compose.images.lock.yaml"
+    "compose.yml:compose.models.yml:compose.comfyui.experimental.yaml:"
+    "compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml"
 )
 MANIFEST = ROOT / "config/model-manifest.json"
 MODELS_DOC = ROOT / "docs/MODELS.md"
@@ -24,7 +24,7 @@ class ComposeUnitAndRecommendedModelsTests(unittest.TestCase):
 
     def test_installer_expected_compose_file_matches_canonical_chain(self) -> None:
         text = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
-        self.assertIn("compose.yml:compose.models.yml:compose.hardening.yaml:", text)
+        self.assertIn("compose.yml:compose.models.yml:compose.comfyui.experimental.yaml:", text)
         self.assertIn(
             "compose.local-builds.yaml:compose.images.lock.yaml",
             text,
@@ -33,6 +33,7 @@ class ComposeUnitAndRecommendedModelsTests(unittest.TestCase):
     def test_image_lock_scripts_expect_the_same_chain(self) -> None:
         escaped = (
             r"^COMPOSE_FILE=compose\.yml:compose\.models\.yml:"
+            r"compose\.comfyui\.experimental\.yaml:"
             r"compose\.hardening\.yaml:compose\.local-builds\.yaml:"
             r"compose\.images\.lock\.yaml$"
         )
@@ -45,6 +46,15 @@ class ComposeUnitAndRecommendedModelsTests(unittest.TestCase):
         text = (ROOT / "compose.yml").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("# One Compose project."))
         self.assertIn("\nname: ai-station\n", text)
+
+    def test_general_reasoning_vision_enable_flash_attn_and_kv_cache(self) -> None:
+        text = (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        for service in ("llm-general:", "llm-reasoning:", "llm-vision:"):
+            self.assertIn(service, text)
+        self.assertGreaterEqual(text.count("--flash-attn"), 3)
+        self.assertIn("LLM_GENERAL_CACHE_TYPE_K", text)
+        self.assertIn("REASONING_CACHE_TYPE_K", text)
+        self.assertIn("VISION_CACHE_TYPE_K", text)
 
     def test_models_doc_lists_every_manifest_id_and_total_gib(self) -> None:
         doc = MODELS_DOC.read_text(encoding="utf-8")

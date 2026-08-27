@@ -20,6 +20,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from apps.gateway.app.paths import PROJECT_DIR
+from apps.gateway.app.document_router import extract_document
 
 HOST = os.getenv("AI_STATION_UI_GATEWAY_HOST", "127.0.0.1")
 PORT = int(os.getenv("AI_STATION_UI_GATEWAY_PORT", "8890"))
@@ -120,6 +121,37 @@ def tika_extract_bytes(file_bytes: bytes, filename: str, mime: str) -> str:
     )
 
 
+def extract_attachment_text(file_bytes: bytes, filename: str, mime: str) -> str:
+    paddle_url = os.getenv("AI_STATION_PADDLEOCR_URL", "").rstrip("/")
+
+    def paddle_fn(data: bytes, name: str, media: str) -> str:
+        if not paddle_url:
+            return ""
+        req = urllib.request.Request(
+            f"{paddle_url}/predict",
+            data=data,
+            headers={
+                "Content-Type": media or "application/octet-stream",
+                "Content-Disposition": f'attachment; filename="{name}"',
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as response:
+            payload = json.loads(response.read().decode("utf-8", errors="replace"))
+        return str(payload.get("text") or "").strip()
+
+    result = extract_document(
+        file_bytes,
+        filename,
+        mime,
+        tika_fn=tika_extract_bytes,
+        paddle_fn=paddle_fn if paddle_url else None,
+        tesseract_fn=tika_extract_bytes,
+        paddle_available=bool(paddle_url),
+    )
+    return result.text
+
+
 def parse_data_url(url: str):
     match = re.match(r"^data:([^;]+);base64,(.*)$", url, re.DOTALL)
     if not match:
@@ -194,9 +226,9 @@ def image_item_to_ocr_text(item: dict, index: int, auth_header: str | None = Non
 
         ext = guess_ext(mime)
         filename = f"attached-image-{index}{ext}"
-        ocr_text = tika_extract_bytes(file_bytes, filename, mime)
+        ocr_text = extract_attachment_text(file_bytes, filename, mime)
         return (
-            f"\n\n[Attached image {index} processed by local Apache Tika OCR]\n"
+            f"\n\n[Attached image {index} processed by local document intelligence]\n"
             f"{ocr_text}\n"
             f"[/Attached image {index} OCR]\n"
         )

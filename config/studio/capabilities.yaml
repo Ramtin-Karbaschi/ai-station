@@ -1,0 +1,134 @@
+version: 1
+output_root: /srv/ai-station/runtime/comfyui/output
+provider: comfyui-media-experimental
+gpu_policy: one_heavy_at_a_time
+capabilities:
+  image.generate.premium:
+    label: "Image → Generate (Final)"
+    model: FLUX.2-dev
+    workflow: config/clients/comfyui/workflows/flux2-text-to-image.json
+    status: production
+    installed: true
+  image.generate.fast:
+    label: "Image → Fast"
+    model: Z-Image-Turbo
+    preferred_format: nvfp4
+    workflow: config/clients/comfyui/workflows/z-image-turbo-text-to-image.json
+    status: configured_pending_weights
+    installed: false
+  image.generate.interactive:
+    label: "Image → Interactive"
+    model: FLUX.2-klein-4B
+    status: configured_pending_weights
+    installed: false
+  image.edit:
+    label: "Image → Edit"
+    model: Qwen-Image-Edit-2511
+    status: configured_pending_weights
+    installed: false
+  image.graphic:
+    label: "Image → Graphic / Text"
+    model: Qwen-Image-2512
+    status: configured_pending_weights
+    installed: false
+  image.upscale:
+    label: "Image → Upscale"
+    model: FLUX.2-dev
+    status: production
+    installed: true
+  video.generate.fast:
+    label: "Video → Fast / Multi-shot"
+    model: LTX-2.5
+    preferred_format: nvfp4
+    status: configured_pending_weights
+    installed: false
+  video.generate.cinematic:
+    label: "Video → Cinematic / Quality"
+    model: MiniMax H3
+    workflow: config/clients/comfyui/workflows/h3-text-to-video.json
+    status: production
+    installed: true
+  video.generate.draft:
+    label: "Video → Draft"
+    model: MiniMax H3 Turbo LoRA
+    status: production
+    installed: true
+  video.control:
+    label: "Video → Control"
+    model: MiniMax-H3-Fun-Controlnet-Union
+    status: configured_pending_weights
+    installed: false
+  video.animate_image:
+    label: "Video → Animate Image"
+    model: MiniMax H3
+    workflow: config/clients/comfyui/workflows/h3-image-to-video.json
+    status: production
+    installed: true
+  avatar.talking_photo:
+    label: "Avatar → Talking Photo"
+    model: InfiniteTalk
+    status: configured_pending_weights
+    installed: false
+  avatar.talking_character:
+    label: "Avatar → Talking Character"
+    model: InfiniteTalk
+    status: configured_pending_weights
+    installed: false
+  avatar.dubbing:
+    label: "Avatar → Dubbing"
+    model: InfiniteTalk
+    status: configured_pending_weights
+    installed: false
+  avatar.lip_sync:
+    label: "Avatar / Video → Fix Lip Sync"
+    model: LatentSync 1.6
+    status: configured_pending_weights
+    installed: false
+  music.generate:
+    label: "Music → Generate"
+    model: MiniMax Music 3
+    workflow: config/clients/comfyui/workflows/music3-text-to-music.json
+    status: production
+    installed: true
+  music.fast:
+    label: "Music → Fast"
+    model: ACE-Step 1.5
+    status: configured_pending_weights
+    installed: false
+  music.studio:
+    label: "Music → Studio"
+    model: ACE-Step 1.5
+    status: configured_pending_weights
+    installed: false
+  voice.narration:
+    label: "Voice → Narration"
+    model: Fish Audio S2 Pro
+    status: configured_pending_weights
+    installed: false
+  voice.clone:
+    label: "Voice → Clone"
+    model: Qwen3-TTS 1.7B
+    status: configured_pending_weights
+    installed: false
+  sound.foley:
+    label: "Sound → Generate from Video"
+    model: ThinkSound
+    status: configured_pending_weights
+    installed: false
+  enhance.video:
+    label: "Enhance → Video"
+    model: SeedVR2-7B
+    status: configured_pending_weights
+    installed: false
+  threed.image:
+    label: "3D → Image to 3D"
+    model: Hunyuan3D 2.1
+    status: configured_pending_weights
+    isolated_provider: hunyuan3d-2_1
+    installed: false
+  threed.text:
+    label: "3D → Text to 3D"
+    model: Hunyuan3D 2.1
+    status: configured_pending_weights
+    isolated_provider: hunyuan3d-2_1
+    installed: false

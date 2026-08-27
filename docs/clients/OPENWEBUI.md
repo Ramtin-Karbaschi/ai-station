@@ -19,15 +19,16 @@ Graphify is a code graph, not document retrieval
 
 ## Notebook-style workflow
 
-Use profile `general` so chat and embeddings share the GPU. ComfyUI must
-be stopped first.
+Chat uses the `general` GPU profile (Qwen3.8 27B). Embeddings and the
+reranker stay on CPU (ADR-022), so they can run beside that chat
+profile. ComfyUI must be stopped first; it cannot share the GPU.
 
 1. Open `http://127.0.0.1:3000`.
 2. Go to **Workspace → Knowledge**.
 3. Create one collection per topic (one "notebook").
 4. Upload PDFs or text. Apache Tika extracts text; Tesseract handles
    Persian and English scans.
-5. Start a chat with `Qwen3.6-35B-A3B-UD-Q4_K_M`.
+5. Start a chat with `Qwen3.8-27B-UD-Q4_K_M`.
 6. Attach that Knowledge collection to the chat (Focused Retrieval).
 7. Ask questions. Keep generated briefings in **Notes** and attach a
    Note when you need the full draft in context.
@@ -38,8 +39,12 @@ automatic RAG injection. Station default is `function_calling=default`.
 ## Retrieval path
 
 ~~~text
-upload → Tika/OCR → Qwen3 embedding (:8090) → pgvector
-query  → hybrid BM25 + vectors → CPU Qwen3 reranker (:8091) → top 3 chunks
+upload → Tika/OCR → Qwen3 Embedding 8B (:8090, 4096-d) → pgvector
+query  → hybrid BM25 + vectors → CPU Qwen3 Reranker 4B (:8091) → top 3 chunks
+
+Do not mix 1024-d rows from the retired 0.6B embedder with 4096-d
+vectors. Rebuild every Knowledge collection after the 8B switch. Leave
+the 0.6B GGUFs on disk until that reindex is accepted.
 ~~~
 
 Hybrid search and the CPU reranker start with `ai start`. They do not
@@ -47,7 +52,22 @@ replace pgvector (ADR-005). Candidate pool is 20 chunks; at most 3 enter
 the prompt.
 
 Limits: 20 files, 150 MiB each, 512-token chunks. Full-context mode is
-off so large collections cannot overflow the 8192-token chat window.
+off so large collections cannot overflow the 262144-token chat window.
+
+
+## Chat length vs context window
+
+Open WebUI default sampling is `function_calling=default`, `num_ctx` 262144,
+and max_tokens 4096 (`DEFAULT_MODEL_PARAMS` in `compose.yml`).
+
+- **262144** is the llama.cpp **context** window for Qwen3.8 general
+  (prompt + RAG + history + output). Measured 2026-08-27: Q4 KV,
+  flash-attn, 138801-token ingest, 22401 MiB VRAM.
+- **4096** is the default **completion** budget. Replies that stop mid-sentence
+  with `finish_reason=length` hit this cap, not the 262144 input window.
+- Persistent Open WebUI config is off, so compose env is the source of truth.
+- Long chat history plus RAG can still fill 262144 and truncate; that is a
+  context limit, not the output cap.
 
 ## Windows Manager
 

@@ -25,7 +25,7 @@ Open WebUI :3000 ──> UI Gateway :8890 ──> Host Gateway :8888 ──> act
 | `llm-gateway` | LiteLLM — project-facing OpenAI API |
 | `postgres` | Open WebUI + LiteLLM metadata |
 | `redis` | Open WebUI websockets |
-| `embedder` | Always-on embeddings |
+| `embedder` | Always-on CPU embeddings (ADR-022) |
 | `reranker` | Always-on CPU rerank for Open WebUI hybrid RAG |
 | `tika` / `searxng` / `open-webui` | Human RAG / chat UI |
 
@@ -35,10 +35,10 @@ Only **one** heavy profile may run on a ~24GB GPU:
 
 | Profile | Canonical model name | Port |
 |---|---|---|
-| `general` | `Qwen3.6-35B-A3B-UD-Q4_K_M` | 8082 |
-| `coder` | `Qwen3-Coder-30B-A3B-Instruct-Q4` | 8083 |
-| `reasoning` | `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M` | 8084 |
-| `vision` | `Qwen3-VL-32B-Instruct-Q4_K_M` | 8085 |
+| `general` | `Qwen3.8-27B-UD-Q4_K_M` | 8082 |
+| `coder` | `Ornith-1.5-35B-Q4_K_M` | 8083 |
+| `reasoning` | `Qwen3.8-27B-Reasoning-UD-Q4_K_M` | 8084 |
+| `vision` | `Qwen3.8-27B-Vision-UD-Q4_K_M` | 8085 |
 | `ornith` (retained) | `Ornith-1.5-35B-Q4_K_M` | 8086 |
 | `qwen38` (retained) | `Qwen3.8-27B-UD-Q4_K_M` | 8087 |
 | `longwriter` (retained) | `LongWriter-Zero-32B-Q4_K_M` | 8088 |
@@ -47,7 +47,7 @@ Only **one** heavy profile may run on a ~24GB GPU:
 `general` or `vision` (ADR-019). `longwriter` does not replace `general`
 or `reasoning` (ADR-020). Rollback is `ai models use general`.
 
-The CPU reranker (`Qwen3-Reranker-0.6B-Q8_0`, port 8091) starts with
+The CPU reranker (`Qwen3-Reranker-4B-Q6_K`, port 8091) starts with
 `ai start` and can coexist with one heavy GPU model.
 
 ## Operator CLI
@@ -56,7 +56,7 @@ The CPU reranker (`Qwen3-Reranker-0.6B-Q8_0`, port 8091) starts with
 ai start --profile general
 ai models use coder
 ai models active
-ai projects create inventory-api --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0
+ai projects create inventory-api --models Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M
 ai projects list
 ai opencode configure
 ai opencode test
@@ -78,25 +78,31 @@ retrieval live in your application or in Open WebUI:
   that collection to a chat. That is **not** `ai projects`. See
   [clients/OPENWEBUI.md](clients/OPENWEBUI.md).
 - **Programmatic:** create a project key that allows
-  `Qwen3.6-35B-A3B-UD-Q4_K_M` + `Qwen3-Embedding-0.6B-Q8_0`, store chunks in
+  `Qwen3.8-27B-UD-Q4_K_M` + `Qwen3-Embedding-8B-Q4_K_M`, store chunks in
   your DB/pgvector, then call chat with
   retrieved context.
 
 ### 2) Automation agents (email triage, tools, workflows)
 
-Build the agent in your own project (Python/Node). Give it a dedicated LiteLLM
-virtual key with only the models it needs (usually
-`Qwen3.6-35B-A3B-UD-Q4_K_M` or `Qwen3-Coder-30B-A3B-Instruct-Q4`). The agent
-code owns Gmail/IMAP credentials and tool actions; the gateway only serves
-model inference.
+Optional visual path: n8n on `http://127.0.0.1:5678` (off by default).
+See [clients/N8N.md](clients/N8N.md). Workflows call LiteLLM at
+`http://llm-gateway:4000/v1` with the `n8n` project key
+(`ai n8n configure`). IMAP/Gmail credentials stay in n8n, not in Git.
+
+You can still build the agent in your own project (Python/Node). Give it
+a dedicated LiteLLM virtual key with only the models it needs (usually
+`Qwen3.8-27B-UD-Q4_K_M` or `Ornith-1.5-35B-Q4_K_M`). The
+agent code owns Gmail/IMAP credentials and tool actions; the gateway
+only serves model inference.
 
 Recommended pattern: one virtual key per use-case / project.
 
 ```text
-docs-rag-api      -> models: Qwen3.6-35B-A3B-UD-Q4_K_M, Qwen3-Embedding-0.6B-Q8_0
-email-agent-api   -> models: Qwen3.6-35B-A3B-UD-Q4_K_M
-coder-agent-api   -> models: Qwen3-Coder-30B-A3B-Instruct-Q4
-opencode          -> models: Qwen3-Coder-30B-A3B-Instruct-Q4, Qwen3.6-35B-A3B-UD-Q4_K_M, DeepSeek-R1-Distill-Qwen-32B-Q4_K_M, Ornith-1.5-35B-Q4_K_M
+docs-rag-api      -> models: Qwen3.8-27B-UD-Q4_K_M, Qwen3-Embedding-8B-Q4_K_M
+email-agent-api   -> models: Qwen3.8-27B-UD-Q4_K_M
+n8n               -> models: Qwen3.8-27B-UD-Q4_K_M, Ornith-1.5-35B-Q4_K_M, Qwen3-Embedding-8B-Q4_K_M
+coder-agent-api   -> models: Ornith-1.5-35B-Q4_K_M
+opencode          -> models: Ornith-1.5-35B-Q4_K_M, Qwen3.8-27B-UD-Q4_K_M, Qwen3.8-27B-Reasoning-UD-Q4_K_M
 ```
 
 ### 3) OpenCode developer runtime (WSL)
@@ -104,14 +110,14 @@ opencode          -> models: Qwen3-Coder-30B-A3B-Instruct-Q4, Qwen3.6-35B-A3B-UD
 OpenCode is a first-class LiteLLM client and runs inside WSL as the dedicated
 non-root user `aidev`. Point it at
 `http://127.0.0.1:4000/v1` with the `opencode` project key. One provider
-`ai-station` lists three tool-capable models (Coder, Qwen3.6, Ornith) plus
-DeepSeek for non-tool reasoning. Default `model`/`small_model` is
-`Qwen3-Coder-30B-A3B-Instruct-Q4`. Title/summary agents are disabled so they
-cannot GPU-swap. `ai opencode use <profile>` warms that
-GPU and aligns `model`/`small_model` without hiding the picker. Coder
-remains the station default (ADR-008). The shared coder runtime ceiling is
-32768, while OpenCode deliberately advertises a verified 16384 client limit;
-the other profiles are 8192. The build agent has LSP,
+`ai-station` lists three tool-capable models (Ornith/coder, Qwen3.8, and
+the same Ornith bytes on the compatibility profile) plus Qwen3.8 Reasoning.
+Default `model`/`small_model` is `Ornith-1.5-35B-Q4_K_M`. Title/summary
+agents are disabled so they cannot GPU-swap. `ai opencode use <profile>`
+warms that GPU and aligns `model`/`small_model` without hiding the picker.
+Advertised OpenCode context for Qwen3.8 is **262144** after the 2026-08-27
+probe (Q4 KV, flash-attn, 138801-token ingest). Ornith/coder stay at
+**8192**. The build agent has LSP,
 formatter, skills, edit/Bash access
 inside the worktree, and 40 iterations. Native compaction is enabled; the
 custom continuation hook is not part of the system.
@@ -148,7 +154,7 @@ Host process:
 ```env
 LLM_BASE_URL=http://127.0.0.1:4000/v1
 LLM_API_KEY=<from ai projects create>
-LLM_MODEL=Qwen3.6-35B-A3B-UD-Q4_K_M
+LLM_MODEL=Qwen3.8-27B-UD-Q4_K_M
 ```
 
 Docker Compose project:
@@ -159,7 +165,7 @@ services:
     environment:
       LLM_BASE_URL: http://llm-gateway:4000/v1
       LLM_API_KEY: ${LLM_API_KEY}
-      LLM_MODEL: Qwen3.6-35B-A3B-UD-Q4_K_M
+      LLM_MODEL: Qwen3.8-27B-UD-Q4_K_M
     networks:
       - default
       - ai-platform

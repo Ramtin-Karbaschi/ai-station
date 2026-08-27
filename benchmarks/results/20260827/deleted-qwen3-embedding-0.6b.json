@@ -1,0 +1,9 @@
+{
+  "deleted_at": "2026-08-27T08:09:13.963190+00:00",
+  "path": "/srv/ai-station/models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
+  "size_bytes": 639150592,
+  "sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
+  "replacement": "embedding-qwen3-8b-q4_k_m",
+  "reason": "Open WebUI document_chunk rebuilt at 4096-d (67/67); cosine smoke hit Station notebook fixture",
+  "backup": "/srv/ai-station/backups/document_chunk-20260827T080224Z.sql"
+}

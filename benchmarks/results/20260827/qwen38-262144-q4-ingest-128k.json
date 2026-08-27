@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "target_tokens": 131072,
+  "n_ctx": 262144,
+  "kv": "q4_0",
+  "usage": {
+    "completion_tokens": 3,
+    "prompt_tokens": 138801,
+    "total_tokens": 138804,
+    "prompt_tokens_details": {
+      "cached_tokens": 22634
+    }
+  },
+  "preview": "ctx-ok",
+  "elapsed_s": 190.4
+}

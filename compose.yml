@@ -1,5 +1,5 @@
 # One Compose project. Operator entry: ai start
-# COMPOSE_FILE chain: .env.example (includes compose.models.yml).
+# COMPOSE_FILE chain: .env.example (includes compose.models.yml and the ComfyUI overlay).
 name: ai-station
 
 networks:
@@ -97,10 +97,11 @@ services:
   embedder:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
     restart: unless-stopped
-    gpus: all
+    # CPU-only so RAG survives the one heavy GPU chat profile (ADR-022).
+    gpus: []
     command:
       - -m
-      - /models/${EMBEDDING_MODEL_FILE:-embedding/qwen3-embedding-0.6b-q8_0.gguf}
+      - /models/${EMBEDDING_MODEL_FILE:-embedding/qwen3-embedding-8b-q4_k_m.gguf}
       - --alias
       - ai-station-embedding
       - --host
@@ -108,7 +109,7 @@ services:
       - --port
       - "8090"
       - -ngl
-      - "999"
+      - "0"
       - -c
       - "${EMBEDDING_CONTEXT:-8192}"
       - --embedding
@@ -203,14 +204,14 @@ services:
       ENABLE_OLLAMA_API: "False"
       OPENAI_API_BASE_URLS: "http://llm-gateway:4000/v1"
       OPENAI_API_KEYS: "${LITELLM_MASTER_KEY}"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.6-35B-A3B-UD-Q4_K_M", "Qwen3-Coder-30B-A3B-Instruct-Q4", "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M", "Qwen3-VL-32B-Instruct-Q4_K_M", "Ornith-1.5-35B-Q4_K_M", "Qwen3.8-27B-UD-Q4_K_M", "LongWriter-Zero-32B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.8-27B-UD-Q4_K_M", "Ornith-1.5-35B-Q4_K_M", "Qwen3.8-27B-Reasoning-UD-Q4_K_M", "Qwen3.8-27B-Vision-UD-Q4_K_M", "LongWriter-Zero-32B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
 
       ENABLE_PERSISTENT_CONFIG: "False"
       ENABLE_EVALUATION_ARENA_MODELS: "False"
-      DEFAULT_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
-      DEFAULT_PINNED_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
+      DEFAULT_MODELS: "Qwen3.8-27B-UD-Q4_K_M"
+      DEFAULT_PINNED_MODELS: "Qwen3.8-27B-UD-Q4_K_M"
       DEFAULT_MODEL_METADATA: '{"capabilities": {"vision": true, "file_upload": true, "file_context": true, "web_search": true, "image_generation": false, "code_interpreter": false}}'
-      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 8192, "max_tokens": 1024, "function_calling": "default"}'
+      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 262144, "max_tokens": 4096, "function_calling": "default"}'
 
       CONTENT_EXTRACTION_ENGINE: "tika"
       TIKA_SERVER_URL: "http://tika:9998"
@@ -262,6 +263,49 @@ services:
       - "127.0.0.1:${WEBUI_PORT:-3000}:8080"
     networks:
       - default
+
+  n8n:
+    profiles: ["n8n"]
+    image: docker.n8n.io/n8nio/n8n:2.35.6
+    container_name: ai-station-n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST: "127.0.0.1"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "http"
+      N8N_LISTEN_ADDRESS: "0.0.0.0"
+      WEBHOOK_URL: "http://127.0.0.1:${N8N_PORT:-5678}/"
+      N8N_EDITOR_BASE_URL: "http://127.0.0.1:${N8N_PORT:-5678}/"
+      N8N_SECURE_COOKIE: "false"
+      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY:-}"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_HIRING_BANNER_ENABLED: "false"
+      GENERIC_TIMEZONE: "${GENERIC_TIMEZONE:-UTC}"
+      TZ: "${TZ:-UTC}"
+    volumes:
+      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/n8n:/home/node/.n8n
+      - ./config/clients/n8n/workflows:/opt/ai-station-n8n-workflows:ro
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    networks:
+      - default
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:5678/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
 
 volumes:
   pgdata:

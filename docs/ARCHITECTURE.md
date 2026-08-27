@@ -39,6 +39,7 @@ flowchart TB
         Search["SearXNG :8889"]
         Postgres["PostgreSQL + pgvector :5432"]
         Redis["Redis :6379"]
+        N8N["n8n optional :5678"]
     end
 
     subgraph Storage["Persistent storage"]
@@ -49,10 +50,13 @@ flowchart TB
     end
 
     Browser --> WebUI
+    Browser --> N8N
     WebUI --> UIGateway
     UIGateway --> Gateway
     Gateway --> LLM
     Apps --> LiteLLM
+    N8N --> LiteLLM
+    N8N --> Tika
     LiteLLM --> Gateway
     LiteLLM --> Embedder
 
@@ -79,7 +83,7 @@ flowchart TB
 1. A project sends an OpenAI-compatible request to LiteLLM on `:4000`.
 2. LiteLLM authenticates the project virtual key and enforces model allowlists.
 3. The project requests a canonical public model name from LiteLLM, such as
-   `Qwen3.6-35B-A3B-UD-Q4_K_M` or `Qwen3-Coder-30B-A3B-Instruct-Q4`.
+   `Qwen3.8-27B-UD-Q4_K_M` or `Ornith-1.5-35B-Q4_K_M`.
 4. LiteLLM forwards heavy chat and vision requests to the host gateway, which
    auto-switches the matching heavy runtime when needed.
 5. Only one heavy profile is loaded on the GPU at a time.
@@ -97,10 +101,12 @@ flowchart TB
 
 1. A document is uploaded to Open WebUI.
 2. Apache Tika extracts text and performs OCR where required.
-3. The local embedding service creates vectors.
-4. Vectors and metadata are stored in PostgreSQL/pgvector.
+3. The local embedding service creates 4096-d vectors (Qwen3 Embedding 8B).
+4. Vectors and metadata are stored in PostgreSQL/pgvector. Do not mix with
+   leftover 1024-d rows from the retired 0.6B embedder.
 5. Hybrid BM25 + vector search selects candidates; the CPU reranker keeps
-   the top 3 chunks for the local model context.
+   the top 3 chunks for the local model context. The live 4B QuantFactory
+   GGUF has not passed a ranking-quality check.
 
 Operator notebooks live in Open WebUI Knowledge. See
 [clients/OPENWEBUI.md](clients/OPENWEBUI.md). `ai projects` is only the
@@ -134,7 +140,7 @@ Persistent information is divided into:
 - Docker volumes for PostgreSQL, Redis and Open WebUI state;
 - `/srv/ai-station/models` for model binaries;
 - `/srv/ai-station/runtime` for active heavy-profile state, Graphify
-  graphs, operator output prefs, and ComfyUI media;
+  graphs, operator output prefs, ComfyUI media, and n8n SQLite;
 - `/srv/ai-station/backups` for timestamped backups;
 - `/opt/ai-station` for version-controlled application files.
 
@@ -158,6 +164,12 @@ Retained media generation uses a GPU-exclusive ComfyUI overlay on
 It is a different workload from chat and must never be deleted.
 `ai start` does not launch it. Starting it stops the active llama.cpp
 heavy profile.
+
+Optional n8n automation is a CPU Compose profile on
+`127.0.0.1:5678` (ADR-021, [clients/N8N.md](clients/N8N.md)). It is a
+different workload from chat, coding, and media. `ai start` does not
+launch it. Starting it does not stop llama.cpp. Workflows call LiteLLM
+on `:4000/v1` only.
 
 ## Reproducibility controls
 

@@ -42,10 +42,9 @@ class OpenCodeClientContractTests(unittest.TestCase):
 
     def test_models_match_catalog_and_capabilities(self) -> None:
         expected = {
-            "Qwen3-Coder-30B-A3B-Instruct-Q4": (16384, 4096, True),
-            "Qwen3.6-35B-A3B-UD-Q4_K_M": (8192, 2048, True),
-            "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M": (8192, 2048, False),
-            "Ornith-1.5-35B-Q4_K_M": (8192, 2048, True),
+            "Ornith-1.5-35B-Q4_K_M": (8192, 4096, True),
+            "Qwen3.8-27B-UD-Q4_K_M": (262144, 2048, True),
+            "Qwen3.8-27B-Reasoning-UD-Q4_K_M": (262144, 2048, True),
         }
         self.assertEqual(set(self.models), set(expected))
         for model_id, (context, output, tools) in expected.items():
@@ -228,6 +227,20 @@ class OpenCodeClientContractTests(unittest.TestCase):
         self.assertIn("make check", contributing)
         self.assertIn("development", contributing)
         self.assertIn("stage", contributing)
+
+    def test_cli_can_update_project_allowlists_in_place(self) -> None:
+        cli = (ROOT / "scripts/ai").read_text(encoding="utf-8")
+        self.assertIn("cmd_projects_update()", cli)
+        self.assertIn("ai projects list|create|update|revoke|show", cli)
+        self.assertIn("/key/update", cli)
+
+    def test_opencode_manager_context_matches_template(self) -> None:
+        manager = (ROOT / "scripts/opencode_config.py").read_text(encoding="utf-8")
+        self.assertIn('MODELS["coder"]: (8192, 4096, True)', manager)
+        self.assertNotIn("16384", manager)
+        doctor = (ROOT / "scripts/opencode_doctor.py").read_text(encoding="utf-8")
+        self.assertIn("== 8192", doctor)
+        self.assertNotIn("== 16384", doctor)
 
 
 if __name__ == "__main__":

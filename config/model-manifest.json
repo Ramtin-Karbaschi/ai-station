@@ -4,37 +4,6 @@
   "generated_at": "2026-07-23T19:09:42.107102+00:00",
   "models": [
     {
-      "destination": "models/general/qwen3.6-35b-a3b-ud-q4_k_m.gguf",
-      "filename": "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
-      "id": "general-qwen3.6-35b-a3b-q4",
-      "profiles": [
-        "core",
-        "all"
-      ],
-      "repo_id": "unsloth/Qwen3.6-35B-A3B-GGUF",
-      "required_for_runtime": true,
-      "revision": "a483e9e6cbd595906af30beda3187c2663a1118c",
-      "revision_is_immutable": true,
-      "role": "general_reasoning",
-      "sha256": "ac0e2c1189e055faa36eff361580e79c5bd6f8e76bffb4ce547f167d53e31a61",
-      "size_bytes": 22134528992
-    },
-    {
-      "destination": "models/coder/qwen3-coder-30b-a3b-instruct-q4.gguf",
-      "filename": "Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf",
-      "id": "coder-qwen3-30b-a3b-q4",
-      "profiles": [
-        "all"
-      ],
-      "repo_id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
-      "required_for_runtime": false,
-      "revision": "b17cb02dd882d5b6ab62fc777ad2995f19668350",
-      "revision_is_immutable": true,
-      "role": "coding_agent",
-      "sha256": "2841aa314d916434860cfb8990347528dcdfe5c350dbcb9d1461dbee88ff2533",
-      "size_bytes": 17665334432
-    },
-    {
       "destination": "models/ornith/ornith-1.5-35b-q4_k_m.gguf",
       "filename": "Ornith-1.5-35B-Q4_K_M.gguf",
       "id": "ornith-1.5-35b-q4",
@@ -61,7 +30,7 @@
       "required_for_runtime": false,
       "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
       "revision_is_immutable": true,
-      "role": "vision_language",
+      "role": "general_reasoning",
       "sha256": "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482",
       "size_bytes": 16464440224,
       "operator_retained": true
@@ -99,80 +68,36 @@
       "operator_retained": true
     },
     {
-      "destination": "models/embedding/qwen3-embedding-0.6b-q8_0.gguf",
-      "filename": "Qwen3-Embedding-0.6B-Q8_0.gguf",
-      "id": "embedding-qwen3-0.6b-q8",
+      "destination": "models/embedding/qwen3-embedding-8b-q4_k_m.gguf",
+      "filename": "Qwen3-Embedding-8B-Q4_K_M.gguf",
+      "id": "embedding-qwen3-8b-q4_k_m",
       "profiles": [
         "core",
         "all"
       ],
-      "repo_id": "Qwen/Qwen3-Embedding-0.6B-GGUF",
+      "repo_id": "Qwen/Qwen3-Embedding-8B-GGUF",
       "required_for_runtime": true,
-      "revision": "370f27d7550e0def9b39c1f16d3fbaa13aa67728",
+      "revision": "69d0e58a13e463cd99a9b83e3f5fee7c10265fab",
       "revision_is_immutable": true,
       "role": "embedding",
-      "sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439",
-      "size_bytes": 639150592
+      "sha256": "3fcd3febec8b3fd64435204db75bf0dd73b91e8d0661e0331acfe7e7c3120b85",
+      "size_bytes": 4676804928
     },
     {
-      "destination": "models/reranker/qwen3-reranker-0.6b-q8_0.gguf",
-      "filename": "qwen3-reranker-0.6b-q8_0.gguf",
-      "id": "reranker-qwen3-0.6b-q8",
+      "destination": "models/reranker/qwen3-reranker-4b-q6_k.gguf",
+      "filename": "Qwen3-Reranker-4B.Q6_K.gguf",
+      "id": "reranker-qwen3-4b-q6_k",
       "profiles": [
+        "core",
         "all"
       ],
-      "repo_id": "ggml-org/Qwen3-Reranker-0.6B-Q8_0-GGUF",
-      "required_for_runtime": false,
-      "revision": "a02f48bb4f057028298c21fa033da2b30d7742d5",
+      "repo_id": "QuantFactory/Qwen3-Reranker-4B-GGUF",
+      "required_for_runtime": true,
+      "revision": "2a42c7aa9c702165da87b09dec164a54d973123b",
       "revision_is_immutable": true,
       "role": "reranker",
-      "sha256": "22c9979ce4fbcdc5acdc310c6641c32797eff1aa980b8f7a2db8a8ea23429a48",
-      "size_bytes": 639153184
-    },
-    {
-      "destination": "models/thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf",
-      "filename": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf",
-      "id": "reasoning-deepseek-r1-32b-q4",
-      "profiles": [
-        "all"
-      ],
-      "repo_id": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF",
-      "required_for_runtime": false,
-      "revision": "1dc8cf9ffa5dd333057ea1b09ccf4772d8726dec",
-      "revision_is_immutable": true,
-      "role": "thinking_reasoning",
-      "sha256": "bed9b0f551f5b95bf9da5888a48f0f87c37ad6b72519c4cbd775f54ac0b9fc62",
-      "size_bytes": 19851335840
-    },
-    {
-      "destination": "models/vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf",
-      "filename": "Qwen3VL-32B-Instruct-Q4_K_M.gguf",
-      "id": "vision-qwen3-vl-32b-q4",
-      "profiles": [
-        "all"
-      ],
-      "repo_id": "Qwen/Qwen3-VL-32B-Instruct-GGUF",
-      "required_for_runtime": false,
-      "revision": "e3e1fe0c76de7ee58ea65db420c643adfe2e457c",
-      "revision_is_immutable": true,
-      "role": "vision_language",
-      "sha256": "5cf0136e721d6294718ec71fd8c93b17ab5dd4e2714d6079e83fa46571ad94c8",
-      "size_bytes": 19762150432
-    },
-    {
-      "destination": "models/vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf",
-      "filename": "mmproj-Qwen3VL-32B-Instruct-Q8_0.gguf",
-      "id": "vision-qwen3-vl-32b-mmproj-q8",
-      "profiles": [
-        "all"
-      ],
-      "repo_id": "Qwen/Qwen3-VL-32B-Instruct-GGUF",
-      "required_for_runtime": false,
-      "revision": "e3e1fe0c76de7ee58ea65db420c643adfe2e457c",
-      "revision_is_immutable": true,
-      "role": "vision_mmproj",
-      "sha256": "c01734a97adc350c1eebb957ed433afee4e376ebd0949163f659c76d8dcf20ca",
-      "size_bytes": 772360224
+      "sha256": "1cf491b95e4d622306a5e1deff25cb9f2deeedd83fc2149b17f450d2587c2269",
+      "size_bytes": 3624199168
     },
     {
       "id": "experimental-comfyui-music3-dit-int8",
@@ -381,6 +306,96 @@
       "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
       "size_bytes": 336213556,
       "operator_retained": true
+    },
+    {
+      "destination": "models/asr/qwen3-asr-1.7b-q8_0.gguf",
+      "filename": "Qwen3-ASR-1.7B-Q8_0.gguf",
+      "id": "asr-qwen3-1.7b-q8",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "ggml-org/Qwen3-ASR-1.7B-GGUF",
+      "required_for_runtime": false,
+      "revision": "36a678687ba7d07a74ca70ccb0e36902e005fb80",
+      "revision_is_immutable": true,
+      "role": "speech_to_text",
+      "sha256": "58e22d0532d4eacaf034cfac17a6fed159f37c41390c710186783be439d1fc57",
+      "size_bytes": 2165034944
+    },
+    {
+      "destination": "models/asr/mmproj-qwen3-asr-1.7b-q8_0.gguf",
+      "filename": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf",
+      "id": "asr-qwen3-1.7b-mmproj-q8",
+      "profiles": [
+        "all"
+      ],
+      "repo_id": "ggml-org/Qwen3-ASR-1.7B-GGUF",
+      "required_for_runtime": false,
+      "revision": "36a678687ba7d07a74ca70ccb0e36902e005fb80",
+      "revision_is_immutable": true,
+      "role": "speech_to_text_mmproj",
+      "sha256": "46c1d533af3f354ceb37ce855dbceff7da7fa7cf1e6a523df3b13440bd164c0d",
+      "size_bytes": 355709344
+    },
+    {
+      "id": "studio-z-image-turbo-nvfp4",
+      "destination": "models/comfyui/diffusion_models/z_image_turbo_nvfp4.safetensors",
+      "filename": "split_files/diffusion_models/z_image_turbo_nvfp4.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/z_image_turbo",
+      "required_for_runtime": false,
+      "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+      "revision_is_immutable": true,
+      "role": "studio_image_fast",
+      "sha256": "a553c889dbcb910de4c98293237573219a37007c1074a3f04576646a088bd5c8",
+      "size_bytes": 4509509600
+    },
+    {
+      "id": "studio-z-image-text-encoder-fp4",
+      "destination": "models/comfyui/text_encoders/qwen_3_4b_fp4_mixed.safetensors",
+      "filename": "split_files/text_encoders/qwen_3_4b_fp4_mixed.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/z_image_turbo",
+      "required_for_runtime": false,
+      "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+      "revision_is_immutable": true,
+      "role": "studio_image_fast_text_encoder",
+      "sha256": "7ca32dcf07dfe7692945d80fff86e3a74cb83c6206b9b223ac6836b939bb85d6",
+      "size_bytes": 3479416193
+    },
+    {
+      "id": "studio-z-image-vae",
+      "destination": "models/comfyui/vae/ae.safetensors",
+      "filename": "split_files/vae/ae.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/z_image_turbo",
+      "required_for_runtime": false,
+      "revision": "08d04455279082882deaabc8d0d09fc914c071e1",
+      "revision_is_immutable": true,
+      "role": "studio_image_fast_vae",
+      "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
+      "size_bytes": 335304388
+    },
+    {
+      "id": "studio-qwen-image-edit-2511-fp8mixed",
+      "destination": "models/comfyui/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors",
+      "filename": "split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors",
+      "profiles": [
+        "studio-2026"
+      ],
+      "repo_id": "Comfy-Org/Qwen-Image-Edit_ComfyUI",
+      "required_for_runtime": false,
+      "revision": "984166f60a9b1fcede5e9b9287b7a7aebc050010",
+      "revision_is_immutable": true,
+      "role": "studio_image_edit",
+      "sha256": "c9fdc158e46d3b61ef75f21ae866ca2fe808bf4a53643120d1c1e87c19280a4e",
+      "size_bytes": 20533762817
     }
   ],
   "profiles": {
@@ -392,6 +407,12 @@
     },
     "experimental-comfyui": {
       "description": "Retained ComfyUI MiniMax Music3/H3 and FLUX.2-dev still-image packs. Never experimental. Never delete. GPU-exclusive overlay; start with ai provider start comfyui-media-experimental (ADR-015, ADR-018)."
+    },
+    "legacy-retired": {
+      "description": "Superseded local model bytes may still exist on disk until replacement acceptance and deletion evidence are recorded; they are no longer in the production manifest."
+    },
+    "studio-2026": {
+      "description": "Local AI Studio 2026 additions (Z-Image, Qwen Image Edit, later LTX/ACE/avatar). Off-by-default. Not retained until local acceptance."
     }
   },
   "schema_version": 1

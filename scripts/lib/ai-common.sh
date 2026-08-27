@@ -8,7 +8,7 @@ AI_STATE_DIR="${AI_STATE_DIR:-$AI_STATION_DATA/runtime}"
 AI_ACTIVE_PROFILE_FILE="${AI_ACTIVE_PROFILE_FILE:-$AI_STATE_DIR/active-heavy-profile}"
 
 HEAVY_PROFILES=(general coder reasoning vision ornith qwen38 longwriter)
-OPTIONAL_PROFILES=(reranker)
+OPTIONAL_PROFILES=(reranker asr)
 EXPERIMENTAL_GPU_OVERLAYS=(
   "comfyui-experimental:compose.comfyui.experimental.yaml:comfyui-experimental"
 )
@@ -130,7 +130,7 @@ ai_ensure_docker() {
 ai_dump_published_ports() {
   echo "--- loopback listeners ---" >&2
   ss -lntp 2>/dev/null | grep -E \
-    ':(3000|5432|6379|8082|8083|8084|8085|8086|8087|8088|8090|8091|8888|8889|8890|9998)\b' >&2 || true
+    ':(3000|5432|5678|6379|8082|8083|8084|8085|8086|8087|8088|8090|8091|8888|8889|8890|9998)\b' >&2 || true
   echo "--- ai-station containers ---" >&2
   docker ps -a --filter name=ai-station \
     --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' >&2 || true
@@ -167,12 +167,8 @@ ai_stop_experimental_gpu_overlays() {
     cd "$root"
     for entry in "${EXPERIMENTAL_GPU_OVERLAYS[@]}"; do
       IFS=':' read -r profile overlay service <<<"$entry"
-      env -u COMPOSE_FILE docker compose \
-        --project-name "${COMPOSE_PROJECT_NAME:-ai-station}" \
-        $(ai_compose_env_file_args) \
-        -f compose.yml -f "$overlay" \
-        --profile "$profile" \
-        stop "$service" 2>/dev/null || true
+      # Full COMPOSE_FILE chain: ComfyUI is a profiled service, not an orphan.
+      ai_compose --profile "$profile" stop "$service" 2>/dev/null || true
     done
     # Retired SGLang overlay: drop a leftover container if an old
     # active-profile file still names it.
@@ -217,6 +213,58 @@ if path.is_file():
 data.setdefault("Comfy.TutorialCompleted", True)
 data.setdefault("Comfy.RightSidePanel.IsOpen", True)
 path.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+PY
+}
+
+ai_prepare_n8n_runtime_dirs() {
+  local data="${AI_STATION_DATA:-/srv/ai-station}"
+  local dir="$data/runtime/n8n"
+  mkdir -p "$dir"
+  chmod 700 "$dir" 2>/dev/null || true
+  # Official n8n image runs as uid 1000 (node).
+  chown -R 1000:1000 "$dir" 2>/dev/null || true
+}
+
+ai_ensure_n8n_encryption_key() {
+  local existing
+  existing="$(ai_load_env_value N8N_ENCRYPTION_KEY)"
+  if [[ -n "$existing" ]]; then
+    return 0
+  fi
+  python3 - "${AI_STATION_ROOT}/.env" <<'PY'
+from __future__ import annotations
+
+import pathlib
+import secrets
+import sys
+
+path = pathlib.Path(sys.argv[1])
+key = secrets.token_urlsafe(36)
+if not path.is_file():
+    path.write_text(f"N8N_ENCRYPTION_KEY={key}\n", encoding="utf-8")
+    path.chmod(0o600)
+    raise SystemExit(0)
+text = path.read_text(encoding="utf-8")
+lines = text.splitlines()
+found = False
+out = []
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("N8N_ENCRYPTION_KEY="):
+        current = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+        if current:
+            raise SystemExit(0)
+        out.append(f"N8N_ENCRYPTION_KEY={key}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    if out and out[-1] != "":
+        out.append("")
+    out.append("# Optional n8n workflow client (ADR-021).")
+    out.append(f"N8N_ENCRYPTION_KEY={key}")
+path.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
+path.chmod(0o600)
 PY
 }
 
@@ -316,6 +364,7 @@ ai_profile_service() {
     qwen38) echo "llm-qwen38" ;;
     longwriter) echo "llm-longwriter" ;;
     reranker) echo "reranker" ;;
+    asr) echo "asr-qwen3" ;;
     *) return 1 ;;
   esac
 }
@@ -330,6 +379,7 @@ ai_profile_port() {
     qwen38) echo "8087" ;;
     longwriter) echo "8088" ;;
     reranker) echo "8091" ;;
+    asr) echo "8092" ;;
     *) return 1 ;;
   esac
 }
@@ -344,6 +394,7 @@ ai_profile_alias() {
     qwen38) echo "local-qwen38" ;;
     longwriter) echo "local-longwriter" ;;
     reranker) echo "local-reranker" ;;
+    asr) echo "local-asr" ;;
     *) return 1 ;;
   esac
 }

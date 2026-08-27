@@ -22,7 +22,7 @@ services:
     container_name: ai-station-llm-general
     command:
       - -m
-      - /models/${LLM_GENERAL_MODEL_FILE:-general/qwen3.6-35b-a3b-ud-q4_k_m.gguf}
+      - /models/${LLM_GENERAL_MODEL_FILE:-qwen38/qwen3.8-27b-ud-q4_k_m.gguf}
       - --alias
       - ai-station-general
       - --reasoning
@@ -39,6 +39,12 @@ services:
       - "${LLM_GENERAL_CONTEXT:-8192}"
       - --parallel
       - "${LLM_GENERAL_PARALLEL:-1}"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - "${LLM_GENERAL_CACHE_TYPE_K:-q4_0}"
+      - --cache-type-v
+      - "${LLM_GENERAL_CACHE_TYPE_V:-q4_0}"
     ports:
       - "127.0.0.1:${GENERAL_LLM_PORT:-8082}:8082"
     healthcheck:
@@ -54,9 +60,13 @@ services:
     container_name: ai-station-llm-coder
     command:
       - -m
-      - /models/${LLM_CODER_MODEL_FILE:-coder/qwen3-coder-30b-a3b-instruct-q4.gguf}
+      - /models/${LLM_CODER_MODEL_FILE:-ornith/ornith-1.5-35b-q4_k_m.gguf}
       - --alias
       - ai-station-coder
+      - --reasoning
+      - "off"
+      - --reasoning-budget
+      - "0"
       - --host
       - 0.0.0.0
       - --port
@@ -88,9 +98,11 @@ services:
     container_name: ai-station-llm-reasoning
     command:
       - -m
-      - /models/${REASONING_MODEL_FILE:-thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf}
+      - /models/${REASONING_MODEL_FILE:-qwen38/qwen3.8-27b-ud-q4_k_m.gguf}
       - --alias
       - ai-station-reasoning
+      - --reasoning
+      - "on"
       - --jinja
       - --host
       - 0.0.0.0
@@ -102,6 +114,12 @@ services:
       - "${REASONING_CONTEXT:-8192}"
       - --parallel
       - "${REASONING_PARALLEL:-1}"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - "${REASONING_CACHE_TYPE_K:-q4_0}"
+      - --cache-type-v
+      - "${REASONING_CACHE_TYPE_V:-q4_0}"
     ports:
       - "127.0.0.1:${REASONING_LLM_PORT:-8084}:8084"
     healthcheck:
@@ -117,9 +135,9 @@ services:
     container_name: ai-station-llm-vision
     command:
       - -m
-      - /models/${VISION_MODEL_FILE:-vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf}
+      - /models/${VISION_MODEL_FILE:-qwen38/qwen3.8-27b-ud-q4_k_m.gguf}
       - --mmproj
-      - /models/${VISION_MMPROJ_FILE:-vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf}
+      - /models/${VISION_MMPROJ_FILE:-qwen38/mmproj-f16.gguf}
       - --alias
       - ai-station-vision
       - --host
@@ -132,6 +150,12 @@ services:
       - "${VISION_CONTEXT:-4096}"
       - --parallel
       - "${VISION_PARALLEL:-1}"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - "${VISION_CACHE_TYPE_K:-q4_0}"
+      - --cache-type-v
+      - "${VISION_CACHE_TYPE_V:-q4_0}"
     ports:
       - "127.0.0.1:${VISION_LLM_PORT:-8085}:8085"
     healthcheck:
@@ -194,6 +218,12 @@ services:
       - "${LLM_QWEN38_CONTEXT:-8192}"
       - --parallel
       - "${LLM_QWEN38_PARALLEL:-1}"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - "${LLM_QWEN38_CACHE_TYPE_K:-q4_0}"
+      - --cache-type-v
+      - "${LLM_QWEN38_CACHE_TYPE_V:-q4_0}"
     ports:
       - "127.0.0.1:${QWEN38_LLM_PORT:-8087}:8087"
     healthcheck:
@@ -239,7 +269,7 @@ services:
     gpus: []
     command:
       - -m
-      - /models/${RERANKER_MODEL_FILE:-reranker/qwen3-reranker-0.6b-q8_0.gguf}
+      - /models/${RERANKER_MODEL_FILE:-reranker/qwen3-reranker-4b-q6_k.gguf}
       - --alias
       - ai-station-reranker
       - --host
@@ -258,6 +288,36 @@ services:
       - "127.0.0.1:${RERANKER_PORT:-8091}:8091"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8091/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+  # CPU-only so ASR can coexist with one heavy GPU chat profile (ADR-027).
+  asr-qwen3:
+    <<: *llama-common
+    profiles: ["asr"]
+    container_name: ai-station-asr-qwen3
+    gpus: []
+    command:
+      - -m
+      - /models/${ASR_MODEL_FILE:-asr/qwen3-asr-1.7b-q8_0.gguf}
+      - --mmproj
+      - /models/${ASR_MMPROJ_FILE:-asr/mmproj-qwen3-asr-1.7b-q8_0.gguf}
+      - --alias
+      - ai-station-asr
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8092"
+      - -ngl
+      - "0"
+      - -c
+      - "${ASR_CONTEXT:-8192}"
+    ports:
+      - "127.0.0.1:${ASR_PORT:-8092}:8092"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8092/v1/models >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 20

@@ -70,11 +70,11 @@ Priorities:
 | GPU path | NVIDIA CUDA through Docker |
 | Main UI | Open WebUI |
 | Application API | LiteLLM `:4000` |
-| Default LLM | Qwen3.6 35B-A3B GGUF (llama.cpp) |
-| Embeddings | Qwen3 Embedding 0.6B |
+| Default LLM | Qwen3.8 27B GGUF (llama.cpp); OpenCode default is Ornith 1.5 |
+| Embeddings | Qwen3 Embedding 8B (CPU) |
 | Document extraction | Apache Tika + Persian OCR |
 | Web search | SearXNG |
-| Speech recognition | Local faster-whisper large-v3 |
+| Speech recognition | Qwen3-ASR-1.7B primary; faster-whisper large-v3 fallback |
 | Release maturity | Production-oriented baseline on `main` |
 
 Verified acceptance:
@@ -96,10 +96,10 @@ RELEASE AUDIT PASSED
 | GPU inference | NVIDIA CUDA container runtime |
 | Retrieval-augmented generation | Open WebUI Knowledge + hybrid search + CPU reranker |
 | Vector persistence | PostgreSQL + pgvector |
-| Document parsing | Apache Tika |
-| Persian and English OCR | Tesseract through Tika |
+| Document parsing | Apache Tika first; PaddleOCR-VL when available; Tesseract fallback |
+| Persian and English OCR | Tesseract through Tika until PaddleOCR-VL-1.6 is live |
 | Local search | SearXNG |
-| Speech-to-text | faster-whisper large-v3 |
+| Speech-to-text | Qwen3-ASR-1.7B primary; faster-whisper large-v3 fallback |
 | Reproducible containers | SHA-256 image digests |
 | Reproducible models | Immutable revisions and SHA-256 checksums |
 
@@ -251,18 +251,30 @@ ai projects create my-app
 
 ## Local endpoints
 
-All default ports bind to `127.0.0.1`.
+All default ports bind to `127.0.0.1`. `ai start` prints this directory.
+
+**Always-on after `ai start`**
 
 | Service | Endpoint |
 |---|---|
 | Open WebUI | `http://127.0.0.1:3000` |
 | LiteLLM (apps) | `http://127.0.0.1:4000/v1` |
-| Host Gateway | `http://127.0.0.1:8888` |
-| UI Gateway | `http://127.0.0.1:8890` |
+| LiteLLM Admin | `http://127.0.0.1:4000/ui` |
 | SearXNG | `http://127.0.0.1:8889` |
-| General LLM | `http://127.0.0.1:8082/v1` |
-| Embedding | `http://127.0.0.1:8090/v1` |
 | Apache Tika | `http://127.0.0.1:9998` |
+| Embedding (CPU) | `http://127.0.0.1:8090/v1` |
+| Reranker (CPU) | `http://127.0.0.1:8091/v1` |
+
+**On demand**
+
+| Service | Endpoint | Start |
+|---|---|---|
+| ComfyUI | `http://127.0.0.1:8188` | `ai provider start comfyui-media-experimental` |
+| n8n | `http://127.0.0.1:5678` | `ai n8n start` |
+| Graphify map | `http://127.0.0.1:4174/` | `ai graphify view` |
+| OpenCode | `http://127.0.0.1:4096` | `ai opencode doctor` |
+
+Host Gateway `:8888`, UI Gateway `:8890`, and llama.cpp `:8082`–`:8088` are internal, not client contracts.
 
 ## Reproducibility and security
 
@@ -308,6 +320,7 @@ security vulnerabilities through a public issue.
 | [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
 | [Open WebUI](docs/clients/OPENWEBUI.md) | Human chat and Knowledge notebooks |
 | [ComfyUI](docs/clients/COMFYUI.md) | Retained MiniMax music/video and FLUX.2 stills |
+| [n8n](docs/clients/N8N.md) | Optional local workflow automation |
 | [Scripts](docs/SCRIPTS.md) | Canonical script map |
 | [Operations](docs/OPERATIONS.md) | Start, stop, verify |
 | [Models](docs/MODELS.md) | Recommended packs, sizes, performance, add/remove |

@@ -25,8 +25,8 @@ are planning hints, not guarantees:
 
 | VRAM (approx.) | Start with |
 |---|---|
-| ≥ 22 GiB | Core `general` (Qwen3.6 35B-A3B Q4) plus embeddings |
-| ≥ 18 GiB | `coder` (Qwen3 Coder 30B-A3B Q4) for OpenCode |
+| ≥ 22 GiB | Core `general` (Qwen3.8 27B Q4) plus embeddings |
+| ≥ 18 GiB | `coder` (Ornith 1.5 35B-A3B Q4) for OpenCode |
 | ≥ 16 GiB | A smaller Q4 GGUF registered with `ai models add` |
 | < 16 GiB | Do not expect the default 30–35B Q4 pack to fit |
 
@@ -45,17 +45,14 @@ source is named. At most one heavy GPU profile runs at a time.
 
 | Manifest id | Role | Size (GiB) | Measured performance (this GPU) |
 |---|---|---:|---|
-| `general-qwen3.6-35b-a3b-q4` | Default chat / tools | 20.61 | Dated llama.cpp bench 2026-07-23: ~3.4–4 decode tok/s at ~24 GiB VRAM. Production default. |
-| `coder-qwen3-30b-a3b-q4` | OpenCode default | 16.45 | 2026-08-19 context smoke: 16384 ctx with q8 KV, ~20.7 GiB VRAM, short chat and tools passed. |
-| `ornith-1.5-35b-q4` | Retained coding | 20.22 | 2026-08-23 LiteLLM `:4000`: identity 0.941 s, JSON 0.568 s, tools 0.893 s (pass). |
-| `qwen38-27b-q4` | Retained dense VL + tools | 15.33 | 2026-08-23 LiteLLM `:4000`: identity 1.29 s, JSON 2.845 s (`max_tokens=256`, thinking on), tools 3.247 s (pass). |
+| `qwen38-27b-q4` | Shared general / reasoning / vision base | 15.33 | 2026-08-23 LiteLLM `:4000`: identity 1.29 s, JSON 2.845 s (`max_tokens=256`, thinking on), tools 3.247 s (pass). |
+| `ornith-1.5-35b-q4` | OpenCode default / agentic coding | 20.22 | 2026-08-23 LiteLLM `:4000`: identity 0.941 s, JSON 0.568 s, tools 0.893 s (pass). |
 | `qwen38-27b-mmproj-f16` | Qwen3.8 vision projector | 0.86 | Required with `qwen38-27b-q4`. Combined Qwen3.8 pack **16.19 GiB**. |
 | `longwriter-zero-32b-q4` | Retained long-form writing | 18.49 | Q4_K_M chosen after Q8_0 failed (~2.7 tok/s). Selection smoke: 5.696 s / 22.47 tok/s. Checked-in 2026-08-23 JSON: 164.0 s / 0.78 tok/s under disk contention. |
-| `reasoning-deepseek-r1-32b-q4` | Reasoning, no tools | 18.49 | High latency. 2026-08-20 short chat timed out at 180 s; not advertised for tools. |
-| `vision-qwen3-vl-32b-q4` | Multimodal chat | 18.40 | Fits this ~24 GiB GPU with mmproj; no 2026-08-23 tok/s smoke. |
-| `vision-qwen3-vl-32b-mmproj-q8` | Vision projector | 0.72 | Required with `vision-qwen3-vl-32b-q4`. Combined vision pack **19.12 GiB**. |
-| `embedding-qwen3-0.6b-q8` | Retrieval embeddings | 0.60 | CPU/GPU embedder on `:8090`; started with `ai start`. |
-| `reranker-qwen3-0.6b-q8` | Hybrid RAG rerank | 0.60 | CPU on `:8091`; started with `ai start`. |
+| `embedding-qwen3-8b-q4_k_m` | Retrieval embeddings | 4.36 | CPU on `:8090` (ADR-022); upgraded to Qwen3 8B Q4_K_M for stronger multilingual retrieval. |
+| `reranker-qwen3-4b-q6_k` | Hybrid RAG rerank | 3.38 | CPU on `:8091`; upgraded to Qwen3 4B Q6_K for Open WebUI hybrid RAG. |
+| `asr-qwen3-1.7b-q8` | Primary speech-to-text | 2.02 | ggml-org Q8_0; CPU profile `asr` on `:8092` (ADR-027). Not live until provisioned. |
+| `asr-qwen3-1.7b-mmproj-q8` | Qwen3-ASR audio projector | 0.33 | Required with `asr-qwen3-1.7b-q8`. |
 
 ### ComfyUI media (GPU-exclusive overlay)
 
@@ -70,17 +67,26 @@ That overlay stops the active llama.cpp heavy profile.
 | MiniMax H3 | `experimental-comfyui-h3-fl2va-int8`, `experimental-comfyui-h3-ref2va-int8`, `experimental-comfyui-h3-text-encoder-nvfp4`, `experimental-comfyui-h3-video-vae`, `experimental-comfyui-h3-audio-vae`, `experimental-comfyui-h3-fl2v-turbo-lora`, `experimental-comfyui-h3-ref2v-turbo-lora` | 62.73 | Text-to-video 302.3 s |
 | FLUX.2-dev | `experimental-comfyui-flux2-dit-q4`, `experimental-comfyui-flux2-text-encoder-fp4`, `experimental-comfyui-flux2-vae` | 30.45 | Text-to-image 262.3 s |
 
+Studio 2026 additions are not production until a local smoke exists (ADR-028):
+
+| Pack | Manifest ids | Size (GiB) | Status |
+|---|---|---:|---|
+| Z-Image-Turbo NVFP4 | `studio-z-image-turbo-nvfp4`, `studio-z-image-text-encoder-fp4`, `studio-z-image-vae` | 7.75 | Official Comfy-Org pin; download pending |
+| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Official Comfy-Org pin; download pending |
+
 ### Pack totals (weights only)
 
 | Pack | Size (GiB) |
 |---|---:|
-| Core (`general` + embedding) | 21.21 |
-| Other chat/vision/rerank GGUFs | 54.66 |
+| Core (`general` + embedding) | 15.93 |
+| Other chat/vision/rerank GGUFs | 40.17 |
 | Retained chat (Ornith + Qwen3.8 + LongWriter) | 54.91 |
 | ComfyUI MiniMax Music 3 | 11.10 |
 | ComfyUI MiniMax H3 | 62.73 |
 | ComfyUI FLUX.2-dev | 30.45 |
-| **All manifest weights** | **235.05** |
+| Speech (Qwen3-ASR 1.7B Q8 + mmproj) | 2.35 |
+| Studio 2026 pending (Z-Image + Qwen Image Edit) | 26.87 |
+| **All manifest weights** | **196.14** |
 
 Evidence files: `benchmarks/results/20260823/` (LiteLLM and ComfyUI
 smokes). Hardware planning remains in the table above, not a guarantee
@@ -98,9 +104,13 @@ Model GGUF and safetensors are **not** in Git. They live under
 | Optional local Python virtualenvs (`.venvs/`) | not part of Git | Workstation-only; do not treat as product size. |
 | Digest-pinned Compose images | tens of GiB | Runtime containers, not model weights and not the Git tree. |
 
+Current production manifest total after Qwen3.8/Ornith consolidation
+plus pinned (not yet all locally accepted) studio/ASR weights:
+**196.14 GiB**.
+
 The official project size **without AI model weights** is the Git
-application: about **1.2 MiB** of tracked source. A full recommended
-weight set is **235.05 GiB** under `/srv/ai-station` and is provisioned
+application: about **1.2 MiB** of tracked source. The current production
+manifest weight set is **196.14 GiB** under `/srv/ai-station` and is provisioned
 separately with `ai models install` / `make models-core`.
 
 ## Manifest fields
@@ -126,8 +136,8 @@ Each model entry contains:
 
 Default operational models:
 
-- Qwen3.6 35B-A3B general (GGUF);
-- Qwen3 Embedding 0.6B.
+- Qwen3.8 27B shared general/reasoning GGUF;
+- Qwen3 Embedding 8B Q4_K_M.
 
 ~~~bash
 ./scripts/provision-models.sh --profile core
@@ -141,13 +151,10 @@ Core plus selectable heavy roles. These retained packs are never
 experimental and must never be deleted: Ornith 1.5, Qwen3.8, LongWriter
 Q4, and ComfyUI MiniMax Music 3 / MiniMax H3 / FLUX.2.
 
-- Qwen3 Coder 30B-A3B;
-- DeepSeek-R1 Distill Qwen 32B (reasoning);
-- Qwen3-VL 32B + mmproj (vision);
-- Ornith-1.5 35B Q4 (retained coding profile; does not replace coder);
-- Qwen3.8 27B UD-Q4_K_M + mmproj (retained dense VL+tools; does not replace general or vision);
+- Ornith-1.5 35B Q4 (default coding profile);
+- Qwen3.8 27B UD-Q4_K_M + mmproj (shared general, reasoning, and vision profile);
 - LongWriter-Zero 32B Q4_K_M (retained long-form / RL writing; does not replace general);
-- Qwen3 Reranker 0.6B (CPU; started with `ai start` for hybrid RAG).
+- Qwen3 Reranker 4B Q6_K (CPU; started with `ai start` for hybrid RAG).
 
 ~~~bash
 ./scripts/provision-models.sh --profile all
@@ -240,6 +247,7 @@ silently overwritten.
 /srv/ai-station/models/embedding
 /srv/ai-station/models/reranker
 /srv/ai-station/models/whisper
+/srv/ai-station/models/asr
 /srv/ai-station/models/custom
 /srv/ai-station/models/comfyui
 ~~~

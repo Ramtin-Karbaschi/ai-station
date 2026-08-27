@@ -1,29 +1,24 @@
-# AI Station Model Registry — canonical runtime aliases and profiles.
-# Internal runtime wiring uses aliases (local-*); user-facing names live in
-# config/model-catalog.json and are mirrored here for operational clarity.
-
 version: 1
 runtime_policy:
   max_active_heavy_profiles: 1
   heavy_profiles:
-    - general
-    - coder
-    - reasoning
-    - vision
-    - ornith
-    - qwen38
-    - longwriter
+  - general
+  - coder
+  - reasoning
+  - vision
+  - ornith
+  - qwen38
+  - longwriter
   always_on:
-    - embedder
-    - llm-gateway
+  - embedder
+  - llm-gateway
   optional_profiles:
-    - reranker
-
+  - reranker
 models:
   local-general:
     alias: local-general
-    catalog_id: general-qwen3_6-35b-a3b
-    public_name: Qwen3.6-35B-A3B-UD-Q4_K_M
+    catalog_id: general-qwen38-27b
+    public_name: Qwen3.8-27B-UD-Q4_K_M
     role: general
     kind: chat
     heavy: true
@@ -32,15 +27,16 @@ models:
     port: 8082
     backend_model: ai-station-general
     runtime: llama-cpp
-    file: general/qwen3.6-35b-a3b-ud-q4_k_m.gguf
-    context_size: 8192
+    file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
+    context_size: 262144
     status: production
-    manifest_id: general-qwen3.6-35b-a3b-q4
-
+    manifest_id: qwen38-27b-q4
+    family: qwen
+    note: Shared Qwen3.8 bytes; general route disables thinking.
   local-coder:
     alias: local-coder
-    catalog_id: coder-qwen3-coder-30b-a3b
-    public_name: Qwen3-Coder-30B-A3B-Instruct-Q4
+    catalog_id: coder-ornith-1_5-35b
+    public_name: Ornith-1.5-35B-Q4_K_M
     role: coder
     kind: chat
     heavy: true
@@ -49,15 +45,16 @@ models:
     port: 8083
     backend_model: ai-station-coder
     runtime: llama-cpp
-    file: coder/qwen3-coder-30b-a3b-instruct-q4.gguf
+    file: ornith/ornith-1.5-35b-q4_k_m.gguf
     context_size: 8192
     status: production
-    manifest_id: coder-qwen3-30b-a3b-q4
-
+    manifest_id: ornith-1.5-35b-q4
+    family: qwen
+    note: Default OpenCode/coding route; replaces Qwen3-Coder in active config.
   local-reasoning:
     alias: local-reasoning
-    catalog_id: reasoning-deepseek-r1-32b
-    public_name: DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
+    catalog_id: reasoning-qwen38-27b
+    public_name: Qwen3.8-27B-Reasoning-UD-Q4_K_M
     role: reasoning
     kind: chat
     heavy: true
@@ -66,16 +63,16 @@ models:
     port: 8084
     backend_model: ai-station-reasoning
     runtime: llama-cpp
-    file: thinking/deepseek-r1-distill-qwen-32b-q4_k_m.gguf
-    context_size: 8192
+    file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
+    context_size: 262144
     status: production
-    manifest_id: reasoning-deepseek-r1-32b-q4
-    note: Weights under models/thinking; Compose profile name is reasoning.
-
+    manifest_id: qwen38-27b-q4
+    note: Shares Qwen3.8 bytes with general; thinking route.
+    family: qwen
   local-vision:
     alias: local-vision
-    catalog_id: vision-qwen3-vl-32b
-    public_name: Qwen3-VL-32B-Instruct-Q4_K_M
+    catalog_id: vision-qwen38-27b
+    public_name: Qwen3.8-27B-Vision-UD-Q4_K_M
     role: vision
     kind: vision
     heavy: true
@@ -84,12 +81,13 @@ models:
     port: 8085
     backend_model: ai-station-vision
     runtime: llama-cpp
-    file: vision/qwen3-vl-32b-instruct/qwen3-vl-32b-instruct-q4_k_m.gguf
-    mmproj: vision/qwen3-vl-32b-instruct/mmproj-qwen3-vl-32b.gguf
+    file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
+    mmproj: qwen38/mmproj-f16.gguf
     context_size: 4096
     status: production
-    manifest_id: vision-qwen3-vl-32b-q4
-
+    manifest_id: qwen38-27b-q4
+    family: qwen
+    note: Shares Qwen3.8 bytes with general; loads mmproj only in vision profile.
   local-ornith:
     alias: local-ornith
     catalog_id: ornith-1_5-35b
@@ -104,10 +102,10 @@ models:
     runtime: llama-cpp
     file: ornith/ornith-1.5-35b-q4_k_m.gguf
     context_size: 8192
-    status: optional
+    status: compatibility
     manifest_id: ornith-1.5-35b-q4
-    note: Optional heavy profile; does not replace the coder profile. Switch with ai models use ornith.
-
+    note: Optional heavy profile; does not replace the coder profile. Switch with
+      ai models use ornith.
   local-qwen38:
     alias: local-qwen38
     catalog_id: qwen38-27b
@@ -122,11 +120,11 @@ models:
     runtime: llama-cpp
     file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
     mmproj: qwen38/mmproj-f16.gguf
-    context_size: 8192
-    status: optional
+    context_size: 262144
+    status: compatibility
     manifest_id: qwen38-27b-q4
-    note: Optional dense 27B VL+tools profile from Unsloth GGUF of Qwen/Qwen3.8-27B. Does not replace general or vision. Switch with ai models use qwen38.
-
+    note: Optional dense 27B VL+tools profile from Unsloth GGUF of Qwen/Qwen3.8-27B.
+      Does not replace general or vision. Switch with ai models use qwen38.
   local-longwriter:
     alias: local-longwriter
     catalog_id: longwriter-zero-32b
@@ -143,12 +141,12 @@ models:
     context_size: 8192
     status: optional
     manifest_id: longwriter-zero-32b-q4
-    note: Optional long-form writing / RL profile. Q4_K_M fully GPU-loads on 24 GiB. Does not replace general or reasoning. Switch with ai models use longwriter.
-
+    note: Optional long-form writing / RL profile. Q4_K_M fully GPU-loads on 24 GiB.
+      Does not replace general or reasoning. Switch with ai models use longwriter.
   local-embedding:
     alias: local-embedding
-    catalog_id: embedding-qwen3-0_6b
-    public_name: Qwen3-Embedding-0.6B-Q8_0
+    catalog_id: embedding-qwen3-8b
+    public_name: Qwen3-Embedding-8B-Q4_K_M
     role: embedding
     kind: embedding
     heavy: false
@@ -157,15 +155,14 @@ models:
     port: 8090
     backend_model: ai-station-embedding
     runtime: llama-cpp
-    file: embedding/qwen3-embedding-0.6b-q8_0.gguf
+    file: embedding/qwen3-embedding-8b-q4_k_m.gguf
     context_size: 8192
     status: production
-    manifest_id: embedding-qwen3-0.6b-q8
-
+    manifest_id: embedding-qwen3-8b-q4_k_m
   local-reranker:
     alias: local-reranker
-    catalog_id: reranker-qwen3-0_6b
-    public_name: Qwen3-Reranker-0.6B-Q8_0
+    catalog_id: reranker-qwen3-4b
+    public_name: Qwen3-Reranker-4B-Q6_K
     role: reranker
     kind: reranker
     heavy: false
@@ -174,9 +171,9 @@ models:
     port: 8091
     backend_model: ai-station-reranker
     runtime: llama-cpp
-    file: reranker/qwen3-reranker-0.6b-q8_0.gguf
+    file: reranker/qwen3-reranker-4b-q6_k.gguf
     context_size: 4096
     status: production
     gpu_layers: 0
     note: CPU-only by default to coexist with one heavy GPU model.
-    manifest_id: reranker-qwen3-0.6b-q8
+    manifest_id: reranker-qwen3-4b-q6_k
