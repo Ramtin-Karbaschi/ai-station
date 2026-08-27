@@ -1,0 +1,9 @@
+{
+  "path": "/srv/ai-station/models/reranker/qwen3-reranker-0.6b-q8_0.gguf",
+  "size_bytes": 639153184,
+  "sha256": "22c9979ce4fbcdc5acdc310c6641c32797eff1aa980b8f7a2db8a8ea23429a48",
+  "replacement": "reranker-qwen3-4b-q6_k",
+  "replacement_sha256": "33e92e5d354031bbf370894dd30a447c6368ec0f7b70e5810424f5925aec7384",
+  "acceptance": "official llama.cpp convert+Q6_K ranked loopback-binding above Paris distractor on 2026-08-27",
+  "deleted_at": "2026-08-27T09:00:00Z"
+}

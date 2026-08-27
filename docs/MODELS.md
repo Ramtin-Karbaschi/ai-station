@@ -50,7 +50,7 @@ source is named. At most one heavy GPU profile runs at a time.
 | `qwen38-27b-mmproj-f16` | Qwen3.8 vision projector | 0.86 | Required with `qwen38-27b-q4`. Combined Qwen3.8 pack **16.19 GiB**. |
 | `longwriter-zero-32b-q4` | Retained long-form writing | 18.49 | Q4_K_M chosen after Q8_0 failed (~2.7 tok/s). Selection smoke: 5.696 s / 22.47 tok/s. Checked-in 2026-08-23 JSON: 164.0 s / 0.78 tok/s under disk contention. |
 | `embedding-qwen3-8b-q4_k_m` | Retrieval embeddings | 4.36 | CPU on `:8090` (ADR-022); upgraded to Qwen3 8B Q4_K_M for stronger multilingual retrieval. |
-| `reranker-qwen3-4b-q6_k` | Hybrid RAG rerank | 3.38 | CPU on `:8091`; upgraded to Qwen3 4B Q6_K for Open WebUI hybrid RAG. |
+| `reranker-qwen3-4b-q6_k` | Hybrid RAG rerank | 3.08 | CPU on `:8091`; official Qwen conversion via llama.cpp `4fc4ec55` then Q6_K (ADR-024). |
 | `asr-qwen3-1.7b-q8` | Primary speech-to-text | 2.02 | ggml-org Q8_0; CPU profile `asr` on `:8092` (ADR-027). Weights installed; unified `/v1/audio/transcriptions` on the host gateway. |
 | `asr-qwen3-1.7b-mmproj-q8` | Qwen3-ASR audio projector | 0.33 | Required with `asr-qwen3-1.7b-q8`. |
 
@@ -102,7 +102,7 @@ Studio 2026 additions are not production until a local smoke exists (ADR-028):
 | ComfyUI FLUX.2-dev | 30.45 |
 | Speech (Qwen3-ASR 1.7B Q8 + mmproj) | 2.35 |
 | Studio 2026 + OCR (pinned, not all accepted) | 198.10 |
-| **All manifest weights** | **367.37** |
+| **All manifest weights** | **367.07** |
 
 Evidence files: `benchmarks/results/20260823/` (LiteLLM and ComfyUI
 smokes). Hardware planning remains in the table above, not a guarantee
@@ -122,11 +122,11 @@ Model GGUF and safetensors are **not** in Git. They live under
 
 Current production-plus-studio manifest total after Qwen3.8/Ornith
 consolidation plus pinned (not yet all locally accepted) studio/ASR/OCR
-weights: **367.37 GiB**.
+weights: **367.07 GiB**.
 
 The official project size **without AI model weights** is the Git
 application: about **1.2 MiB** of tracked source. The current manifest
-weight set is **367.37 GiB** under `/srv/ai-station` and is provisioned
+weight set is **367.07 GiB** under `/srv/ai-station` and is provisioned
 separately with `ai models install` / `make models-core`.
 
 ## Manifest fields

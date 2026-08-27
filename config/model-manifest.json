@@ -91,13 +91,18 @@
         "core",
         "all"
       ],
-      "repo_id": "QuantFactory/Qwen3-Reranker-4B-GGUF",
+      "repo_id": "Qwen/Qwen3-Reranker-4B",
       "required_for_runtime": true,
-      "revision": "2a42c7aa9c702165da87b09dec164a54d973123b",
+      "revision": "22e683669bc0f0bd69640a1354a6d0aebcfeede5",
       "revision_is_immutable": true,
       "role": "reranker",
-      "sha256": "1cf491b95e4d622306a5e1deff25cb9f2deeedd83fc2149b17f450d2587c2269",
-      "size_bytes": 3624199168
+      "sha256": "33e92e5d354031bbf370894dd30a447c6368ec0f7b70e5810424f5925aec7384",
+      "size_bytes": 3305699168,
+      "conversion": {
+        "script": "scripts/convert-qwen3-reranker-4b.sh",
+        "llama_cpp_revision": "4fc4ec5541b243957ae5099edb67372f8f3b550e",
+        "quantization": "Q6_K"
+      }
     },
     {
       "id": "experimental-comfyui-music3-dit-int8",

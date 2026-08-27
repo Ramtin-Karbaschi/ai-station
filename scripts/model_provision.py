@@ -10,6 +10,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any
 
@@ -45,6 +46,10 @@ def configure_hub_client() -> None:
         str(HUB_ETAG_TIMEOUT_SECONDS),
     )
     os.environ.setdefault("HF_XET_HIGH_PERFORMANCE", "1")
+    # Xet on this workstation stalls near completion with no byte progress.
+    # Prefer classic HTTPS / hf_transfer unless the caller opts back into Xet.
+    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+    os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
 
 
 def hub_lock_dir(cache_dir: pathlib.Path, repo_id: str) -> pathlib.Path:
@@ -151,64 +156,101 @@ def http_resume_download(
         token=token,
         user_agent=user_agent,
     )
-    auth = _auth_headers(token)
+    auth_conf: pathlib.Path | None = None
+    try:
+        if shutil.which("aria2c"):
+            command = [
+                "aria2c",
+                "--continue=true",
+                "--max-connection-per-server=16",
+                "--split=16",
+                "--min-split-size=1M",
+                "--file-allocation=none",
+                "--max-tries=40",
+                "--retry-wait=5",
+                "--timeout=60",
+                "--connect-timeout=30",
+                "--lowest-speed-limit=8192",
+                "--allow-overwrite=true",
+                "--auto-file-renaming=false",
+                f"--user-agent={user_agent}",
+                "--console-log-level=notice",
+                "--summary-interval=30",
+                "-d",
+                str(dest.parent),
+                "-o",
+                dest.name,
+            ]
+            if token:
+                handle, name = tempfile.mkstemp(
+                    prefix="ai-station-aria2-",
+                    suffix=".conf",
+                )
+                auth_conf = pathlib.Path(name)
+                os.write(
+                    handle,
+                    f"header=Authorization: Bearer {token}\n".encode("utf-8"),
+                )
+                os.close(handle)
+                os.chmod(auth_conf, 0o600)
+                command.insert(1, f"--conf-path={auth_conf}")
+            command.append(source)
+        else:
+            command = [
+                "curl",
+                "-fL",
+                "--retry",
+                "40",
+                "--retry-delay",
+                "4",
+                "--retry-all-errors",
+                "--connect-timeout",
+                "30",
+                "--speed-limit",
+                "8192",
+                "--speed-time",
+                "60",
+                "-C",
+                "-",
+                "-A",
+                user_agent,
+            ]
+            if token:
+                handle, name = tempfile.mkstemp(
+                    prefix="ai-station-curl-",
+                    suffix=".cfg",
+                )
+                auth_conf = pathlib.Path(name)
+                os.write(
+                    handle,
+                    f'header = "Authorization: Bearer {token}"\n'.encode("utf-8"),
+                )
+                os.close(handle)
+                os.chmod(auth_conf, 0o600)
+                command.extend(["-K", str(auth_conf)])
+            command.extend(["-o", str(dest), source])
 
-    if shutil.which("aria2c"):
-        command = [
-            "aria2c",
-            "--continue=true",
-            "--max-connection-per-server=4",
-            "--split=4",
-            "--min-split-size=8M",
-            "--file-allocation=none",
-            "--max-tries=40",
-            "--retry-wait=5",
-            "--timeout=60",
-            "--connect-timeout=30",
-            "--lowest-speed-limit=8192",
-            "--allow-overwrite=true",
-            "--auto-file-renaming=false",
-            f"--user-agent={user_agent}",
-            "--console-log-level=notice",
-            "--summary-interval=30",
-            "-d",
-            str(dest.parent),
-            "-o",
-            dest.name,
-        ]
-        if token:
-            command.append(f"--header=Authorization: Bearer {token}")
-        command.append(source)
-    else:
-        command = [
-            "curl",
-            "-fL",
-            "--retry",
-            "40",
-            "--retry-delay",
-            "4",
-            "--retry-all-errors",
-            "--connect-timeout",
-            "30",
-            "--speed-limit",
-            "8192",
-            "--speed-time",
-            "60",
-            "-C",
-            "-",
-            "-A",
-            user_agent,
-            *auth,
-            "-o",
-            str(dest),
-            source,
-        ]
+        completed = subprocess.run(command, check=False)
+    finally:
+        if auth_conf is not None:
+            auth_conf.unlink(missing_ok=True)
 
-    completed = subprocess.run(command, check=False)
     if completed.returncode != 0:
         raise RuntimeError(
             f"HTTP resume download failed (exit {completed.returncode}): {dest}"
         )
+
+
+def load_hf_token() -> str | None:
+    for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"):
+        value = os.getenv(key)
+        if value:
+            return value
+    token_path = pathlib.Path.home() / ".cache" / "huggingface" / "token"
+    if token_path.is_file():
+        text = token_path.read_text(encoding="utf-8").strip()
+        return text or None
+    return None
 
 
 def load_manifest(path: pathlib.Path) -> dict[str, Any]:
@@ -340,6 +382,13 @@ def install_model(
         exist_ok=True,
     )
 
+    if model.get("conversion") and not destination.is_file():
+        raise RuntimeError(
+            f"{model['id']} is a converted artifact; run "
+            f"{model['conversion'].get('script', 'the recorded convert script')} "
+            "instead of downloading a community GGUF."
+        )
+
     if verify_model(model, data_root):
         print(f"SKIP: {model['id']} already verified.")
         return
@@ -372,23 +421,30 @@ def install_model(
         model["filename"],
     )
 
-    if is_incomplete_destination(destination, model["size_bytes"]):
-        print(
-            "Incomplete destination present; resuming over HTTP Range "
-            f"({destination.stat().st_size} of {model['size_bytes']} bytes)."
+    if model.get("conversion"):
+        raise RuntimeError(
+            f"{model['id']} failed checksum after conversion; re-run "
+            f"{model['conversion'].get('script', 'the recorded convert script')}."
         )
-        try:
-            http_resume_download(
-                resolve_url,
-                destination,
-                token=token,
-            )
-        except Exception as exc:
-            print(f"HTTP resume failed: {exc}")
-        else:
-            if verify_model(model, data_root):
-                print(f"INSTALLED: {model['id']}")
-                return
+
+    print("Downloading over HTTPS with aria2c/curl (Xet/hub last).")
+    if destination.is_file():
+        print(
+            f"Resume from {destination.stat().st_size} of "
+            f"{model['size_bytes']} bytes."
+        )
+    try:
+        http_resume_download(
+            resolve_url,
+            destination,
+            token=token,
+        )
+    except Exception as exc:
+        print(f"HTTP download failed: {exc}")
+    else:
+        if verify_model(model, data_root):
+            print(f"INSTALLED: {model['id']}")
+            return
 
     # Keep list/help/verify usable without the download-only dependency.
     from huggingface_hub import hf_hub_download
@@ -552,7 +608,7 @@ def main() -> int:
                 )
         return 0
 
-    token = os.getenv("HF_TOKEN") or None
+    token = load_hf_token()
     failures = 0
 
     if args.verify_only:

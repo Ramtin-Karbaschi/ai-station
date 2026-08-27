@@ -18,8 +18,46 @@ ROOT = Path(__file__).resolve().parents[1]
 MANAGER = ROOT / "scripts/model_manager.py"
 PROVISIONER = ROOT / "scripts/model_provision.py"
 MANIFEST = ROOT / "config/model-manifest.json"
-CODER_ID = "coder-qwen3-30b-a3b-q4"
-EMBED_ID = "embedding-qwen3-0.6b-q8"
+CODER_ID = "fixture-optional-q4"
+EMBED_ID = "embedding-qwen3-8b-q4_k_m"
+
+
+def _write_model_manager_fixture(root: Path) -> None:
+    config = root / "config"
+    config.mkdir(parents=True)
+    (config / "model-manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "profiles": {
+                    "custom": {
+                        "description": "Test-only optional model fixture."
+                    }
+                },
+                "models": [
+                    {
+                        "id": CODER_ID,
+                        "destination": "models/custom/fixture-q4.gguf",
+                        "filename": "fixture-q4.gguf",
+                        "profiles": ["custom"],
+                        "repo_id": "org/name",
+                        "required_for_runtime": False,
+                        "revision": "abc123",
+                        "revision_is_immutable": True,
+                        "role": "custom",
+                        "sha256": "0" * 64,
+                        "size_bytes": 7,
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (config / "model-catalog.json").write_text(
+        json.dumps({"schema_version": 1, "models": []}) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _load_provisioner():
@@ -46,37 +84,42 @@ class ModelManagementTests(unittest.TestCase):
             text=True,
         )
         self.assertIn("--id", help_result.stdout)
-        listed = subprocess.run(
-            [
-                "python3",
-                str(PROVISIONER),
-                "--manifest",
-                str(MANIFEST),
-                "--data-root",
-                "/tmp/ai-station-model-test-does-not-exist",
-                "--id",
-                CODER_ID,
-                "--list",
-                "--json",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        rows = json.loads(listed.stdout)
-        self.assertEqual([row["id"] for row in rows], [CODER_ID])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "root"
+            _write_model_manager_fixture(root)
+            listed = subprocess.run(
+                [
+                    "python3",
+                    str(PROVISIONER),
+                    "--manifest",
+                    str(root / "config/model-manifest.json"),
+                    "--data-root",
+                    "/tmp/ai-station-model-test-does-not-exist",
+                    "--id",
+                    CODER_ID,
+                    "--list",
+                    "--json",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            rows = json.loads(listed.stdout)
+            self.assertEqual([row["id"] for row in rows], [CODER_ID])
 
     def test_quarantine_is_dry_run_by_default_and_reversible(self) -> None:
-        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        model = next(item for item in manifest["models"] if item["id"] == CODER_ID)
         with tempfile.TemporaryDirectory() as directory:
-            data_root = Path(directory)
+            root = Path(directory) / "root"
+            _write_model_manager_fixture(root)
+            manifest = json.loads((root / "config/model-manifest.json").read_text(encoding="utf-8"))
+            model = next(item for item in manifest["models"] if item["id"] == CODER_ID)
+            data_root = Path(directory) / "data"
             model_path = data_root / model["destination"]
             model_path.parent.mkdir(parents=True)
             model_path.write_bytes(b"fixture")
 
             dry_run = subprocess.run(
-                [str(MANAGER), "--data-root", directory, "quarantine", CODER_ID],
+                [str(MANAGER), "--root", str(root), "--data-root", str(data_root), "quarantine", CODER_ID],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -87,8 +130,10 @@ class ModelManagementTests(unittest.TestCase):
             subprocess.run(
                 [
                     str(MANAGER),
+                    "--root",
+                    str(root),
                     "--data-root",
-                    directory,
+                    str(data_root),
                     "quarantine",
                     CODER_ID,
                     "--confirm",
@@ -102,8 +147,10 @@ class ModelManagementTests(unittest.TestCase):
             subprocess.run(
                 [
                     str(MANAGER),
+                    "--root",
+                    str(root),
                     "--data-root",
-                    directory,
+                    str(data_root),
                     "restore",
                     CODER_ID,
                     "--confirm",
@@ -361,10 +408,17 @@ class ModelManagementTests(unittest.TestCase):
             cache_blob.parent.mkdir(parents=True)
             cache_blob.write_bytes(payload)
 
+            def fake_http(*_args, **_kwargs):
+                raise RuntimeError("http skipped in fixture")
+
             def fake_hub(**kwargs):
                 return str(cache_blob)
 
-            with patch.dict("sys.modules", {"huggingface_hub": _HubStub(fake_hub)}):
+            with patch.object(
+                provisioner,
+                "http_resume_download",
+                side_effect=fake_http,
+            ), patch.dict("sys.modules", {"huggingface_hub": _HubStub(fake_hub)}):
                 provisioner.install_model(
                     model,
                     data_root,
