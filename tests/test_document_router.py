@@ -38,6 +38,21 @@ class DocumentRouterTests(unittest.TestCase):
         r = extract_document(b"x", "scan.png", "image/png", tika_fn=_tika_empty, paddle_fn=_paddle, tesseract_fn=_tess, document_class="scanned_persian", paddle_available=True)
         self.assertEqual(r.engine, "paddleocr-vl-1.6")
 
+    def test_complex_hint_on_digital_pdf_skips_tika(self):
+        r = extract_document(
+            b"%PDF",
+            "scan.pdf",
+            "application/pdf",
+            tika_fn=_tika_good,
+            paddle_fn=_paddle,
+            tesseract_fn=_tess,
+            document_class="scanned_persian",
+            paddle_available=True,
+        )
+        self.assertEqual(r.engine, "paddleocr-vl-1.6")
+        self.assertEqual(r.document_class, "scanned_persian")
+        self.assertFalse(r.fallback_used)
+
     def test_complex_classes(self):
         for c in ("table", "formula", "chart", "screenshot", "rotated", "poor_scan", "mixed_persian_english"):
             r = extract_document(b"x", f"{c}.png", "image/png", tika_fn=_tika_empty, paddle_fn=_paddle, tesseract_fn=_tess, document_class=c, paddle_available=True)
@@ -65,6 +80,25 @@ class SttRouterTests(unittest.TestCase):
             return Transcript("w", "faster-whisper-large-v3", lang, [{"start": 0}], True, "ok")
         r = transcribe(b"x", want_timestamps=True, qwen_available=True, qwen_fn=qwen, whisper_fn=whisper)
         self.assertEqual(r.engine, "faster-whisper-large-v3")
+        self.assertFalse(r.fallback_used)
+
+    def test_whisper_primary_when_qwen_unavailable(self):
+        def qwen(_b, lang):
+            raise AssertionError("Qwen must not run when unavailable")
+        def whisper(_b, lang):
+            return Transcript("w", "faster-whisper-large-v3", lang, None, False, "ok")
+        r = transcribe(b"x", qwen_available=False, qwen_fn=qwen, whisper_fn=whisper)
+        self.assertEqual(r.engine, "faster-whisper-large-v3")
+        self.assertFalse(r.fallback_used)
+
+    def test_whisper_is_fallback_when_qwen_fails(self):
+        def qwen(_b, lang):
+            raise RuntimeError("asr down")
+        def whisper(_b, lang):
+            return Transcript("w", "faster-whisper-large-v3", lang, None, False, "ok")
+        r = transcribe(b"x", qwen_available=True, qwen_fn=qwen, whisper_fn=whisper)
+        self.assertEqual(r.engine, "faster-whisper-large-v3")
+        self.assertTrue(r.fallback_used)
 
 
 class GatewaySttRouteTests(unittest.IsolatedAsyncioTestCase):

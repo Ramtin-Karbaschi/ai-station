@@ -60,13 +60,13 @@ def transcribe(
             )
     if whisper_fn is None:
         raise RuntimeError("Whisper fallback selected but no engine function was provided")
-    fallback = whisper_fn(audio_bytes, language)
+    whisper = whisper_fn(audio_bytes, language)
     return Transcript(
-        text=fallback.text,
+        text=whisper.text,
         engine="faster-whisper-large-v3",
-        language=fallback.language or language,
-        timestamps=fallback.timestamps,
-        fallback_used=True,
+        language=whisper.language or language,
+        timestamps=whisper.timestamps,
+        fallback_used=False,
         reason="timestamp / compatibility path" if want_timestamps else "Qwen3-ASR unavailable",
     )
 
@@ -151,8 +151,8 @@ def _whisper_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
         engine="faster-whisper-large-v3",
         language=payload.get("language") or language,
         timestamps=payload.get("segments"),
-        fallback_used=True,
-        reason="whisper fallback",
+        fallback_used=False,
+        reason="whisper transcription",
     )
 
 

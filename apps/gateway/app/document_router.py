@@ -95,9 +95,16 @@ def extract_document(
     document_class: str | None = None,
     paddle_available: bool = False,
 ) -> ExtractionResult:
-    classified = classify_document(filename, mime, document_class)
+    mime_class = classify_document(filename, mime)
+    classified = document_class or mime_class
     tika_text = tika_fn(file_bytes, filename, mime)
-    if classified == "digital" and classified not in COMPLEX_CLASSES and digital_text_is_good(tika_text):
+    caller_marked_complex = document_class in COMPLEX_CLASSES
+    if (
+        mime_class == "digital"
+        and not caller_marked_complex
+        and classified not in COMPLEX_CLASSES
+        and digital_text_is_good(tika_text)
+    ):
         return ExtractionResult(
             text=tika_text,
             engine="tika",
@@ -105,7 +112,12 @@ def extract_document(
             reason="digitally extractable text from Apache Tika",
             document_class=classified,
         )
-    if document_class in COMPLEX_CLASSES or classified == "image" or not digital_text_is_good(tika_text):
+    if (
+        caller_marked_complex
+        or classified in COMPLEX_CLASSES
+        or mime_class == "image"
+        or not digital_text_is_good(tika_text)
+    ):
         if paddle_available and paddle_fn is not None:
             paddle_text = paddle_fn(file_bytes, filename, mime)
             if digital_text_is_good(paddle_text):
