@@ -127,6 +127,20 @@ class SttRouterTests(unittest.TestCase):
         self.assertEqual(parts[1].get_param("name", header="content-disposition"), "language")
         self.assertEqual(parts[1].get_payload(decode=True), b"fa")
 
+    def test_asr_multipart_crlf_precedes_boundary_after_binary_audio(self):
+        audio = b"RIFF\x00\xff\r\n\x1aWAVEfmt"
+        body = _asr_multipart_body(audio, "fa")
+        start = body.find(audio)
+        self.assertNotEqual(start, -1)
+        after = body[start + len(audio) :]
+        next_part = f"\r\n--{ASR_MULTIPART_BOUNDARY}\r\n".encode("utf-8")
+        self.assertTrue(after.startswith(next_part), after[:48])
+        msg = self._parse_asr_multipart(body)
+        parts = list(msg.iter_parts())
+        self.assertEqual(len(parts), 2)
+        self.assertEqual(parts[0].get_payload(decode=True), audio)
+        self.assertEqual(parts[1].get_payload(decode=True), b"fa")
+
     def test_asr_multipart_without_language_has_no_empty_part(self):
         body = _asr_multipart_body(b"AUDIO", None)
         delimiter = f"--{ASR_MULTIPART_BOUNDARY}\r\n".encode("utf-8")

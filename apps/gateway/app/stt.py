@@ -94,23 +94,29 @@ def _asr_multipart_body(
     boundary: str = ASR_MULTIPART_BOUNDARY,
     filename: str = "audio.wav",
 ) -> bytes:
-    parts: list[bytes] = [
-        (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
-            "Content-Type: application/octet-stream\r\n\r\n"
-        ).encode("utf-8")
-        + audio_bytes
-    ]
+    dash_boundary = f"--{boundary}".encode("utf-8")
+    crlf = b"\r\n"
+    body = bytearray()
+    body += dash_boundary
+    body += crlf
+    body += (
+        f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        "Content-Type: application/octet-stream\r\n"
+    ).encode("utf-8")
+    body += crlf
+    body += audio_bytes
     if language:
-        parts.append(
-            (
-                f"--{boundary}\r\n"
-                'Content-Disposition: form-data; name="language"\r\n\r\n'
-                f"{language}"
-            ).encode("utf-8")
-        )
-    return b"\r\n".join(parts) + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        body += crlf
+        body += dash_boundary
+        body += crlf
+        body += b'Content-Disposition: form-data; name="language"\r\n'
+        body += crlf
+        body += language.encode("utf-8")
+    body += crlf
+    body += dash_boundary
+    body += b"--"
+    body += crlf
+    return bytes(body)
 
 
 def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
