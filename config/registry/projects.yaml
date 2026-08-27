@@ -38,3 +38,12 @@ projects:
   created_at: '2026-08-24T08:41:24.389684+00:00'
   key_alias: company-os
   litellm_key_hash: b08dda565c51043ff83d1f7854e7d939bf493b2fe3bc642ce81ab9ad69375090
+- id: content-studio
+  models:
+  - Qwen3.8-27B-UD-Q4_K_M
+  - Qwen3.8-27B-Vision-UD-Q4_K_M
+  - LongWriter-Zero-32B-Q4_K_M
+  status: active
+  created_at: '2026-08-27T13:39:47.701239+00:00'
+  key_alias: content-studio
+  litellm_key_hash: 417fae51de80f574f87506d85a187e2b49e0d3d4939f2ffe5005e87c4a187960
