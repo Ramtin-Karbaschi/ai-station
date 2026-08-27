@@ -22,6 +22,13 @@ class ComposeUnitAndRecommendedModelsTests(unittest.TestCase):
         self.assertIn(f"COMPOSE_FILE={CANONICAL_COMPOSE_FILE}", text)
         self.assertIn("COMPOSE_PROJECT_NAME=ai-station", text)
 
+    def test_env_example_sets_measured_general_and_reasoning_context(self) -> None:
+        text = (ROOT / ".env.example").read_text(encoding="utf-8")
+        self.assertIn("LLM_GENERAL_CONTEXT=262144", text)
+        self.assertIn("REASONING_CONTEXT=262144", text)
+        models = (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        self.assertIn("${REASONING_CONTEXT:-8192}", models)
+
     def test_installer_expected_compose_file_matches_canonical_chain(self) -> None:
         text = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
         self.assertIn("compose.yml:compose.models.yml:compose.comfyui.experimental.yaml:", text)
