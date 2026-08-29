@@ -4,6 +4,10 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Start no longer dies on a missing Tool Gateway unit:** Control Panel
+  option 1 runs `ai start` as root. If `ai-station-tool-gateway.service`
+  is not installed, Start now installs that system unit instead of
+  `systemctl --user restart` (systemd exit 5 aborted the whole start).
 - **Vision reasoning off:** `llm-vision` now passes `--reasoning off` and
   `--reasoning-budget 0`, matching `llm-general`. The shared Qwen3.8
   weights still support thinking; the vision profile must not enter

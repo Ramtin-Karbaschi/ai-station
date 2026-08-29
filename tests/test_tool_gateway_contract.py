@@ -43,6 +43,15 @@ class ToolGatewayContractTests(unittest.TestCase):
         self.assertIn("systemctl --user", tool_lib)
         self.assertIn("WantedBy=default.target", user_unit)
         self.assertTrue((ROOT / "scripts/install-tool-gateway-user.sh").is_file())
+        start_fn = tool_lib.split("ai_tools_start()", 1)[1].split("ai_tools_stop()", 1)[0]
+        self.assertIn("already healthy", start_fn)
+        self.assertIn("id -u", start_fn)
+        self.assertIn("/etc/systemd/system", tool_lib)
+        self.assertIn("install-tool-gateway-user.sh", start_fn)
+        self.assertIn("ai_tools_user_unit_exists", start_fn)
+        self.assertIn("ai_tools_install_system_unit", start_fn)
+        user_restart_index = start_fn.find('systemctl --user restart')
+        self.assertGreater(user_restart_index, start_fn.find("ai_tools_user_unit_exists"))
 
     def test_searxng_json_and_safe_search_are_enabled(self) -> None:
         settings = (ROOT / "infra/searxng/settings.yml").read_text(encoding="utf-8")

@@ -88,7 +88,7 @@ Keep as-needed; not used by the Windows quick-start path:
 - `provision-whisper-*.sh`
 - `update-image-lock.sh`, `verify-image-lock.sh`, `verify-build-lock.sh`
 - `release-audit.sh`, `docs-audit.sh`, `verify-mermaid.sh`, `publish-github.sh`
-- `install-systemd.sh` (loopback-bound host/UI gateway units)
+- `install-systemd.sh` (loopback-bound host/UI/tool gateway units)
 
 ## Experimental (off by default)
 

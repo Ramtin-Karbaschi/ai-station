@@ -41,7 +41,10 @@ scripts/install-tool-gateway-user.sh
 ```
 
 The `ai tools` commands discover the system unit first and otherwise manage the
-user unit. Do not run both units at once.
+user unit. Do not run both units at once. Control Panel **Start** runs `ai start`
+as root; if the system unit is missing it is installed from
+`infra/systemd/ai-station-tool-gateway.service` instead of calling
+`systemctl --user restart` (that path exits 5 and aborted the whole start).
 
 No paid API credential is needed. Search uses the local SearXNG service and
 entity lookup uses the public Wikidata API. Clients must still treat an empty,
