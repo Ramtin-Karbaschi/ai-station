@@ -1,8 +1,8 @@
 {
   "id": "ai-station-qwen-image-edit-2511",
   "revision": 0,
-  "last_node_id": 10,
-  "last_link_id": 12,
+  "last_node_id": 15,
+  "last_link_id": 19,
   "nodes": [],
   "groups": [],
   "config": {},
@@ -44,40 +44,40 @@
       }
     },
     "5": {
-      "class_type": "TextEncodeQwenImageEdit",
+      "class_type": "TextEncodeQwenImageEditPlus",
       "inputs": {
         "clip": ["2", 0],
         "vae": ["3", 0],
-        "image": ["4", 0],
+        "image1": ["13", 0],
         "prompt": "Replace the background with a clean studio sweep. Keep the subject identity, pose, and product labels."
       }
     },
     "6": {
-      "class_type": "TextEncodeQwenImageEdit",
+      "class_type": "TextEncodeQwenImageEditPlus",
       "inputs": {
         "clip": ["2", 0],
         "vae": ["3", 0],
-        "image": ["4", 0],
-        "prompt": "blurry, extra fingers, watermark, text artifacts"
+        "image1": ["13", 0],
+        "prompt": " "
       }
     },
     "7": {
       "class_type": "VAEEncode",
       "inputs": {
-        "pixels": ["4", 0],
+        "pixels": ["13", 0],
         "vae": ["3", 0]
       }
     },
     "8": {
       "class_type": "KSampler",
       "inputs": {
-        "model": ["1", 0],
-        "positive": ["5", 0],
-        "negative": ["6", 0],
+        "model": ["12", 0],
+        "positive": ["14", 0],
+        "negative": ["15", 0],
         "latent_image": ["7", 0],
         "seed": 42,
-        "steps": 8,
-        "cfg": 1,
+        "steps": 40,
+        "cfg": 4,
         "sampler_name": "euler",
         "scheduler": "simple",
         "denoise": 1
@@ -95,6 +95,40 @@
       "inputs": {
         "images": ["9", 0],
         "filename_prefix": "ai-station-qwen-image-edit-2511"
+      }
+    },
+    "11": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": {
+        "model": ["1", 0],
+        "shift": 3.1
+      }
+    },
+    "12": {
+      "class_type": "CFGNorm",
+      "inputs": {
+        "model": ["11", 0],
+        "strength": 1
+      }
+    },
+    "13": {
+      "class_type": "FluxKontextImageScale",
+      "inputs": {
+        "image": ["4", 0]
+      }
+    },
+    "14": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": ["5", 0],
+        "reference_latents_method": "index_timestep_zero"
+      }
+    },
+    "15": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": ["6", 0],
+        "reference_latents_method": "index_timestep_zero"
       }
     }
   }

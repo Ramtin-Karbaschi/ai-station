@@ -230,8 +230,10 @@ Still open on this workstation:
   LTX-2.5 NVFP4 is on disk. Hunyuan3D 2.1 is the official Comfy-Org
   checkpoint (`studio-hunyuan3d-2_1-comfy-checkpoint`, SHA-256 verified);
   `ai provider start hunyuan3d-2_1` starts the shared ComfyUI overlay.
-  Capability map marks new packs `configured_pending_smoke`, not
-  production, until a local smoke. Fish S2 Pro is local/personal use.
+  Capability map keeps untested packs at `configured_pending_smoke`. Qwen
+  Image Edit 2511 is `verified` after its local reference-identity smoke;
+  evidence is under `/srv/ai-station/runtime/evals`. Fish S2 Pro is
+  local/personal use.
 - Superseded LLM/VL bytes (Qwen3.6, Qwen3-Coder, DeepSeek-R1 Distill,
   Qwen3-VL-32B + mmproj) are gone from `/srv`. Keep Ornith, Qwen3.8,
   LongWriter, MiniMax Music 3 / H3, and FLUX.2.

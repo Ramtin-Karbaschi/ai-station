@@ -10,6 +10,7 @@ fact across multiple documents.
 | Install or upgrade | [INSTALLATION.md](INSTALLATION.md) |
 | Understand the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Integrate an application | [PLATFORM.md](PLATFORM.md) |
+| Implement grounded accuracy for Local Content Studio | [LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md](LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md) |
 | Operate or recover it | [OPERATIONS.md](OPERATIONS.md) |
 | Recommended models, sizes, performance, and Git size without weights | [MODELS.md](MODELS.md) |
 | See the verified release snapshot | [AI_STATION_CURRENT_STATE.md](ops/AI_STATION_CURRENT_STATE.md) |
@@ -18,6 +19,7 @@ fact across multiple documents.
 | Use the code graph | [GRAPHIFY.md](clients/GRAPHIFY.md) |
 | Generate music or video | [COMFYUI.md](clients/COMFYUI.md) |
 | Automate workflows | [N8N.md](clients/N8N.md) |
+| Use grounded research tools | [TOOL_GATEWAY.md](clients/TOOL_GATEWAY.md) |
 | Diagnose a failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Find the correct script | [SCRIPTS.md](SCRIPTS.md) |
 | Review security boundaries | [THREAT_MODEL.md](security/THREAT_MODEL.md) |

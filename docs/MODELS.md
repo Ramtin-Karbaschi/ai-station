@@ -75,7 +75,7 @@ Studio 2026 additions are not production until a local smoke exists (ADR-028):
 | Pack | Manifest ids | Size (GiB) | Status |
 |---|---|---:|---|
 | Z-Image-Turbo NVFP4 | `studio-z-image-turbo-nvfp4`, `studio-z-image-text-encoder-fp4`, `studio-z-image-vae` | 7.75 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
-| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Official Comfy-Org pin; DiT on disk; shares TE/VAE with 2512; pending ComfyUI smoke |
+| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Verified 2026-08-29 with the official Plus reference workflow (40 steps, CFG 4); evidence under `/srv/ai-station/runtime/evals` |
 | FLUX.2-klein-4B | `studio-flux2-klein-4b`, `studio-flux2-klein-text-encoder-fp4`, `studio-flux2-klein-vae` | 11.12 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
 | Qwen-Image-2512 | `studio-qwen-image-2512-fp8`, `studio-qwen-image-text-encoder-nvfp4`, `studio-qwen-image-vae` | 24.96 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
 | LTX-2.5 distilled NVFP4 | `studio-ltx25-distilled-nvfp4`, `studio-ltx25-text-encoder-int8`, `studio-ltx25-video-vae`, `studio-ltx25-audio-vae` | 33.43 | Official Lightricks NVFP4 pin; size-matched on disk; pending ComfyUI smoke |

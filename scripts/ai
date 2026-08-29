@@ -29,6 +29,7 @@ Usage:
   ai opencode test [--model general|coder|reasoning|ornith]
   ai graphify install|configure|status|extract|query|path|explain|view|uninstall
   ai n8n start|stop|status|configure|uninstall
+  ai tools start|stop|status|smoke|capabilities
   ai output show|set|open|path media|graphify|export
   ai test [--live] [--endpoint URL] [--model NAME]
   ai logs [gateway|general|coder|reasoning|vision|ornith|qwen38|longwriter|embedder|webui|n8n]
@@ -96,6 +97,7 @@ Always-on (after ai start):
   LiteLLM API         http://127.0.0.1:4000/v1
   LiteLLM Admin       http://127.0.0.1:4000/ui
   SearXNG             http://127.0.0.1:8889
+  Tool Gateway        http://127.0.0.1:8892/v1
   Tika                http://127.0.0.1:9998
   Embedding           http://127.0.0.1:8090/v1
   Reranker            http://127.0.0.1:8091/v1
@@ -188,6 +190,7 @@ cmd_status() {
     "http://127.0.0.1:4000/health/liveliness|LiteLLM Gateway" \
     "http://127.0.0.1:8888/health|Host Gateway" \
     "http://127.0.0.1:8890/health|UI Gateway" \
+    "http://127.0.0.1:8892/healthz|Tool Gateway" \
     "http://127.0.0.1:3000|Open WebUI" \
     "http://127.0.0.1:8889|SearXNG" \
     "http://127.0.0.1:9998|Tika" \
@@ -291,6 +294,7 @@ cmd_start() {
   # when already healthy to avoid needless flaps during overlapping starts.
   ai_ensure_host_gateway ai-station-gateway "http://127.0.0.1:8888/health" "Host Gateway"
   ai_ensure_host_gateway ai-station-ui-gateway "http://127.0.0.1:8890/health" "UI Gateway"
+  ai_tools_start
 
   # Start the model before Open WebUI so the UI does not open onto a cold backend.
   ai_retry_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
@@ -319,6 +323,7 @@ cmd_stop() {
     stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker n8n 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
   systemctl stop ai-station-ui-gateway 2>/dev/null || true
+  ai_tools_stop
   systemctl stop ai-station-gateway 2>/dev/null || true
   ai_set_active_heavy_profile ""
   echo "AI Station stopped."
@@ -1084,6 +1089,9 @@ source "$ROOT/scripts/lib/ai-n8n.sh"
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-output.sh"
 
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-tools.sh"
+
 cmd_verify() {
   ai_ensure_docker || true
   if [[ "${1:-}" == "--stability" ]]; then
@@ -1097,6 +1105,7 @@ cmd_verify() {
   echo
   curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null | python3 -m json.tool || true
   curl -fsS --max-time 5 http://127.0.0.1:8890/health 2>/dev/null | python3 -m json.tool || true
+  curl -fsS --max-time 5 http://127.0.0.1:8892/healthz 2>/dev/null | python3 -m json.tool || true
 }
 
 cmd_test() {
@@ -1179,6 +1188,7 @@ main() {
     graphify) cmd_graphify "$@" ;;
     n8n) cmd_n8n "$@" ;;
     output) cmd_output "$@" ;;
+    tools) cmd_tools "$@" ;;
     test) cmd_test "$@" ;;
     logs) cmd_logs "$@" ;;
     gateway) cmd_gateway_url ;;
