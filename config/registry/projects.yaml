@@ -33,6 +33,7 @@ projects:
 - id: company-os
   models:
   - Ornith-1.5-35B-Q4_K_M
+  - Qwen3.8-27B-UD-Q4_K_M
   - Qwen3-Embedding-8B-Q4_K_M
   status: active
   created_at: '2026-08-24T08:41:24.389684+00:00'
