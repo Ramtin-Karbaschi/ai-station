@@ -6,6 +6,7 @@ from apps.gateway.app.admission import (
     admit,
     estimate_required_vram_mib,
     get_provider,
+    uses_gpu_exclusivity,
     vram_probe_looks_stale,
 )
 
@@ -58,6 +59,19 @@ class AdmissionTests(unittest.TestCase):
                 "n8n": {
                     "id": "n8n",
                     "heavy": False,
+                    "resource_group": "cpu",
+                    "minimum_vram_mib": 0,
+                    "minimum_ram_mib": 1024,
+                    "minimum_storage_mib": 512,
+                    "kv_cache_mib_per_1k_context": 0,
+                    "default_context": 1,
+                    "max_context": 1,
+                    "fallback_provider": None,
+                },
+                "cpu-mislabeled-heavy": {
+                    "id": "cpu-mislabeled-heavy",
+                    "heavy": True,
+                    "resource_group": "cpu",
                     "minimum_vram_mib": 0,
                     "minimum_ram_mib": 1024,
                     "minimum_storage_mib": 512,
@@ -190,6 +204,50 @@ class AdmissionTests(unittest.TestCase):
         self.assertEqual(decision.decision, "START")
         self.assertEqual(decision.stop_providers, [])
         self.assertEqual(decision.required_vram_mib, 0)
+        self.assertTrue(
+            any("VRAM exclusivity does not apply" in r for r in decision.reasons)
+        )
+
+    def test_cpu_resource_group_does_not_stop_gpu_even_if_heavy(self) -> None:
+        decision = admit(
+            "cpu-mislabeled-heavy",
+            registry=self.registry,
+            hardware=self.hardware,
+            free_vram_mib=400,
+            free_ram_mib=40000,
+            free_storage_mib=500000,
+            active_heavy=["llama-cpp-general"],
+        )
+        self.assertEqual(decision.decision, "START")
+        self.assertEqual(decision.stop_providers, [])
+        self.assertFalse(
+            uses_gpu_exclusivity(
+                get_provider(self.registry, "cpu-mislabeled-heavy")
+            )
+        )
+
+    def test_cpu_provider_still_rejects_on_insufficient_ram(self) -> None:
+        decision = admit(
+            "n8n",
+            registry=self.registry,
+            hardware=self.hardware,
+            free_vram_mib=400,
+            free_ram_mib=100,
+            free_storage_mib=500000,
+            active_heavy=["llama-cpp-general"],
+        )
+        self.assertEqual(decision.decision, "REJECT")
+        self.assertIn("insufficient system RAM", decision.reasons[0])
+
+    def test_gpu_heavy_uses_exclusivity(self) -> None:
+        self.assertTrue(
+            uses_gpu_exclusivity(
+                get_provider(self.registry, "llama-cpp-general")
+            )
+        )
+        self.assertFalse(
+            uses_gpu_exclusivity(get_provider(self.registry, "n8n"))
+        )
 
     def test_estimate_kv_budget(self) -> None:
         provider = get_provider(self.registry, "llama-cpp-general")

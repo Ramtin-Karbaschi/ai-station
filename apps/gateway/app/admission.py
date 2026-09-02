@@ -224,6 +224,19 @@ def estimate_required_vram_mib(provider: dict[str, Any], context: int) -> int:
     return base + kv
 
 
+def uses_gpu_exclusivity(provider: dict[str, Any]) -> bool:
+    """Return whether this provider competes for exclusive GPU VRAM.
+
+    RAM and storage are already checked before this gate. Non-heavy and
+    ``resource_group: cpu`` providers must start beside a full GPU (ADR-022,
+    n8n). A mis-set ``heavy: true`` on a CPU provider must not stop the
+    active GPU profile.
+    """
+    if provider.get("resource_group") == "cpu":
+        return False
+    return bool(provider.get("heavy"))
+
+
 def admit(
     provider_id: str,
     *,
@@ -332,8 +345,13 @@ def admit(
             budget=budget,
         )
 
-    if not provider.get("heavy"):
-        reasons.append("CPU provider; VRAM budget does not apply")
+    if not uses_gpu_exclusivity(provider):
+        # GPU conflict / VRAM reduction runs only for exclusive GPU
+        # heavies. RAM and storage already passed above, so mixed
+        # CPU+GPU load is validated without stopping the GPU.
+        reasons.append(
+            "non-exclusive GPU provider; VRAM exclusivity does not apply"
+        )
         reasons.append("RAM/storage budgets satisfied")
         return AdmissionDecision(
             decision="START",
@@ -352,7 +370,7 @@ def admit(
     required_full = estimate_required_vram_mib(provider, requested_context)
     conflicts = [pid for pid in active_heavy if pid != provider_id]
 
-    if provider.get("heavy") and conflicts and len(conflicts) >= max_heavy:
+    if conflicts and len(conflicts) >= max_heavy:
         if allow_auto_stop:
             # After stop, assume nearly full GPU VRAM becomes available.
             gpu_total = int(
@@ -424,7 +442,7 @@ def admit(
 
     available = free_vram_mib
     # If we will stop conflicts, recompute against projected free.
-    if conflicts and allow_auto_stop and provider.get("heavy"):
+    if conflicts and allow_auto_stop:
         gpu_total = int(
             hardware.get("gpu", {}).get("vram_total_mib") or free_vram_mib
         )
@@ -433,7 +451,7 @@ def admit(
     if available >= required_full + margin_vram:
         decision = (
             "STOP_CONFLICTING_PROVIDER_AND_START"
-            if conflicts and provider.get("heavy") and allow_auto_stop
+            if conflicts and allow_auto_stop
             else "START"
         )
         if decision == "STOP_CONFLICTING_PROVIDER_AND_START":
@@ -467,22 +485,12 @@ def admit(
             reasons.append(
                 f"reduced_context={reduced} requires={required_reduced} MiB"
             )
-            decision = (
-                "STOP_CONFLICTING_PROVIDER_AND_START"
-                if conflicts and provider.get("heavy") and allow_auto_stop
-                else "START_WITH_REDUCED_CONTEXT"
-            )
-            # Prefer explicit reduced-context decision name when no stop needed.
-            if not (conflicts and provider.get("heavy") and allow_auto_stop):
-                decision = "START_WITH_REDUCED_CONTEXT"
-            else:
-                # Still communicate reduced context via effective_context.
+            if conflicts and allow_auto_stop:
                 reasons.append(
                     "will stop conflicting provider and start with reduced context"
                 )
-                decision = "START_WITH_REDUCED_CONTEXT"
             return AdmissionDecision(
-                decision=decision,
+                decision="START_WITH_REDUCED_CONTEXT",
                 provider_id=provider_id,
                 requested_context=requested_context,
                 effective_context=reduced,
@@ -492,9 +500,7 @@ def admit(
                 free_storage_mib=free_storage_mib,
                 active_heavy=list(active_heavy),
                 stop_providers=(
-                    conflicts
-                    if conflicts and provider.get("heavy") and allow_auto_stop
-                    else []
+                    conflicts if conflicts and allow_auto_stop else []
                 ),
                 reasons=reasons,
                 budget=budget,
