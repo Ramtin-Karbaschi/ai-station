@@ -88,7 +88,23 @@ Common causes:
 
 - `N8N_ENCRYPTION_KEY` missing from `.env` (first start writes it);
 - `/srv/ai-station/runtime/n8n` not writable by uid 1000;
-- LiteLLM `:4000` is down, so imported workflows fail even if the UI loads.
+- LiteLLM `:4000` is down, so imported workflows fail even if the UI loads;
+- Instance AI wizard asks for Anthropic/OpenAI: run `ai n8n configure`
+  then `ai n8n start` so `N8N_LLM_API_KEY` is in the container. If the
+  wizard remains, pick Self-hosted / OpenAI-compatible at
+  `http://llm-gateway:4000/v1` with model `Qwen3.8-27B-UD-Q4_K_M`.
+- Sandbox wizard asks for Service URL / API key: do not paste a host
+  URL. Start n8n so env sets `http://sandbox-api:8080` and
+  `N8N_SANDBOX_SERVICE_API_KEY`. Daytona is not used.
+- Assistant sits on “working” for many minutes with no new UI text:
+  n8n did not send `max_tokens`. Check `docker logs ai-station-llm-general`
+  for rising `n_decoded`. Restart general after the 4096 cap
+  (`ai models use general`) if an old unbounded request is still on
+  the GPU.
+- `Rate limit exceeded … Limit type: tokens` on `/assistant`: a LiteLLM
+  virtual key still has a TPM cap. Run `ai projects unlimit` (or
+  `ai n8n configure` for the n8n key). This is not the 262144 context
+  window. New keys are unlimited unless you pass `--tpm`/`--rpm`.
 
 See [clients/N8N.md](clients/N8N.md).
 
@@ -296,6 +312,30 @@ journalctl -u ai-station-ui-gateway -n 200 --no-pager
 curl -v http://127.0.0.1:8888/health
 curl -v http://127.0.0.1:8890/health
 ~~~
+
+## Cursor cannot git commit in `/opt/ai-station`
+
+The worktree and `.git` are owned by `aidev`. Cursor runs as the WSL
+default user (`ramtin` on this host), which is not `aidev` and has no
+sudo. Repair as root (does not take the worktree away from `aidev`):
+
+~~~bash
+ai opencode install
+~~~
+
+That adds the WSL default user to group `aidev`, sets
+`core.sharedRepository=group`, makes `.git` setgid/group-writable, and
+applies a user ACL so even a session that has not yet refreshed groups
+can write the index. Confirm with:
+
+~~~bash
+id
+git -C /opt/ai-station config --get core.sharedRepository
+touch /opt/ai-station/.git/index.lock && rm /opt/ai-station/.git/index.lock
+~~~
+
+`id` should include `aidev`. A new login or Cursor window picks up the
+group; the ACL covers the current process immediately.
 
 ## OpenCode cannot develop or reach local models
 

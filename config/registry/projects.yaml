@@ -48,3 +48,12 @@ projects:
   created_at: '2026-08-27T13:39:47.701239+00:00'
   key_alias: content-studio
   litellm_key_hash: 417fae51de80f574f87506d85a187e2b49e0d3d4939f2ffe5005e87c4a187960
+- id: n8n
+  models:
+  - Qwen3.8-27B-UD-Q4_K_M
+  - Ornith-1.5-35B-Q4_K_M
+  - Qwen3-Embedding-8B-Q4_K_M
+  status: active
+  created_at: '2026-08-29T08:25:43.795162+00:00'
+  key_alias: n8n
+  litellm_key_hash: ad9c9bac2806bb6a69bd4ce41b11b5d13f3710c517d14e42064b1d074907e860

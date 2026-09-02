@@ -81,7 +81,8 @@ flowchart TB
 ### Application chat / completion
 
 1. A project sends an OpenAI-compatible request to LiteLLM on `:4000`.
-2. LiteLLM authenticates the project virtual key and enforces model allowlists.
+2. LiteLLM authenticates the project virtual key and enforces model
+   allowlists. TPM/RPM are off unless the operator set `--tpm`/`--rpm`.
 3. The project requests a canonical public model name from LiteLLM, such as
    `Qwen3.8-27B-UD-Q4_K_M` or `Ornith-1.5-35B-Q4_K_M`.
 4. LiteLLM forwards heavy chat and vision requests to the host gateway, which

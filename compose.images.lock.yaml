@@ -23,6 +23,12 @@ services:
     image: "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289"
   "n8n":
     image: "docker.n8n.io/n8nio/n8n@sha256:bd48276080055f7ccdd2c76b11a19933add48d25e71a59397334bc171e146ff4"
+  "sandbox-certs":
+    image: "ghcr.io/n8n-io/n8n-sandbox-service-api@sha256:21672029fee08495e2398cff7fc370ff60ce0e7c461610732bf2f5265cb75704"
+  "sandbox-api":
+    image: "ghcr.io/n8n-io/n8n-sandbox-service-api@sha256:21672029fee08495e2398cff7fc370ff60ce0e7c461610732bf2f5265cb75704"
+  "sandbox-runner-1":
+    image: "ghcr.io/n8n-io/n8n-sandbox-service-runner-dind@sha256:9de7a8aad7f0d2293716daff40206be60577a59a2c2dae641dd9a425c18bf6fd"
   "open-webui":
     image: "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0"
   "postgres":

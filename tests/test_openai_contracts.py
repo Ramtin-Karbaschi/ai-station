@@ -248,6 +248,7 @@ class CatalogContractTests(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "0")
         general = compose["services"]["llm-general"]["command"]
         self.assertEqual(general[general.index("--reasoning") + 1], "off")
+        self.assertEqual(general[general.index("--n-predict") + 1], "4096")
 
     def test_reasoning_compose_enables_jinja_for_tools(self) -> None:
         compose = yaml.safe_load(
@@ -350,6 +351,18 @@ class CatalogContractTests(unittest.TestCase):
         self.assertIn('"$allowed_bridge_host:$port"', verifier)
         self.assertNotIn("0.0.0.0:8888", verifier)
         self.assertIn("host.docker.internal", unit)
+
+    def test_chat_models_default_max_tokens_is_4096(self) -> None:
+        litellm = yaml.safe_load(
+            (ROOT / "config/gateway/litellm.yaml").read_text(encoding="utf-8")
+        )
+        for entry in litellm["model_list"]:
+            if entry["model_info"].get("mode") != "chat":
+                continue
+            if entry["model_name"] == "LongWriter-Zero-32B-Q4_K_M":
+                self.assertNotIn("max_tokens", entry["litellm_params"])
+                continue
+            self.assertEqual(entry["litellm_params"].get("max_tokens"), 4096)
 
 
 class GatewayContractTests(unittest.IsolatedAsyncioTestCase):

@@ -53,7 +53,10 @@ The installer:
 - verifies the GitHub release SHA-256 before installation;
 - installs a root-owned binary under `/usr/local/lib/ai-station/opencode/`;
 - exposes `/usr/local/bin/opencode`;
-- optionally makes `aidev` the Git-worktree owner.
+- optionally makes `aidev` the Git-worktree owner;
+- adds the WSL default user (Cursor) to group `aidev` and sets
+  `core.sharedRepository=group` plus a user ACL on `.git`, so both
+  accounts can commit without taking the worktree away from `aidev`.
 
 It does not grant `aidev` Docker-group or root privileges.
 

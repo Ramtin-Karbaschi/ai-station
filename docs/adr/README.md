@@ -33,6 +33,7 @@ live ADR.
 | [026](ADR-026-superseded-model-deletion.md) | Delete superseded bytes after acceptance, not permanent quarantine | Accepted |
 | [027](ADR-027-asr-primary-fallback.md) | Qwen3-ASR-1.7B primary; faster-whisper-large-v3 fallback | Accepted |
 | [028](ADR-028-local-ai-studio-capabilities.md) | Capability routing on ComfyUI; one heavy GPU; Hunyuan3D isolated | Accepted |
+| [029](ADR-029-no-default-litellm-tpm-rpm.md) | LiteLLM virtual keys have no TPM/RPM unless the operator sets them | Accepted |
 
 ADR-010 (custom OpenCode compaction hook) was superseded by ADR-009 and ADR-013
 and removed. The incident remains in Git history.

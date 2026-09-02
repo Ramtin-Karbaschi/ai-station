@@ -4,6 +4,28 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Cursor can commit the `aidev` worktree:** the WSL default user is
+  in group `aidev`, `.git` is `core.sharedRepository=group` with setgid
+  and a user ACL, and `ai opencode install` re-applies that sharing so
+  Cursor does not need sudo to `git commit`.
+- **n8n uses local LiteLLM models:** `ai n8n start` creates the `n8n`
+  LiteLLM project, writes `N8N_LLM_API_KEY`, and sets Instance AI to
+  `http://llm-gateway:4000/v1` with `Qwen3.8-27B-UD-Q4_K_M`. The
+  Assistant wizard no longer requires an Anthropic/OpenAI cloud key.
+- **n8n AI Assistant sandbox:** `ai n8n start` generates sandbox API
+  keys and starts official `sandbox-api` / privileged runner on the
+  Compose network only (`http://sandbox-api:8080`). No host ports and
+  no Daytona. The UI should show Code sandbox as found in server
+  configuration — do not paste a secret into Service URL / API key.
+- **n8n hang on local Qwen:** Instance AI omitted `max_tokens`, so
+  llama.cpp used `n_predict=-1` and generated 10k+ tokens with a 37k
+  prompt. Chat models now default to **4096** output tokens (LiteLLM +
+  `--n-predict 4096`). Browser-use tools are off. LongWriter stays
+  uncapped.
+- **LiteLLM virtual keys have no TPM/RPM by default:** `ai projects
+  create` no longer applies 100000 TPM / 60 RPM. Existing keys are
+  cleared with `ai projects unlimit`. Optional `--tpm`/`--rpm` remain
+  as explicit caps (ADR-029).
 - **Start no longer dies on a missing Tool Gateway unit:** Control Panel
   option 1 runs `ai start` as root. If `ai-station-tool-gateway.service`
   is not installed, Start now installs that system unit instead of

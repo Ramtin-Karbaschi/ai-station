@@ -33,7 +33,10 @@ PaddleOCR-VL-1.6 (`infra/paddleocr-vl/Dockerfile`, Compose profile
 `ocr-vl`), and the retained ComfyUI media image
 (`infra/comfyui/Dockerfile`). n8n is a registry image
 (`docker.n8n.io/n8nio/n8n`) gated by Compose profile `n8n` and pinned in
-the same lock file.
+the same lock file. The n8n sandbox API, cert bootstrap, and privileged
+runner images (`ghcr.io/n8n-io/n8n-sandbox-service-*`) are pinned there
+too. The inner sandbox image is digest-pinned in Compose env
+(`SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE`).
 
 ## Updating the lock
 

@@ -23,7 +23,7 @@ Usage:
   ai provider list|status|inspect|start|stop|doctor ...
       # experimental media: comfyui-media-experimental (http://127.0.0.1:8188)
       # optional n8n: n8n (http://127.0.0.1:5678)
-  ai projects list|create|update|revoke|show ...
+  ai projects list|create|update|revoke|show|unlimit ...
   ai opencode install|configure|doctor|parity|run|acceptance ...
   ai opencode use general|coder|reasoning|ornith
   ai opencode test [--model general|coder|reasoning|ornith]
@@ -320,7 +320,7 @@ cmd_stop() {
   ai_ensure_docker || true
   ai_stop_experimental_gpu_overlays
   ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile qwen38 --profile longwriter --profile reranker --profile n8n \
-    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker n8n 2>/dev/null || true
+    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
   systemctl stop ai-station-ui-gateway 2>/dev/null || true
   ai_tools_stop
@@ -609,9 +609,15 @@ PY
       n8n)
         ai_prepare_n8n_runtime_dirs
         ai_ensure_n8n_encryption_key
-        ai_retry_compose --profile n8n up -d n8n
+        ai_n8n_ensure_project
+        ai_n8n_sync_litellm_key
+        ai_ensure_n8n_sandbox_secrets
+        ai_retry_compose --profile n8n up -d sandbox-certs sandbox-api sandbox-runner-1
+        ai_retry_compose --profile n8n up -d --force-recreate n8n
         ai_wait_url "http://127.0.0.1:5678/healthz" "n8n" 90
         echo "n8n UI: http://127.0.0.1:5678"
+        echo "Instance AI: LiteLLM http://llm-gateway:4000/v1 (Qwen3.8-27B-UD-Q4_K_M)"
+        echo "Sandbox: http://sandbox-api:8080 (internal; key is N8N_SANDBOX_SERVICE_API_KEY)"
         ;;
       default|"")
         [[ -n "$service" ]] && ai_compose up -d "$service"
@@ -661,8 +667,8 @@ PY
   elif [[ "$profile" == "asr" ]]; then
     ai_compose --profile asr stop asr-qwen3 2>/dev/null || true
   elif [[ "$profile" == "n8n" ]]; then
-    ai_compose --profile n8n stop n8n 2>/dev/null || true
-    ai_compose --profile n8n rm -f n8n 2>/dev/null || true
+    ai_compose --profile n8n stop n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
+    ai_compose --profile n8n rm -f n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
   else
     ai_compose stop "$service" 2>/dev/null || true
   fi
@@ -718,18 +724,38 @@ else:
 PY
 }
 
+cmd_projects_unlimit() {
+  local alias=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --alias) alias="$2"; shift 2 ;;
+      *) echo "Usage: ai projects unlimit [--alias <id>]" >&2; exit 2 ;;
+    esac
+  done
+  if ! curl -fsS --max-time 5 "http://127.0.0.1:4000/health/liveliness" >/dev/null; then
+    echo "ERROR: LiteLLM gateway is not healthy on :4000" >&2
+    exit 1
+  fi
+  local args=(unlimit)
+  if [[ -n "$alias" ]]; then
+    args+=(--alias "$alias")
+  fi
+  python3 "$ROOT/scripts/lib/litellm_keys.py" "${args[@]}"
+}
+
 cmd_projects_create() {
   local id="${1:-}"
   shift || true
   if [[ -z "$id" || ! "$id" =~ ^[a-z0-9][a-z0-9_-]{1,62}$ ]]; then
     echo "Usage: ai projects create <id> [--models a,b] [--rpm N] [--tpm N]" >&2
     echo "ID must match: ^[a-z0-9][a-z0-9_-]{1,62}$" >&2
+    echo "TPM/RPM are off by default. Pass --tpm/--rpm only to cap a key." >&2
     exit 2
   fi
 
   local models="Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M"
-  local rpm=60
-  local tpm=100000
+  local rpm=""
+  local tpm=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --models) models="$2"; shift 2 ;;
@@ -751,18 +777,17 @@ cmd_projects_create() {
     exit 1
   fi
 
-  local models_json
-  models_json="$(python3 - <<PY
-import json
-print(json.dumps([m.strip() for m in "$models".split(",") if m.strip()]))
-PY
-)"
+  local payload
+  payload="$(
+    python3 "$ROOT/scripts/lib/litellm_keys.py" generate-payload \
+      --alias "$id" --models "$models" --rpm "$rpm" --tpm "$tpm"
+  )"
 
   local response
   response="$(curl -fsS --max-time 30 \
     -H "Authorization: Bearer ${key}" \
     -H "Content-Type: application/json" \
-    -d "{\"key_alias\":\"${id}\",\"models\":${models_json},\"rpm_limit\":${rpm},\"tpm_limit\":${tpm},\"metadata\":{\"project\":\"${id}\",\"platform\":\"ai-station\"}}" \
+    -d "$payload" \
     "http://127.0.0.1:4000/key/generate")"
 
   python3 - "$id" "$models" "$response" <<'PY'
@@ -1138,6 +1163,7 @@ main() {
       ;;
     projects-show) cmd="projects"; set -- show-paths "$@" ;;
     projects-revoke) cmd="projects"; set -- revoke "$@" ;;
+    projects-unlimit) cmd="projects"; set -- unlimit "$@" ;;
     reset-webui-password) cmd="reset-webui-password" ;;
     litellm-ui-credentials) cmd="litellm-ui-credentials" ;;
     api-info) cmd="api-info" ;;
@@ -1181,6 +1207,7 @@ main() {
         revoke) cmd_projects_revoke "$@" ;;
         show) cmd_projects_show "$@" ;;
         show-paths) cmd_projects_show_with_paths "$@" ;;
+        unlimit) cmd_projects_unlimit "$@" ;;
         *) echo "Unknown projects command: $sub" >&2; usage; exit 2 ;;
       esac
       ;;

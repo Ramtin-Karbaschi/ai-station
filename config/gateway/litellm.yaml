@@ -5,6 +5,7 @@ model_list:
     api_base: http://host.docker.internal:8888/v1
     api_key: not-needed
     timeout: 600
+    max_tokens: 4096
   model_info:
     id: Qwen3.8-27B-UD-Q4_K_M
     mode: chat
@@ -14,6 +15,7 @@ model_list:
     api_base: http://host.docker.internal:8888/v1
     api_key: not-needed
     timeout: 600
+    max_tokens: 4096
   model_info:
     id: Ornith-1.5-35B-Q4_K_M
     mode: chat
@@ -23,6 +25,7 @@ model_list:
     api_base: http://host.docker.internal:8888/v1
     api_key: not-needed
     timeout: 600
+    max_tokens: 4096
   model_info:
     id: Qwen3.8-27B-Reasoning-UD-Q4_K_M
     mode: chat
@@ -32,6 +35,7 @@ model_list:
     api_base: http://host.docker.internal:8888/v1
     api_key: not-needed
     timeout: 600
+    max_tokens: 4096
   model_info:
     id: Qwen3.8-27B-Vision-UD-Q4_K_M
     mode: chat

@@ -70,6 +70,16 @@ Adopt option 5.
   `http://llm-gateway:4000/v1` (Compose DNS) or
   `http://127.0.0.1:4000/v1` from the host. Canonical public model
   names only.
+- Instance AI (n8n 2.35 `/assistant`) is pre-wired to LiteLLM:
+  bare model `Qwen3.8-27B-UD-Q4_K_M`,
+  `N8N_INSTANCE_AI_MODEL_URL=http://llm-gateway:4000/v1`,
+  API key from the `n8n` LiteLLM project (`N8N_LLM_API_KEY`).
+  Sandbox is the official n8n-sandbox stack on the Compose network
+  (`http://sandbox-api:8080`, no host ports, no Daytona). The runner
+  is privileged Docker-in-Docker. `ai n8n start` generates
+  `N8N_SANDBOX_SERVICE_API_KEY` and recreates n8n so env applies.
+  SearXNG uses Compose DNS `http://searxng:8080`. `ai n8n start`
+  also creates the LiteLLM project key.
 - Station templates: importable JSON under
   `config/clients/n8n/workflows/` (LiteLLM chat; Tika then
   summarize). Operator adds IMAP/Gmail credentials in the n8n UI.
@@ -101,6 +111,9 @@ workload classes.
   `.env` (`N8N_ENCRYPTION_KEY`), data dir under `/srv`.
 - n8n Cloud / telemetry. Mitigation: templates, diagnostics,
   version notifications, and personalization off; no tunnel.
+- Instance AI sandbox runner is privileged Docker-in-Docker.
+  Mitigation: Compose profile `n8n` only, no published sandbox
+  ports, generated API keys in `.env`, no Daytona.
 - License is not MIT. Mitigation: record Sustainable Use License
   in `THIRD_PARTY_NOTICES.md`; workstation-internal use only.
 
