@@ -7,9 +7,15 @@ fact across multiple documents.
 
 | Need | Canonical document |
 |---|---|
+| Product intent and sale scope | [PRODUCT.md](PRODUCT.md) |
+| What to build next | [ROADMAP.md](ROADMAP.md) |
+| Decision index | [DECISIONS.md](DECISIONS.md) |
+| Current goal and next action | [PROJECT_STATE.md](PROJECT_STATE.md) |
 | Install or upgrade | [INSTALLATION.md](INSTALLATION.md) |
 | Understand the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Integrate an application | [PLATFORM.md](PLATFORM.md) |
+| Disaster recovery targets and drills | [DISASTER_RECOVERY.md](ops/DISASTER_RECOVERY.md) |
+| Chat and document retention | [DATA_GOVERNANCE.md](ops/DATA_GOVERNANCE.md) |
 | Implement grounded accuracy for Local Content Studio | [LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md](LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md) |
 | Operate or recover it | [OPERATIONS.md](OPERATIONS.md) |
 | Recommended models, sizes, performance, and Git size without weights | [MODELS.md](MODELS.md) |
@@ -27,8 +33,16 @@ fact across multiple documents.
 
 ## Authority rules
 
+- `PRODUCT.md` owns buyer, SKU, in/out of scope, and the sale goal.
+- `ROADMAP.md` owns sequential waves. It is not a calendar.
+- `DECISIONS.md` indexes product decisions to ADRs; ADRs remain the
+  decision bodies.
+- `PROJECT_STATE.md` owns the current goal and next action. It is not
+  a verified runtime snapshot.
 - `ARCHITECTURE.md` owns component boundaries and request flows.
 - `PLATFORM.md` owns the LiteLLM application contract and project keys.
+- `ops/DISASTER_RECOVERY.md` owns RPO/RTO and restore-drill policy.
+- `ops/DATA_GOVERNANCE.md` owns chat/document retention policy.
 - `MODELS.md` owns the recommended-model list (size + measured
   performance), the Git application size excluding weights, and
   add/remove procedures. Machine definitions stay in manifest,
@@ -36,7 +50,9 @@ fact across multiple documents.
 - `AI_STATION_CURRENT_STATE.md` is a snapshot, not a timeline or roadmap.
 - ADRs own durable decisions and trade-offs.
 - `docs/research/` contains evidence and experiments; it is non-normative
-  unless an accepted ADR promotes a result.
+  unless an accepted ADR promotes a result. The digest
+  [AI_STATION_DEVELOPMENT_PLAN.md](research/AI_STATION_DEVELOPMENT_PLAN.md)
+  is input only.
 - `CHANGELOG.md` owns chronological user-visible changes.
 - `CONTRIBUTING.md` owns the three-branch Git workflow.
 

@@ -315,6 +315,8 @@ security vulnerabilities through a public issue.
 | Document | Purpose |
 |---|---|
 | [Documentation map](docs/README.md) | Canonical ownership and navigation |
+| [Product](docs/PRODUCT.md) | Sale intent, SKUs, in/out of scope |
+| [Roadmap](docs/ROADMAP.md) | Sequential waves; no calendar |
 | [Installation](docs/INSTALLATION.md) | Linux, Windows+WSL, upgrade, clone to another PC |
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |

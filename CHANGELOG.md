@@ -4,6 +4,11 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **Product upgrade program documents:** [PRODUCT.md](docs/PRODUCT.md),
+  [ROADMAP.md](docs/ROADMAP.md), [DECISIONS.md](docs/DECISIONS.md),
+  [PROJECT_STATE.md](docs/PROJECT_STATE.md), ADR-030 through ADR-034,
+  disaster recovery and data-governance policies. Sequence is waves
+  without a calendar. Wave 0 is the next implementation step.
 - **Cursor can commit the `aidev` worktree:** the WSL default user is
   in group `aidev`, `.git` is `core.sharedRepository=group` with setgid
   and a user ACL, and `ai opencode install` re-applies that sharing so

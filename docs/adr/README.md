@@ -6,13 +6,13 @@ live ADR.
 
 | ADR | Decision | Status |
 |---|---|---|
-| [001](ADR-001-adaptive-inference-fabric.md) | Reduced adaptive fabric: registry, admission, one heavy GPU | Accepted |
+| [001](ADR-001-adaptive-inference-fabric.md) | Reduced adaptive fabric: registry, admission, one heavy GPU (default; ADR-031 extends multi-GPU) | Accepted |
 | [002](ADR-002-primary-interactive-engine.md) | Retain llama.cpp; reject SGLang (overlay removed) | Accepted |
 | [003](ADR-003-llama-cpp-role.md) | llama.cpp owns GGUF chat, vision, embedding, rerank | Accepted |
-| [004](ADR-004-resource-admission-control.md) | Start, reduce context, queue, or fallback before GPU conflict | Accepted |
+| [004](ADR-004-resource-admission-control.md) | Start, reduce context, queue, or fallback before GPU conflict (one-GPU default; ADR-031) | Accepted |
 | [005](ADR-005-retrieval-engine.md) | Retain pgvector until a measured gap exists | Accepted |
 | [006](ADR-006-document-router.md) | Tika default; PaddleOCR-VL-1.6 for hard pages; Tesseract fallback | Accepted |
-| [007](ADR-007-observability-boundary.md) | Engine-native metrics only; no SaaS telemetry | Accepted |
+| [007](ADR-007-observability-boundary.md) | Engine-native metrics only; no SaaS telemetry (next increment ADR-034) | Accepted |
 | [008](ADR-008-optional-ornith-heavy-profile.md) | Ornith remains a retained pack; coder profile now loads Ornith 1.5 (ADR-023) | Accepted |
 | [009](ADR-009-opencode-local-client.md) | OpenCode is the local LiteLLM client, WSL-native | Accepted |
 | [011](ADR-011-opencode-context-kv-cache-headroom.md) | OpenCode Ornith/coder stay 8192; Qwen3.8 general/reasoning advertise 262144 after 2026-08-27 probe | Accepted |
@@ -34,6 +34,11 @@ live ADR.
 | [027](ADR-027-asr-primary-fallback.md) | Qwen3-ASR-1.7B primary; faster-whisper-large-v3 fallback | Accepted |
 | [028](ADR-028-local-ai-studio-capabilities.md) | Capability routing on ComfyUI; one heavy GPU; Hunyuan3D isolated | Accepted |
 | [029](ADR-029-no-default-litellm-tpm-rpm.md) | LiteLLM virtual keys have no TPM/RPM unless the operator sets them | Accepted |
+| [030](ADR-030-sso-only-identity.md) | Human identity is SSO/OIDC only; LDAP rejected | Accepted |
+| [031](ADR-031-multi-gpu-default-one.md) | Multi-GPU capable; default one GPU; concurrent per GPU; TP opt-in | Accepted |
+| [032](ADR-032-optional-npu-offload.md) | Optional NPU offload for embed/rerank/ASR after local benchmark | Accepted |
+| [033](ADR-033-soft-usage-alerts.md) | Soft usage alerts; ADR-029 unlimited keys stay the default | Accepted |
+| [034](ADR-034-lean-observability-increment.md) | Lean local alerts next; no Grafana/Loki stack | Accepted |
 
 ADR-010 (custom OpenCode compaction hook) was superseded by ADR-009 and ADR-013
 and removed. The incident remains in Git history.

@@ -2,6 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-07-23
+- Later amendment: 2026-09-02 — single-GPU exclusivity remains
+  the default and the policy on one-GPU hosts. Multi-GPU
+  concurrency and optional tensor-parallel are specified in
+  [ADR-031](ADR-031-multi-gpu-default-one.md). This ADR is not
+  rewritten; ADR-031 extends it.
 
 ## Context
 
