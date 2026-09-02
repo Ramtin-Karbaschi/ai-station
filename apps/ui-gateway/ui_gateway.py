@@ -146,7 +146,7 @@ def extract_attachment_text(file_bytes: bytes, filename: str, mime: str) -> str:
         mime,
         tika_fn=tika_extract_bytes,
         paddle_fn=paddle_fn if paddle_url else None,
-        tesseract_fn=tika_extract_bytes,
+        tesseract_fn=None,
         paddle_available=bool(paddle_url),
     )
     return result.text

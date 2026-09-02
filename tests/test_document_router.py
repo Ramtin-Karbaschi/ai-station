@@ -66,6 +66,34 @@ class DocumentRouterTests(unittest.TestCase):
         self.assertEqual(r.engine, "tesseract")
         self.assertTrue(r.fallback_used)
 
+    def test_tika_ocr_fallback_when_no_distinct_tesseract(self):
+        r = extract_document(
+            b"x",
+            "scan.png",
+            "image/png",
+            tika_fn=_tika_empty,
+            paddle_fn=_paddle,
+            tesseract_fn=None,
+            document_class="scanned_persian",
+            paddle_available=False,
+        )
+        self.assertEqual(r.engine, "tika-ocr")
+        self.assertTrue(r.fallback_used)
+
+    def test_tika_passed_as_tesseract_fn_labels_tika_ocr(self):
+        r = extract_document(
+            b"x",
+            "scan.png",
+            "image/png",
+            tika_fn=_tika_empty,
+            paddle_fn=_paddle,
+            tesseract_fn=_tika_empty,
+            document_class="scanned_persian",
+            paddle_available=False,
+        )
+        self.assertEqual(r.engine, "tika-ocr")
+        self.assertTrue(r.fallback_used)
+
 
 class SttRouterTests(unittest.TestCase):
     def test_qwen_primary(self):
