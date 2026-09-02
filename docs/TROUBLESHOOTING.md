@@ -317,10 +317,11 @@ curl -v http://127.0.0.1:8890/health
 
 The worktree and `.git` are owned by `aidev`. Cursor runs as the WSL
 default user (`ramtin` on this host), which is not `aidev` and has no
-sudo. Repair as root (does not take the worktree away from `aidev`):
+sudo. Repair as root (does not take the worktree away from `aidev`).
+This WSL user has no sudo; from WSL run:
 
 ~~~bash
-ai opencode install
+/mnt/c/WINDOWS/system32/wsl.exe -d Ubuntu -u root -- /opt/ai-station/scripts/ai opencode install
 ~~~
 
 That adds the WSL default user to group `aidev`, sets
