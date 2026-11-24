@@ -20,6 +20,9 @@ MANIFEST = ROOT / "config/clients/n8n/manifest.json"
 WORKFLOWS = ROOT / "config/clients/n8n/workflows"
 CHAT = WORKFLOWS / "litellm-chat.json"
 TIKA = WORKFLOWS / "tika-summarize.json"
+TICKET = WORKFLOWS / "ticket-reply.json"
+INVOICE = WORKFLOWS / "invoice-ocr.json"
+MEETING = WORKFLOWS / "meeting-summary.json"
 
 
 class N8nContractTests(unittest.TestCase):
@@ -146,7 +149,7 @@ class N8nContractTests(unittest.TestCase):
         self.assertIn("N8N_SANDBOX_SERVICE_API_KEY=", example)
 
     def test_workflows_call_litellm_canonical_names(self) -> None:
-        for path in (CHAT, TIKA):
+        for path in (CHAT, TIKA, TICKET, INVOICE, MEETING):
             data = json.loads(path.read_text(encoding="utf-8"))
             urls = [
                 str(node.get("parameters", {}).get("url", ""))
@@ -168,6 +171,18 @@ class N8nContractTests(unittest.TestCase):
             for node in tika.get("nodes") or []
         ]
         self.assertIn("http://tika:9998/tika", tika_urls)
+        invoice = json.loads(INVOICE.read_text(encoding="utf-8"))
+        invoice_urls = [
+            str(node.get("parameters", {}).get("url", ""))
+            for node in invoice.get("nodes") or []
+        ]
+        self.assertIn("http://tika:9998/tika", invoice_urls)
+        for needle, path in (
+            ("ticket reply", TICKET),
+            ("invoice ocr", INVOICE),
+            ("meeting summary", MEETING),
+        ):
+            self.assertIn(needle, path.read_text(encoding="utf-8").casefold())
 
     def test_manifest_and_docs_match_adr(self) -> None:
         data = json.loads(MANIFEST.read_text(encoding="utf-8"))

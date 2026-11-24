@@ -84,6 +84,18 @@ read-only at `/opt/ai-station-n8n-workflows` inside the container):
 |---|---|
 | `litellm-chat.json` | Manual trigger → LiteLLM chat |
 | `tika-summarize.json` | Sample text → local Tika extract → LiteLLM summary |
+| `ticket-reply.json` | Sample ticket → local LiteLLM draft; does not send or update a ticket |
+| `invoice-ocr.json` | Sample invoice → local Tika extraction → local LiteLLM result |
+| `meeting-summary.json` | Sample notes → local LiteLLM summary; no calendar or email action |
+
+All five files are inactive on import and use a Manual Trigger. The three
+new examples contain no mail, webhook, schedule, CRM, or external-provider
+nodes. Importing them sends nothing. Selecting **Execute Workflow** sends
+the sample input only to the station's local LiteLLM gateway; invoice OCR
+also calls local Tika. Those requests can use local compute. The workflow
+JSON contains no credentials or API keys. Before executing a chat workflow,
+configure the `Authorization` Header Auth credential described above in the
+n8n UI; do not put a secret into a workflow file.
 
 IMAP/Gmail credentials stay in the n8n UI. Do not commit them.
 

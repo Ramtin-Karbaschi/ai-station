@@ -1,0 +1,102 @@
+{
+  "name": "AI Station meeting summary",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Station meeting summary\n\n1. Run `ai n8n configure` and attach Header Auth `Authorization: Bearer <LLM_API_KEY>` from `projects/n8n.env` to LiteLLM Summary.\n2. Call only `http://llm-gateway:4000/v1` from inside Compose. Never `:8888` or llama.cpp ports.\n3. Canonical model: `Qwen3.8-27B-UD-Q4_K_M`.\n4. Paste notes or a transcript into Set notes. Do not commit calendar credentials.",
+        "height": 340,
+        "width": 440
+      },
+      "id": "note-meeting-summary",
+      "name": "Station notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-240, -100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-meeting-summary",
+      "name": "When clicking Test workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [280, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "notes",
+              "name": "notes",
+              "value": "Weekly ops. Ali: backup ran, restore dry-run still missing a qualifying archive. Sam: Open WebUI Knowledge upload of the Q3 PDF succeeded. Next: enable retention after the owner picks 90 days.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-notes",
+      "name": "Set notes",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://llm-gateway:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"Qwen3.8-27B-UD-Q4_K_M\", \"messages\": [ { \"role\": \"system\", \"content\": \"Summarize the meeting in five short bullets, then list action items as owner: task. Do not invent attendees or dates.\" }, { \"role\": \"user\", \"content\": {{ JSON.stringify($json.notes) }} } ], \"max_tokens\": 256 }",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-litellm-meeting-summary",
+      "name": "LiteLLM Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 80]
+    }
+  ],
+  "connections": {
+    "When clicking Test workflow": {
+      "main": [
+        [
+          {
+            "node": "Set notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set notes": {
+      "main": [
+        [
+          {
+            "node": "LiteLLM Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

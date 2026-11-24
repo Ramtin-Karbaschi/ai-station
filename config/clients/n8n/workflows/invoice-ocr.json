@@ -1,0 +1,148 @@
+{
+  "name": "AI Station invoice OCR",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Station invoice OCR\n\nUses local Apache Tika (`http://tika:9998/tika`) then LiteLLM (`http://llm-gateway:4000/v1/chat/completions`).\n\nReplace the sample text in Set invoice, or change Tika Extract to send a PDF/image body (`Accept: text/plain`).\n\nAttach the n8n project Header Auth credential to LiteLLM Invoice. Canonical model: `Qwen3.8-27B-UD-Q4_K_M`. Never call `:8888`.",
+        "height": 360,
+        "width": 460
+      },
+      "id": "note-invoice-ocr",
+      "name": "Station notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-240, -100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-invoice-ocr",
+      "name": "When clicking Test workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [280, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "document",
+              "name": "document",
+              "value": "INVOICE 1042\\nVendor: Northwind Supplies\\nDate: 2026-08-01\\nAmount due: 128.40 USD\\nLine: 4 boxes of A4 paper",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-invoice",
+      "name": "Set invoice",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://tika:9998/tika",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "text/plain"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.document }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "http-tika-invoice",
+      "name": "Tika Extract",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://llm-gateway:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"Qwen3.8-27B-UD-Q4_K_M\", \"messages\": [ { \"role\": \"system\", \"content\": \"Extract vendor, invoice id, date, currency, and amount due as a compact JSON object. Use null for missing fields. No extra prose.\" }, { \"role\": \"user\", \"content\": {{ JSON.stringify($json.data || $json) }} } ], \"max_tokens\": 256 }",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-litellm-invoice",
+      "name": "LiteLLM Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 80]
+    }
+  ],
+  "connections": {
+    "When clicking Test workflow": {
+      "main": [
+        [
+          {
+            "node": "Set invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set invoice": {
+      "main": [
+        [
+          {
+            "node": "Tika Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tika Extract": {
+      "main": [
+        [
+          {
+            "node": "LiteLLM Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "name": "AI Station ticket reply",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Station ticket reply\n\n1. Run `ai n8n configure` and attach Header Auth `Authorization: Bearer <LLM_API_KEY>` from `projects/n8n.env` to LiteLLM Reply.\n2. Call only `http://llm-gateway:4000/v1` from inside Compose. Never `:8888` or llama.cpp ports.\n3. Canonical model: `Qwen3.8-27B-UD-Q4_K_M`.\n4. Replace the sample ticket text in Set ticket. Do not commit customer mail credentials.",
+        "height": 340,
+        "width": 440
+      },
+      "id": "note-ticket-reply",
+      "name": "Station notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-240, -100]
+    },
+    {
+      "parameters": {},
+      "id": "manual-ticket-reply",
+      "name": "When clicking Test workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [280, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ticket",
+              "name": "ticket",
+              "value": "Subject: Printer offline\\nThe office printer on floor 2 shows offline. I already restarted it. Need a short status update I can send to the requester.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-ticket",
+      "name": "Set ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://llm-gateway:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"Qwen3.8-27B-UD-Q4_K_M\", \"messages\": [ { \"role\": \"system\", \"content\": \"Write a short, polite support reply in the same language as the ticket. Do not invent facts. End with one next step.\" }, { \"role\": \"user\", \"content\": {{ JSON.stringify($json.ticket) }} } ], \"max_tokens\": 256 }",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-litellm-ticket-reply",
+      "name": "LiteLLM Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 80]
+    }
+  ],
+  "connections": {
+    "When clicking Test workflow": {
+      "main": [
+        [
+          {
+            "node": "Set ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set ticket": {
+      "main": [
+        [
+          {
+            "node": "LiteLLM Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
