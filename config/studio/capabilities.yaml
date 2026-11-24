@@ -26,8 +26,11 @@ capabilities:
     label: "Image → Edit"
     model: Qwen-Image-Edit-2511
     workflow: config/clients/comfyui/workflows/qwen-image-edit-2511.json
-    status: configured_pending_smoke
+    status: verified
     installed: true
+    verified_at: "2026-08-29"
+    verification: "Qwen 2511 Plus workflow preserved Kia Pride geometry in a 40-step local smoke"
+    evidence: /srv/ai-station/runtime/evals/qwen-image-edit-2511-smoke.json
   image.graphic:
     label: "Image → Graphic / Text"
     model: Qwen-Image-2512

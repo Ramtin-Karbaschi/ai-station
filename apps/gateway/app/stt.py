@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from email.parser import BytesParser
+from email.policy import default as email_default
 from typing import Callable
 
 
@@ -24,6 +27,71 @@ class Transcript:
 
 TranscribeFn = Callable[[bytes, str | None], Transcript]
 
+_LANGUAGE_RE = re.compile(r"^[a-z]{2,3}(?:-[a-z]{2,4})?$", re.IGNORECASE)
+_QWEN_TEXT_PREFIX_RE = re.compile(r"^\s*language\s+[^<]+<asr_text>\s*", re.IGNORECASE)
+
+
+def normalize_language(language: str | None) -> str | None:
+    """Return a safe Whisper/Qwen language hint, or ``None`` for autodetect.
+
+    OpenAI clients commonly send ``auto`` or locale forms such as ``fa-IR``.
+    The local engines need the ISO-639 language portion, so locale suffixes are
+    intentionally discarded.  Rejecting malformed hints also keeps them out
+    of the subprocess argv used by the Whisper fallback.
+    """
+
+    value = str(language or "").strip().replace("_", "-")
+    if not value or value.lower() in {"auto", "automatic", "detect"}:
+        return None
+    if not _LANGUAGE_RE.fullmatch(value):
+        raise ValueError("language must be an ISO-639 code such as 'fa' or 'en'")
+    return value.split("-", 1)[0].lower()
+
+
+def clean_qwen_text(text: str) -> str:
+    """Remove the local Qwen server's metadata wrapper from transcript text."""
+
+    return _QWEN_TEXT_PREFIX_RE.sub("", str(text or "")).strip()
+
+
+def extract_audio_request(
+    body: bytes,
+    *,
+    content_type: str | None = None,
+    language: str | None = None,
+) -> tuple[bytes, str | None]:
+    """Extract audio and an optional language from raw or OpenAI multipart data.
+
+    The host gateway historically accepted raw audio bytes.  OpenAI-compatible
+    clients send ``multipart/form-data`` with a ``file`` field, so keep raw
+    compatibility while accepting either ``file`` or ``audio`` and a form
+    language field.  The parser is deliberately byte-preserving for audio.
+    """
+
+    if not body:
+        raise ValueError("audio body is empty")
+    resolved_language = normalize_language(language)
+    content_type = (content_type or "").strip()
+    if not content_type.lower().startswith("multipart/"):
+        return body, resolved_language
+
+    envelope = f"Content-Type: {content_type}\r\n\r\n".encode("utf-8") + body
+    message = BytesParser(policy=email_default).parsebytes(envelope)
+    audio: bytes | None = None
+    form_language: str | None = None
+    for part in message.iter_parts():
+        name = part.get_param("name", header="content-disposition")
+        if name in {"file", "audio"} and audio is None:
+            audio = part.get_payload(decode=True) or b""
+        elif name == "language" and form_language is None:
+            raw = part.get_payload(decode=True) or b""
+            form_language = raw.decode("utf-8", errors="replace").strip()
+    if audio is None or not audio:
+        raise ValueError("multipart request must include a non-empty file field")
+    if resolved_language is None and form_language:
+        resolved_language = normalize_language(form_language)
+    return audio, resolved_language
+
 
 def transcribe(
     audio_bytes: bytes,
@@ -34,6 +102,9 @@ def transcribe(
     qwen_fn: TranscribeFn | None = None,
     whisper_fn: TranscribeFn | None = None,
 ) -> Transcript:
+    language = normalize_language(language)
+    if not audio_bytes:
+        raise ValueError("audio body is empty")
     use_whisper = want_timestamps or not qwen_available
     if not use_whisper and qwen_fn is not None:
         try:
@@ -120,6 +191,7 @@ def _asr_multipart_body(
 
 
 def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
+    language = normalize_language(language)
     boundary = ASR_MULTIPART_BOUNDARY
     body = _asr_multipart_body(audio_bytes, language, boundary=boundary)
     req = urllib.request.Request(
@@ -130,8 +202,11 @@ def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
     )
     with urllib.request.urlopen(req, timeout=180) as response:
         payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    text = clean_qwen_text(payload.get("text") or "")
+    if not text:
+        raise RuntimeError("Qwen3-ASR returned an empty transcript")
     return Transcript(
-        text=str(payload.get("text") or "").strip(),
+        text=text,
         engine="qwen3-asr-1.7b",
         language=payload.get("language") or language,
         timestamps=None,
@@ -150,13 +225,13 @@ def _whisper_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
             "python",
             "-c",
             (
-                "import sys, json\n"
+                "import io, sys, json\n"
                 "from faster_whisper import WhisperModel\n"
                 "audio = sys.stdin.buffer.read()\n"
-                "open('/tmp/ai-station-stt.bin', 'wb').write(audio)\n"
-                "model = WhisperModel('/app/backend/data/cache/whisper/models/faster-whisper-large-v3', device='cpu')\n"
+                "model = WhisperModel('/app/backend/data/cache/whisper/models/faster-whisper-large-v3', "
+                "device='cpu', compute_type='int8', local_files_only=True, cpu_threads=3)\n"
                 "lang = sys.argv[1] if sys.argv[1] != '-' else None\n"
-                "segments, info = model.transcribe('/tmp/ai-station-stt.bin', language=lang)\n"
+                "segments, info = model.transcribe(io.BytesIO(audio), language=lang, vad_filter=True)\n"
                 "rows = [{'start': s.start, 'end': s.end, 'text': s.text} for s in segments]\n"
                 "print(json.dumps({'text': ''.join(r['text'] for r in rows).strip(), "
                 "'language': getattr(info, 'language', lang), 'segments': rows}))\n"
@@ -185,6 +260,9 @@ def transcribe_station_audio(
     language: str | None = None,
     want_timestamps: bool = False,
 ) -> Transcript:
+    language = normalize_language(language)
+    if not audio_bytes:
+        raise ValueError("audio body is empty")
     return transcribe(
         audio_bytes,
         language=language,

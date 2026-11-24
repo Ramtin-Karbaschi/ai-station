@@ -21,6 +21,18 @@ ADR = ROOT / "docs/adr/ADR-005-retrieval-engine.md"
 
 
 class OpenWebuiRagContractTests(unittest.TestCase):
+    def test_native_web_search_is_available_by_default_in_chat(self) -> None:
+        env = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"][
+            "open-webui"
+        ]["environment"]
+        metadata = json.loads(env["DEFAULT_MODEL_METADATA"])
+        params = json.loads(env["DEFAULT_MODEL_PARAMS"])
+        self.assertIn("web_search", metadata["defaultFeatureIds"])
+        self.assertTrue(metadata["capabilities"]["web_search"])
+        self.assertEqual(params["function_calling"], "default")
+        self.assertEqual(env["ENABLE_WEB_SEARCH"], "True")
+        self.assertEqual(env["WEB_SEARCH_ENGINE"], "searxng")
+
     def test_hybrid_search_uses_local_cpu_reranker(self) -> None:
         env = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"][
             "open-webui"

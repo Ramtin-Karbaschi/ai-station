@@ -32,6 +32,36 @@ class QualityGateContractTests(unittest.TestCase):
             runner,
         )
 
+    def test_private_planning_docs_are_ignored_and_rejected_when_tracked(self) -> None:
+        import subprocess
+
+        private_paths = (
+            "docs/PRODUCT.md",
+            "docs/ROADMAP.md",
+            "docs/PROJECT_STATE.md",
+            "docs/LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md",
+            "docs/DEVELOPMENT_PLAN.md",
+            "docs/research/AI_STATION_DEVELOPMENT_PLAN.md",
+            "docs/DECISIONS.md",
+        )
+        release_audit = (ROOT / "scripts/release-audit.sh").read_text(
+            encoding="utf-8"
+        )
+
+        for relative in private_paths:
+            with self.subTest(path=relative):
+                result = subprocess.run(
+                    ["git", "check-ignore", "--quiet", "--no-index", relative],
+                    cwd=ROOT,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, relative)
+                self.assertIn(f'"{relative}"', release_audit)
+
+        self.assertIn("git -c safe.directory=", release_audit)
+        self.assertIn("ls-files --error-unmatch", release_audit)
+
+    @unittest.skipIf(os.name == "nt", "requires POSIX shell utilities")
     def test_runner_resolves_unqualified_python_command_names(self) -> None:
         import shutil
         import subprocess
@@ -141,6 +171,32 @@ class QualityGateContractTests(unittest.TestCase):
                     line.lower(),
                     f"{relative}:{line_number}",
                 )
+
+    def test_python_helpers_derive_the_project_root(self) -> None:
+        helpers = (
+            "catalog_review.py",
+            "lora.py",
+            "restore_dry_run.py",
+            "retention.py",
+            "roi.py",
+            "sso.py",
+            "station_alerts.py",
+            "voice.py",
+            "litellm_keys.py",
+        )
+        install_root = "/opt" + "/ai-station"
+        for name in helpers:
+            text = (ROOT / "scripts" / "lib" / name).read_text(encoding="utf-8")
+            self.assertNotIn(install_root, text, name)
+            self.assertIn("Path(__file__).resolve().parents[2]", text, name)
+
+    def test_backup_uses_live_postgres_identity_and_atomic_publish(self) -> None:
+        backup = (ROOT / "scripts" / "backup.sh").read_text(encoding="utf-8")
+        self.assertIn("compose-ai-station.sh", backup)
+        self.assertIn('pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"', backup)
+        self.assertNotIn("pg_dump -U ai_station -d ai_station", backup)
+        self.assertIn("mktemp -d", backup)
+        self.assertIn('mv -nT -- "$WORK_DIR" "$BACKUP_DIR"', backup)
 
 
 if __name__ == "__main__":

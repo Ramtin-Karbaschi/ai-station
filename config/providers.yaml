@@ -67,11 +67,13 @@ providers:
     latency_class: interactive
     stability_class: production
     minimum_vram_mib: 21000
-    minimum_ram_mib: 8192
+    # llm-coder uses --no-kv-offload. Reserve host RAM for up to 262144 tokens
+    # including F32 K/V overrides and recurrent state, in addition to 8 GiB base.
+    minimum_ram_mib: 20480
     minimum_storage_mib: 23000
-    kv_cache_mib_per_1k_context: 180
+    kv_cache_mib_per_1k_context: 0
     default_context: 8192
-    max_context: 32768
+    max_context: 262144
     required_features:
     - nvidia_cuda
     fallback_provider: llama-cpp-general
@@ -140,7 +142,7 @@ providers:
     minimum_ram_mib: 8192
     minimum_storage_mib: 18000
     kv_cache_mib_per_1k_context: 240
-    default_context: 4096
+    default_context: 16384
     max_context: 32768
     required_features:
     - nvidia_cuda

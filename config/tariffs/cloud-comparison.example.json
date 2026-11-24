@@ -1,0 +1,7 @@
+{
+  "currency": "USD",
+  "label": "Example cloud chat rate",
+  "cloud_usd_per_1k_tokens": 0.005,
+  "local_usd_per_1k_tokens": 0.0,
+  "notes": "Replace this file or point AI_STATION_TARIFF at your invoice rate. Local spend uses LiteLLM_SpendLogs when available; tokens times this cloud rate is the comparison, not a bill."
+}

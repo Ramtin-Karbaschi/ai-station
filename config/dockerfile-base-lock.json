@@ -1,6 +1,20 @@
 {
   "dockerfiles": [
     {
+      "dockerfile": "apps/voice/webui/Dockerfile",
+      "line": 1,
+      "locked": "ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0",
+      "original": "ghcr.io/open-webui/open-webui:0.10.2",
+      "type": "registry-digest"
+    },
+    {
+      "dockerfile": "apps/voice/Dockerfile",
+      "line": 1,
+      "locked": "python:3.13-slim-bookworm@sha256:a5a7017efc5969e00ae2b91c8eb0631049a569652aa4ffc4501769049ae45c72",
+      "original": "python:3.13-slim-bookworm",
+      "type": "registry-digest"
+    },
+    {
       "dockerfile": "infra/comfyui/Dockerfile",
       "line": 1,
       "locked": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime@sha256:1f57418aedd9a4d0d3a59646619e1d4f82cacc33817247cead4f749e1f452d4b",
@@ -17,8 +31,8 @@
     {
       "dockerfile": "infra/paddleocr-vl/Dockerfile",
       "line": 1,
-      "locked": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime@sha256:1f57418aedd9a4d0d3a59646619e1d4f82cacc33817247cead4f749e1f452d4b",
-      "original": "pytorch/pytorch:2.10.0-cuda13.0-cudnn9-runtime",
+      "locked": "ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-vl:paddleocr3.6-nvidia-gpu-sm120-offline@sha256:0971c409d1cab2b12aa17b76855e36ac8eb9fb1adc97dbeea15e9b09432a4a3b",
+      "original": "ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-vl:paddleocr3.6-nvidia-gpu-sm120-offline",
       "type": "registry-digest"
     }
   ],

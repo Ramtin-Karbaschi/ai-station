@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import unittest
 
+from fastapi import HTTPException
+
 from apps.gateway.app import main as gateway_main
 
 
@@ -27,6 +29,11 @@ ORNITH_MODEL = {
 NO_PREFIX_MODEL = {
     "backend_model": "some-backend",
     "default_system_prefix": "",
+}
+
+LONGWRITER_MODEL = {
+    "id": "longwriter-zero-32b",
+    "backend_model": "ai-station-longwriter",
 }
 
 
@@ -95,6 +102,57 @@ class RewriteMessagesTests(unittest.TestCase):
         self.assertIsInstance(content, list)
         self.assertEqual(content[0]["text"], "/no_think")
         self.assertEqual(content[1]["text"], "You are a coding agent.")
+
+    def test_longwriter_preserves_a_single_text_prompt(self) -> None:
+        prompt = "  \u062f\u0631\u0628\u0627\u0631\u0647\u0654 \u067e\u0644 \u0628\u0646\u0648\u06cc\u0633.\n"
+        messages = [{"role": "user", "content": prompt}]
+        result = gateway_main.rewrite_messages(LONGWRITER_MODEL, {"messages": messages})
+        self.assertEqual(result["messages"], messages)
+
+    def test_longwriter_stops_at_its_answer_boundary(self) -> None:
+        body = {"messages": [{"role": "user", "content": "Answer briefly."}]}
+        default = gateway_main.rewrite_messages(LONGWRITER_MODEL, body)
+        custom = gateway_main.rewrite_messages(LONGWRITER_MODEL, {**body, "stop": ["END"]})
+        self.assertEqual(default["stop"], ["</answer>"])
+        self.assertEqual(custom["stop"], ["END"])
+
+    def test_longwriter_projects_history_and_sources_into_its_first_message(self) -> None:
+        messages = [
+            {"role": "system", "content": "Write in Persian."},
+            {"role": "user", "content": "Brief A"},
+            {"role": "assistant", "content": "Draft A"},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "<source>Latest evidence</source>"},
+                    {"type": "text", "text": "Revise the draft with this source."},
+                ],
+            },
+        ]
+        body = {"messages": messages, "stream": True}
+
+        result = gateway_main.rewrite_messages(LONGWRITER_MODEL, body)
+
+        self.assertEqual(result["model"], "ai-station-longwriter")
+        self.assertTrue(result["stream"])
+        self.assertEqual(result["messages"], [{
+            "role": "user",
+            "content": (
+                "[system]\nWrite in Persian.\n\n[user]\nBrief A\n\n"
+                "[assistant]\nDraft A\n\n[user]\n<source>Latest evidence</source>\n"
+                "Revise the draft with this source."
+            ),
+        }])
+        self.assertEqual(body["messages"][-1]["content"][0]["text"], "<source>Latest evidence</source>")
+        self.assertEqual(gateway_main.rewrite_messages(NO_PREFIX_MODEL, body)["messages"], messages)
+
+    def test_longwriter_rejects_nontext_parts_instead_of_discarding_them(self) -> None:
+        body = {
+            "messages": [{"role": "user", "content": [{"type": "image_url", "image_url": {"url": "image"}}]}],
+        }
+        with self.assertRaises(HTTPException) as error:
+            gateway_main.rewrite_messages(LONGWRITER_MODEL, body)
+        self.assertEqual(error.exception.status_code, 400)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,10 @@
 
 - Status: Accepted
 - Date: 2026-07-23
+- Later amendment: 2026-09-02 — the next observability increment is
+  lean local alerts ([ADR-034](ADR-034-lean-observability-increment.md)),
+  not a Prometheus/Grafana/Loki stack. No SaaS telemetry remains
+  in force.
 
 ## Context
 

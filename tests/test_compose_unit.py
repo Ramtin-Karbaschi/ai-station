@@ -63,6 +63,13 @@ class ComposeUnitAndRecommendedModelsTests(unittest.TestCase):
         self.assertIn("REASONING_CACHE_TYPE_K", text)
         self.assertIn("VISION_CACHE_TYPE_K", text)
 
+    def test_gpu_compose_requests_are_one_device_by_default_and_overridable(self) -> None:
+        models = (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        comfy = (ROOT / "compose.comfyui.experimental.yaml").read_text(encoding="utf-8")
+        for text in (models, comfy):
+            self.assertIn('${AI_STATION_GPU_DEVICE_ID:-0}', text)
+            self.assertNotIn('gpus: all', text)
+
     def test_models_doc_lists_every_manifest_id_and_total_gib(self) -> None:
         doc = MODELS_DOC.read_text(encoding="utf-8")
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))

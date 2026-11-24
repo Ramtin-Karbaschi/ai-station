@@ -183,6 +183,10 @@ RELEASE AUDIT PASSED
 
 ## Backup policy
 
+RPO/RTO, restore dry-run, and drill policy live in
+[DISASTER_RECOVERY.md](ops/DISASTER_RECOVERY.md). Retention for chats
+and documents lives in [DATA_GOVERNANCE.md](ops/DATA_GOVERNANCE.md).
+
 Backups must be written outside the repository under:
 
 ~~~text

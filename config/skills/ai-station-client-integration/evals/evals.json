@@ -29,12 +29,12 @@
     {
       "id": 3,
       "prompt": "Three internal apps need different AI Station models and limits. Should they share the LiteLLM master key?",
-      "expected_output": "Rejects master-key sharing and recommends isolated project virtual keys, allowlists, limits, and independent revocation.",
+      "expected_output": "Rejects master-key sharing and recommends isolated project virtual keys, allowlists, and independent revocation. Rate limits stay off unless requested.",
       "files": [],
       "expectations": [
         "Rejects sharing the master key",
         "Uses one virtual key per app",
-        "Uses model allowlists and rate/token limits",
+        "Uses model allowlists; TPM/RPM stay off unless requested",
         "Mentions independent revocation and secret redaction"
       ]
     }

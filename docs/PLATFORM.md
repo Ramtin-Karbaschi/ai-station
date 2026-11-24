@@ -193,6 +193,8 @@ client = OpenAI(
 - Gateway published on `127.0.0.1:4000` only
 - Runtime model ports published on loopback for host tooling; apps should use the gateway
 - Per-project virtual keys; master key stays in `.env`
+- Virtual keys have no TPM/RPM unless created with `--tpm`/`--rpm`
+  (`ai projects unlimit` clears existing caps)
 - Message body logging disabled in LiteLLM (`turn_off_message_logging`)
 - Response cache disabled
 - No cloud providers configured in the gateway

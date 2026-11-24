@@ -2,7 +2,27 @@
 
 Open WebUI at `http://127.0.0.1:3000` is the human chat and document UI.
 Application API keys are a different product surface. See
-[PLATFORM.md](../PLATFORM.md).
+[PLATFORM.md](../PLATFORM.md). Non-technical steps:
+[FAQ.md](FAQ.md).
+
+## Voice calls
+
+Open a chat with one model selected and an empty composer. Click the voice
+call icon and allow microphone access. Speak in Persian or English. A pause
+ends your turn, the station speaks its reply, and the microphone listens for
+the next turn. The text conversation remains in the current chat.
+
+Use **End call** or speak a standalone hangup command to release the
+microphone. Commands include "end the call" and the Persian equivalents
+for ending the conversation or disconnecting the call. Speaking during
+playback can interrupt the answer. You can change that behavior with
+**Allow Voice Interruption in Call** in Open WebUI settings.
+
+The station transcribes and synthesizes audio locally. Open WebUI reaches
+both audio routes through the same LiteLLM connection it uses for chat.
+The CPU Piper service selects the voice from the reply text. It has no
+published port and requires no second GPU. On a new installation, run
+`ai voice setup` to provision the pinned voices and start their service.
 
 ## Two different "projects"
 
@@ -16,6 +36,24 @@ Application API keys are a different product surface. See
 Graphify is a code graph, not document retrieval
 ([GRAPHIFY.md](GRAPHIFY.md)). ComfyUI is music/video, not RAG
 ([COMFYUI.md](COMFYUI.md)).
+
+## Web search and research
+
+**Web Search** is enabled by default in new chats. The **Integrations** menu
+shows its current state and lets you change it for that conversation. Check the
+menu after reloading a conversation that was already open before a configuration
+change.
+
+Models with native tool calling can decide when to query the web, refine a
+search, and open individual pages before answering. Ask for primary sources and
+linked citations when you need to verify the answer. SearXNG contacts public
+search engines, so keep query terms public and omit private document content.
+
+Open WebUI uses the model's own reasoning and tool calls for multi-step research.
+For LongWriter, a local Qwen model plans search queries in a separate step.
+LongWriter receives relevant excerpts from up to three retrieved pages before
+writing. Reasoning controls and result depth vary by model. Vision limits each retrieved page
+excerpt to 12,000 characters to leave space for tool calls and the answer.
 
 ## Notebook-style workflow
 
@@ -33,8 +71,9 @@ profile. ComfyUI must be stopped first; it cannot share the GPU.
 7. Ask questions. Keep generated briefings in **Notes** and attach a
    Note when you need the full draft in context.
 
-Do not enable Native function calling on the chat model if you want
-automatic RAG injection. Station default is `function_calling=default`.
+The station's `function_calling=default` uses native tools on this Open WebUI
+version. Preloaded file context and native knowledge tools are separate model
+capabilities.
 
 ## Retrieval path
 

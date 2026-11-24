@@ -28,11 +28,12 @@ models:
     backend_model: ai-station-general
     runtime: llama-cpp
     file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
+    mmproj: qwen38/mmproj-f16.gguf
     context_size: 262144
     status: production
     manifest_id: qwen38-27b-q4
     family: qwen
-    note: Shared Qwen3.8 bytes; general route disables thinking.
+    note: Shared Qwen3.8 bytes and mmproj; general route supports vision and template-controlled reasoning.
   local-coder:
     alias: local-coder
     catalog_id: coder-ornith-1_5-35b
@@ -46,7 +47,7 @@ models:
     backend_model: ai-station-coder
     runtime: llama-cpp
     file: ornith/ornith-1.5-35b-q4_k_m.gguf
-    context_size: 8192
+    context_size: 262144
     status: production
     manifest_id: ornith-1.5-35b-q4
     family: qwen
@@ -83,7 +84,7 @@ models:
     runtime: llama-cpp
     file: qwen38/qwen3.8-27b-ud-q4_k_m.gguf
     mmproj: qwen38/mmproj-f16.gguf
-    context_size: 4096
+    context_size: 16384
     status: production
     manifest_id: qwen38-27b-q4
     family: qwen
@@ -101,7 +102,7 @@ models:
     backend_model: ai-station-ornith
     runtime: llama-cpp
     file: ornith/ornith-1.5-35b-q4_k_m.gguf
-    context_size: 8192
+    context_size: 262144
     status: compatibility
     manifest_id: ornith-1.5-35b-q4
     note: Optional heavy profile; does not replace the coder profile. Switch with

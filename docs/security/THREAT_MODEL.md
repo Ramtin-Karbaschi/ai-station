@@ -83,7 +83,8 @@ one deliberate TCP mirror on the exact private `docker0` address so containers
 can reach the loopback application; wildcard and LAN binds fail verification.
 LiteLLM virtual keys on `:4000` are the authenticated application surface;
 `:8888` remains an internal routing endpoint and must never be configured as a
-client API.
+client API. Virtual keys do not carry TPM/RPM unless the operator sets them
+(ADR-029); loopback binding is the volume control.
 
 ### T7 Arbitrary file access / path traversal
 

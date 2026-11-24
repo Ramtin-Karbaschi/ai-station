@@ -73,6 +73,57 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
+
+wsl_default_user() {
+  local conf="/etc/wsl.conf"
+  [[ -r "$conf" ]] || return 0
+  awk -F= '
+    /^\[user\]/ { in_user=1; next }
+    /^\[/ { in_user=0 }
+    in_user && $1 ~ /^[[:space:]]*default[[:space:]]*$/ {
+      gsub(/[[:space:][:cntrl:]]/, "", $2)
+      print $2
+      exit
+    }
+  ' "$conf"
+}
+
+grant_wsl_operator_git_group() {
+  local operator
+  operator="$(wsl_default_user)"
+  if [[ -z "$operator" || "$operator" == "$DEV_USER" ]]; then
+    return 0
+  fi
+  if ! id "$operator" >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "DRY-RUN: would add $operator to group $DEV_USER for shared Git writes"
+    return 0
+  fi
+  usermod -aG "$DEV_USER" "$operator"
+  echo "OK: added $operator to group $DEV_USER for shared Git writes"
+}
+
+share_git_worktree() {
+  local repo="$1"
+  local operator=""
+  if [[ ! -d "$repo/.git" ]]; then
+    echo "ERROR: $repo is not a Git worktree" >&2
+    return 1
+  fi
+  git -C "$repo" config core.sharedRepository group
+  find "$repo/.git" -type d -exec chmod 2775 {} \;
+  chmod -R g+rwX "$repo/.git"
+  operator="$(wsl_default_user)"
+  if command -v setfacl >/dev/null 2>&1 && [[ -n "$operator" && "$operator" != "$DEV_USER" ]]; then
+    setfacl -R -m "u:${operator}:rwX,g:${DEV_USER}:rwX" "$repo/.git"
+    setfacl -R -d -m "u:${operator}:rwX,g:${DEV_USER}:rwX" "$repo/.git"
+  fi
+  echo "OK: Git objects are group-writable (core.sharedRepository=group)"
+}
+
+
 DEST_DIR="$INSTALL_ROOT/$VERSION"
 DEST_BIN="$DEST_DIR/opencode"
 LINK="/usr/local/bin/opencode"
@@ -137,7 +188,9 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   fi
   if [[ "$OWN_PROJECT" -eq 1 ]]; then
     echo "DRY-RUN: would set $DEV_USER ownership on $ROOT"
+    echo "DRY-RUN: would set core.sharedRepository=group and group-writable .git"
   fi
+  grant_wsl_operator_git_group
   echo "DRY-RUN: would install the pinned OpenCode Python/Bash toolchain"
   exit 0
 fi
@@ -237,7 +290,13 @@ if [[ "$OWN_PROJECT" -eq 1 ]]; then
     exit 1
   fi
   chown -R "$DEV_USER:$DEV_USER" "$resolved_root"
+  share_git_worktree "$resolved_root"
   echo "OK: $DEV_USER owns the project worktree"
+fi
+
+grant_wsl_operator_git_group
+if [[ "$OWN_PROJECT" -ne 1 && -d "$ROOT/.git" ]]; then
+  share_git_worktree "$ROOT"
 fi
 
 echo "OK: OpenCode $VERSION installed with a verified archive"

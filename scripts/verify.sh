@@ -97,6 +97,7 @@ case "$active_profile" in
   ornith) check_url http://127.0.0.1:8086/v1/models "Ornith Model Server" ;;
   qwen38) check_url http://127.0.0.1:8087/v1/models "Qwen3.8 Model Server" ;;
   longwriter) check_url http://127.0.0.1:8088/v1/models "LongWriter Model Server" ;;
+  comfyui-experimental) check_url http://127.0.0.1:8188/system_stats "ComfyUI Media Server" ;;
   *)
     echo "FAIL: unknown active profile '$active_profile'"
     fail=1

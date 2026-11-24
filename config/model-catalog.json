@@ -22,12 +22,13 @@
       "base_url": "http://127.0.0.1:8082/v1",
       "enabled": true,
       "heavy": true,
-      "supports_vision": false,
+      "supports_vision": true,
       "supports_tools": true,
-      "default_system_prefix": "/no_think",
+      "default_system_prefix": "",
       "manifest_id": "qwen38-27b-q4",
+      "mmproj_manifest_id": "qwen38-27b-mmproj-f16",
       "supports_json_schema": true,
-      "note": "Primary general chat/tools route. Shares the single Qwen3.8 GGUF with reasoning and vision profiles."
+      "note": "Primary general chat/tools/vision route. Shares the single Qwen3.8 GGUF and mmproj with the dedicated vision profile."
     },
     {
       "id": "coder-ornith-1_5-35b",
@@ -46,7 +47,7 @@
       "heavy": true,
       "supports_vision": false,
       "supports_tools": true,
-      "default_system_prefix": "/no_think",
+      "default_system_prefix": "",
       "manifest_id": "ornith-1.5-35b-q4",
       "supports_json_schema": true,
       "note": "Default coding and OpenCode model; replaces Qwen3-Coder in the active runtime."

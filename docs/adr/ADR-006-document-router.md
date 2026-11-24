@@ -41,6 +41,16 @@ off while llama.cpp occupies the GPU.
   The `ocr-vl` Compose profile is not the live default until a golden-set
   report exists and the GPU is free. Until then `paddle_available=false`
   returns traffic to Tika/Tesseract.
+- On 2026-11-22 PaddleOCR-VL-1.6 completed a network-isolated CPU run using
+  the cached pipeline models and the compatible PaddlePaddle 3.2.1 CPU
+  wheel. It recovered all four lines on a synthetic Persian/English page.
+  Tesseract recovered three lines and both engines read `1403`. The detector
+  layout scores were about 0.43 to 0.48. These are layout scores, not text
+  confidence or a general quality result.
+- The same scan was used to check the invisible DejaVu Sans text layer.
+  Search found a Persian word, the English phrase, and `1403`, and the
+  rendered output matched the source pixels exactly. The test ran with the
+  production image's PDF dependencies, without moving the production GPU.
 
 ## Rollback
 

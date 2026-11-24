@@ -318,6 +318,7 @@ security vulnerabilities through a public issue.
 | [Installation](docs/INSTALLATION.md) | Linux, Windows+WSL, upgrade, clone to another PC |
 | [Architecture](docs/ARCHITECTURE.md) | Flows and trust boundaries |
 | [Platform](docs/PLATFORM.md) | LiteLLM, projects, CLI |
+| [Architecture decisions](docs/adr/README.md) | Accepted technical decisions |
 | [OpenCode](docs/clients/OPENCODE.md) | Verified non-root WSL developer client |
 | [Open WebUI](docs/clients/OPENWEBUI.md) | Human chat and Knowledge notebooks |
 | [ComfyUI](docs/clients/COMFYUI.md) | Retained MiniMax music/video and FLUX.2 stills |

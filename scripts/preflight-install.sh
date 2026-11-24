@@ -84,7 +84,7 @@ live_gpu_model_fallback() {
 
 host_nvidia_smi_works() {
     local OUTPUT=""
-    if ! OUTPUT="$(nvidia-smi 2>&1)"; then
+    if ! OUTPUT="$("$NVIDIA_SMI" 2>&1)"; then
         return 1
     fi
     [[ "$OUTPUT" != *"Failed to initialize NVML"* ]] \
@@ -141,7 +141,12 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 if [[ "$REQUIRE_GPU" == "true" ]]; then
-    if command -v nvidia-smi >/dev/null 2>&1; then
+    NVIDIA_SMI="$(command -v nvidia-smi || true)"
+    # sudo's secure PATH omits the WSL-provided NVIDIA tools directory.
+    if [[ -z "$NVIDIA_SMI" && -x /usr/lib/wsl/lib/nvidia-smi ]]; then
+        NVIDIA_SMI=/usr/lib/wsl/lib/nvidia-smi
+    fi
+    if [[ -n "$NVIDIA_SMI" ]]; then
         if host_nvidia_smi_works; then
             pass "NVIDIA GPU is visible in Linux/WSL"
         elif live_gpu_model_fallback; then

@@ -41,6 +41,28 @@ class N8nContractTests(unittest.TestCase):
         self.assertEqual(env["N8N_SECURE_COOKIE"], "false")
         self.assertEqual(env["N8N_BLOCK_ENV_ACCESS_IN_NODE"], "true")
         self.assertEqual(env["N8N_COMMUNITY_PACKAGES_ENABLED"], "false")
+        self.assertEqual(
+            env["N8N_INSTANCE_AI_MODEL_URL"],
+            "${N8N_INSTANCE_AI_MODEL_URL:-http://llm-gateway:4000/v1}",
+        )
+        self.assertEqual(
+            env["N8N_INSTANCE_AI_MODEL"],
+            "${N8N_INSTANCE_AI_MODEL:-Qwen3.8-27B-UD-Q4_K_M}",
+        )
+        self.assertEqual(env["N8N_INSTANCE_AI_MODEL_API_KEY"], "${N8N_LLM_API_KEY:-}")
+        self.assertIn("searxng:8080", env["N8N_INSTANCE_AI_SEARXNG_URL"])
+        self.assertEqual(env["N8N_INSTANCE_AI_SANDBOX_ENABLED"], "true")
+        self.assertEqual(env["N8N_INSTANCE_AI_BROWSER_USE_ENABLED"], "false")
+        self.assertEqual(env["N8N_INSTANCE_AI_OBSERVER_MESSAGE_TOKENS"], "8192")
+        self.assertEqual(env["N8N_INSTANCE_AI_SANDBOX_PROVIDER"], "n8n-sandbox")
+        self.assertEqual(
+            env["N8N_SANDBOX_SERVICE_URL"],
+            "${N8N_SANDBOX_SERVICE_URL:-http://sandbox-api:8080}",
+        )
+        self.assertEqual(
+            env["N8N_SANDBOX_SERVICE_API_KEY"],
+            "${N8N_SANDBOX_SERVICE_API_KEY:-}",
+        )
         health = " ".join(service["healthcheck"]["test"])
         self.assertIn("/healthz", health)
         self.assertIn("process.env.N8N_PORT", health)
@@ -49,6 +71,22 @@ class N8nContractTests(unittest.TestCase):
         volumes = "\n".join(str(item) for item in service["volumes"])
         self.assertIn("runtime/n8n", volumes)
         self.assertIn("config/clients/n8n/workflows", volumes)
+
+    def test_sandbox_is_internal_only_and_profile_gated(self) -> None:
+        compose = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+        for name in ("sandbox-certs", "sandbox-api", "sandbox-runner-1"):
+            service = compose["services"][name]
+            self.assertEqual(service["profiles"], ["n8n"])
+            self.assertNotIn("ports", service)
+            self.assertNotIn("gpus", service)
+        self.assertTrue(compose["services"]["sandbox-runner-1"]["privileged"])
+        self.assertNotIn("privileged", compose["services"]["sandbox-api"])
+        self.assertNotIn("privileged", compose["services"]["n8n"])
+        runner_env = compose["services"]["sandbox-runner-1"]["environment"]
+        self.assertIn(
+            "n8n-sandbox-service-sandbox@sha256:",
+            runner_env["SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE"],
+        )
 
     def test_default_start_does_not_launch_n8n(self) -> None:
         start = CLI.read_text(encoding="utf-8")
@@ -84,14 +122,28 @@ class N8nContractTests(unittest.TestCase):
             "--confirm",
             "http://127.0.0.1:5678",
             "llm-gateway:4000",
+            "N8N_LLM_API_KEY",
+            "N8N_INSTANCE_AI",
+            "N8N_SANDBOX_SERVICE",
+            "sandbox-api:8080",
+            "litellm_keys.py",
+            "unlimit --alias",
         ):
             self.assertIn(needle, text)
         cli = CLI.read_text(encoding="utf-8")
         common = COMMON.read_text(encoding="utf-8")
         self.assertIn('source "$ROOT/scripts/lib/ai-n8n.sh"', cli)
         self.assertIn('n8n) cmd_n8n "$@"', cli)
+        self.assertIn("ai_n8n_ensure_project", cli)
+        self.assertIn("ai_n8n_sync_litellm_key", cli)
+        self.assertIn("ai_ensure_n8n_sandbox_secrets", cli)
+        self.assertIn("sandbox-certs sandbox-api sandbox-runner-1", cli)
+        self.assertIn("--force-recreate n8n", cli)
         self.assertIn("ai_prepare_n8n_runtime_dirs", common)
         self.assertIn("ai_ensure_n8n_encryption_key", common)
+        example = (ROOT / ".env.example").read_text(encoding="utf-8")
+        self.assertIn("N8N_LLM_API_KEY=", example)
+        self.assertIn("N8N_SANDBOX_SERVICE_API_KEY=", example)
 
     def test_workflows_call_litellm_canonical_names(self) -> None:
         for path in (CHAT, TIKA):
@@ -138,6 +190,12 @@ class N8nContractTests(unittest.TestCase):
             "http://127.0.0.1:4000/v1",
             "ai n8n start",
             "uninstall --purge --confirm",
+            "N8N_INSTANCE_AI_MODEL_URL",
+            "N8N_SANDBOX_SERVICE_URL",
+            "sandbox-api:8080",
+            "no TPM/RPM",
+            "N8N_LLM_API_KEY",
+            "Self-hosted",
         ):
             self.assertIn(needle, doc)
 
@@ -156,6 +214,16 @@ class N8nContractTests(unittest.TestCase):
         self.assertEqual(
             n8n["configured_image"],
             "docker.n8n.io/n8nio/n8n:2.35.6",
+        )
+        sandbox_api = manifest["services"]["sandbox-api"]
+        self.assertEqual(sandbox_api["source_type"], "registry")
+        self.assertIn(
+            "n8n-sandbox-service-api@sha256:",
+            sandbox_api["locked_image"],
+        )
+        self.assertIn(
+            "n8n-sandbox-service-runner-dind@sha256:",
+            lock,
         )
 
 

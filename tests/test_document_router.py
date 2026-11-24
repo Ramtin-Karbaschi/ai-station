@@ -7,7 +7,15 @@ from email.parser import BytesParser
 from email.policy import default
 
 from apps.gateway.app.document_router import describe_pipeline, extract_document, classify_document
-from apps.gateway.app.stt import ASR_MULTIPART_BOUNDARY, Transcript, _asr_multipart_body, transcribe
+from apps.gateway.app.stt import (
+    ASR_MULTIPART_BOUNDARY,
+    Transcript,
+    _asr_multipart_body,
+    clean_qwen_text,
+    extract_audio_request,
+    normalize_language,
+    transcribe,
+)
 
 
 def _tika_good(_b, _n, _m):
@@ -32,6 +40,38 @@ class DocumentRouterTests(unittest.TestCase):
         p = describe_pipeline()
         self.assertEqual(p["never"], "reranker")
         self.assertEqual(p["digital"], "Apache Tika")
+
+    def test_stt_language_normalizes_locale_and_auto(self):
+        self.assertEqual(normalize_language("fa-IR"), "fa")
+        self.assertEqual(normalize_language("en_US"), "en")
+        self.assertIsNone(normalize_language("auto"))
+
+    def test_stt_rejects_malformed_language_hint(self):
+        with self.assertRaises(ValueError):
+            normalize_language("fa; rm -rf")
+
+    def test_stt_cleans_qwen_metadata_wrapper(self):
+        self.assertEqual(
+            clean_qwen_text("language English<asr_text>Say hello in English."),
+            "Say hello in English.",
+        )
+
+    def test_stt_extracts_openai_multipart_file_and_language(self):
+        boundary = "client-boundary"
+        body = _asr_multipart_body(b"RIFF\x00\xffWAVE", "fa-IR", boundary=boundary)
+        audio, language = extract_audio_request(
+            body,
+            content_type=f"multipart/form-data; boundary={boundary}",
+        )
+        self.assertEqual(audio, b"RIFF\x00\xffWAVE")
+        self.assertEqual(language, "fa")
+
+    def test_stt_raw_body_preserves_explicit_language_precedence(self):
+        audio, language = extract_audio_request(
+            b"audio", content_type="audio/wav", language="en-US"
+        )
+        self.assertEqual(audio, b"audio")
+        self.assertEqual(language, "en")
 
     def test_english_pdf_stays_on_tika(self):
         r = extract_document(b"%PDF", "en.pdf", "application/pdf", tika_fn=_tika_good, paddle_fn=_paddle, tesseract_fn=_tess, document_class="digital", paddle_available=True)
@@ -64,6 +104,34 @@ class DocumentRouterTests(unittest.TestCase):
     def test_tesseract_fallback(self):
         r = extract_document(b"x", "scan.png", "image/png", tika_fn=_tika_empty, paddle_fn=_paddle, tesseract_fn=_tess, document_class="scanned_persian", paddle_available=False)
         self.assertEqual(r.engine, "tesseract")
+        self.assertTrue(r.fallback_used)
+
+    def test_tika_ocr_fallback_when_no_distinct_tesseract(self):
+        r = extract_document(
+            b"x",
+            "scan.png",
+            "image/png",
+            tika_fn=_tika_empty,
+            paddle_fn=_paddle,
+            tesseract_fn=None,
+            document_class="scanned_persian",
+            paddle_available=False,
+        )
+        self.assertEqual(r.engine, "tika-ocr")
+        self.assertTrue(r.fallback_used)
+
+    def test_tika_passed_as_tesseract_fn_labels_tika_ocr(self):
+        r = extract_document(
+            b"x",
+            "scan.png",
+            "image/png",
+            tika_fn=_tika_empty,
+            paddle_fn=_paddle,
+            tesseract_fn=_tika_empty,
+            document_class="scanned_persian",
+            paddle_available=False,
+        )
+        self.assertEqual(r.engine, "tika-ocr")
         self.assertTrue(r.fallback_used)
 
 
@@ -168,6 +236,23 @@ class GatewaySttRouteTests(unittest.IsolatedAsyncioTestCase):
         ) as client:
             empty = await client.post("/v1/audio/transcriptions", content=b"")
         self.assertEqual(empty.status_code, 400)
+
+    async def test_host_gateway_speech_is_pending_smoke(self) -> None:
+        import httpx
+
+        from apps.gateway.app import main as gateway_main
+
+        paths = {getattr(route, "path", None) for route in gateway_main.app.routes}
+        self.assertIn("/v1/audio/speech", paths)
+        transport = httpx.ASGITransport(app=gateway_main.app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            response = await client.post("/v1/audio/speech", content=b"{}")
+        self.assertEqual(response.status_code, 503)
+        body = response.json()
+        self.assertEqual(body["status"], "pending_smoke")
+        self.assertEqual(body["error"], "tts_pending_smoke")
 
 
 if __name__ == "__main__":

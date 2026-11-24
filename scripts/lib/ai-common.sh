@@ -25,11 +25,11 @@ ai_compose() {
 
 ai_load_env_value() {
   local key="$1"
-  python3 - "$key" <<'PY'
+  python3 - "${AI_STATION_ROOT}/.env" "$key" <<'PY'
 import sys
 from pathlib import Path
-key = sys.argv[1]
-path = Path("/opt/ai-station/.env")
+path = Path(sys.argv[1])
+key = sys.argv[2]
 if not path.exists():
     raise SystemExit(0)
 for line in path.read_text(encoding="utf-8").splitlines():
@@ -162,6 +162,7 @@ ai_retry_compose() {
 }
 
 ai_stop_experimental_gpu_overlays() {
+  ai_assert_comfyui_idle
   local root="${AI_STATION_ROOT:-/opt/ai-station}"
   local entry profile overlay service
   (
@@ -175,6 +176,42 @@ ai_stop_experimental_gpu_overlays() {
     # active-profile file still names it.
     docker rm -f ai-station-sglang-experimental >/dev/null 2>&1 || true
   )
+}
+
+ai_assert_comfyui_idle() {
+  if [[ "$(docker inspect -f '{{.State.Running}}' ai-station-comfyui-experimental 2>/dev/null || true)" != true ]]; then
+    return 0
+  fi
+  python3 - <<'PY'
+import json
+import urllib.request
+try:
+    with urllib.request.urlopen("http://127.0.0.1:8188/queue", timeout=5) as response:
+        queue = json.load(response)
+    if not isinstance(queue, dict) or not all(isinstance(queue.get(k), list)
+                                              for k in ("queue_running", "queue_pending")):
+        raise ValueError("invalid media queue")
+    if queue["queue_running"] or queue["queue_pending"]:
+        raise ValueError("ComfyUI generation is busy; wait for the queue to complete")
+except (OSError, ValueError) as exc:
+    raise SystemExit(f"ERROR: GPU switch deferred: {exc}")
+PY
+}
+
+ai_start_gpu_overlay() {
+  local profile="$1" service="$2"
+  if [[ -z "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
+    ai_lifecycle_lock provider-start
+  fi
+  if [[ "$profile" == comfyui-experimental ]]; then
+    ai_prepare_comfyui_runtime_dirs
+  fi
+  cmd_models_stop
+  ai_retry_compose --profile "$profile" up -d "$service"
+  if [[ "$profile" == comfyui-experimental ]]; then
+    ai_wait_url http://127.0.0.1:8188/system_stats ComfyUI 90
+  fi
+  ai_set_active_heavy_profile "$profile"
 }
 
 ai_compose_env_file_args() {
@@ -291,8 +328,12 @@ AI_LIFECYCLE_LOCK_FILE="${AI_LIFECYCLE_LOCK_FILE:-$AI_STATE_DIR/lifecycle.lock}"
 
 ai_lifecycle_lock() {
   local action="${1:-lifecycle}"
+  [[ -n "${AI_LIFECYCLE_LOCK_FD:-}" ]] && return 0
   ai_ensure_state_dir
-  exec {AI_LIFECYCLE_LOCK_FD}>"$AI_LIFECYCLE_LOCK_FILE"
+  # Do not erase the holder's diagnostic before acquiring its lock.
+  exec {AI_LIFECYCLE_LOCK_FD}>>"$AI_LIFECYCLE_LOCK_FILE"
+  # Keep the same inode and permissions usable by the root gateway and the
+  # operator group.  Never replace this file: flock ownership is inode-based.
   if ! flock -n "$AI_LIFECYCLE_LOCK_FD"; then
     local holder
     holder="$(head -n 1 "$AI_LIFECYCLE_LOCK_FILE" 2>/dev/null || true)"
@@ -303,12 +344,13 @@ ai_lifecycle_lock() {
     echo "Close other Manager/Desktop start-stop windows and retry." >&2
     exit 4
   fi
-  printf '%s action=%s pid=%s ppid=%s parent=%s\n' \
+  chmod 660 "$AI_LIFECYCLE_LOCK_FILE" 2>/dev/null || true
+  chgrp --reference="$(dirname "$AI_LIFECYCLE_LOCK_FILE")" "$AI_LIFECYCLE_LOCK_FILE" 2>/dev/null || true
+  printf '%s action=%s pid=%s ppid=%s\n' \
     "$(date -Is)" \
     "$action" \
     "$$" \
     "$PPID" \
-    "$(tr '\0' ' ' </proc/${PPID}/cmdline 2>/dev/null | sed 's/ *$//')" \
     >"$AI_LIFECYCLE_LOCK_FILE" || true
 }
 
@@ -328,12 +370,34 @@ ai_ensure_host_gateway() {
 }
 
 ai_active_heavy_profile() {
-  ai_ensure_state_dir
+  local marker="" running="" p
   if [[ -f "$AI_ACTIVE_PROFILE_FILE" ]]; then
-    cat "$AI_ACTIVE_PROFILE_FILE"
+    marker="$(cat "$AI_ACTIVE_PROFILE_FILE")"
+  fi
+  # The API gateway also switches heavy models, so its live container can
+  # differ from the CLI marker. Prefer the observed runtime when Docker works.
+  if running="$(docker ps --format '{{.Names}}' 2>/dev/null)"; then
+    if [[ -n "$marker" ]] && grep -qx "ai-station-llm-${marker}" <<<"$running"; then
+      echo "$marker"
+      return 0
+    fi
+    for p in "${HEAVY_PROFILES[@]}"; do
+      if grep -qx "ai-station-llm-${p}" <<<"$running"; then
+        echo "$p"
+        return 0
+      fi
+    done
+    if [[ "$marker" == "comfyui-experimental" || "$marker" == "ocr-vl" || "$marker" == "sglang-experimental" ]]; then
+      echo "$marker"
+      return 0
+    fi
+    echo ""
     return 0
   fi
-  local p
+  if [[ -n "$marker" ]]; then
+    echo "$marker"
+    return 0
+  fi
   for p in "${HEAVY_PROFILES[@]}"; do
     if ai_compose ps --status running --services 2>/dev/null | grep -qx "llm-${p}"; then
       echo "$p"
@@ -348,14 +412,23 @@ ai_active_heavy_profile() {
   echo ""
 }
 
-ai_set_active_heavy_profile() {
+ai_set_active_heavy_profile() (
   ai_ensure_state_dir
   if [[ -z "${1:-}" ]]; then
     rm -f "$AI_ACTIVE_PROFILE_FILE"
   else
-    printf '%s\n' "$1" >"$AI_ACTIVE_PROFILE_FILE"
+    # Manager runs as root; CLI operators must still be able to replace its
+    # marker. Publish through the writable directory instead of truncating
+    # a file owned by another account, and never expose a partial value.
+    local temporary
+    temporary="$(mktemp "${AI_ACTIVE_PROFILE_FILE}.XXXXXX")"
+    trap 'rm -f "$temporary"' EXIT
+    printf '%s\n' "$1" >"$temporary"
+    chgrp --reference="$(dirname "$AI_ACTIVE_PROFILE_FILE")" "$temporary"
+    chmod 660 "$temporary"
+    mv -fT "$temporary" "$AI_ACTIVE_PROFILE_FILE"
   fi
-}
+)
 
 ai_profile_service() {
   case "$1" in
@@ -369,6 +442,7 @@ ai_profile_service() {
     reranker) echo "reranker" ;;
     asr) echo "asr-qwen3" ;;
     ocr-vl) echo "ocr-vl" ;;
+    comfyui-experimental) echo "comfyui-experimental" ;;
     *) return 1 ;;
   esac
 }
@@ -385,6 +459,7 @@ ai_profile_port() {
     reranker) echo "8091" ;;
     asr) echo "8092" ;;
     ocr-vl) echo "8093" ;;
+    comfyui-experimental) echo "8188" ;;
     *) return 1 ;;
   esac
 }
@@ -414,7 +489,20 @@ ai_is_heavy_profile() {
 }
 
 ai_vram_free_mib() {
-  nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ' || echo "0"
+  local executable
+  executable="$(command -v nvidia-smi || true)"
+  if [[ -z "$executable" && -x /usr/lib/wsl/lib/nvidia-smi ]]; then
+    executable=/usr/lib/wsl/lib/nvidia-smi
+  fi
+  [[ -n "$executable" ]] || { echo "0"; return; }
+  "$executable" --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ' || echo "0"
+}
+
+ai_assert_admission_startable() {
+  python3 -c 'import json,sys
+decision=json.load(sys.stdin)["decision"]
+if decision not in {"START", "STOP_CONFLICTING_PROVIDER_AND_START"}:
+    raise SystemExit("ERROR: provider was not started; admission decision is " + decision)'
 }
 
 # Diagnostic-only cross-check: warns (does not change any decision) when the
@@ -423,6 +511,8 @@ ai_vram_free_mib() {
 # "nvidia-smi VRAM free looks wrong after heavy container churn".
 ai_vram_probe_warning() {
   local active="$1"
+  # Media models are loaded lazily, so a healthy idle server can have free VRAM.
+  [[ "$active" == comfyui-experimental ]] && return 0
   local free_vram_mib="$2"
   [[ -n "$active" ]] || return 0
   PYTHONPATH="$AI_STATION_ROOT" python3 - "$active" "$free_vram_mib" <<'PY' 2>/dev/null || true

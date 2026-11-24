@@ -70,6 +70,23 @@ check_ignored "example.bak-20260718" "Timestamped backups are ignored by Git"
 check_ignored "models/example.gguf" "Model artifacts are ignored by Git"
 check_ignored "backups/example.dump" "Database backups are ignored by Git"
 
+# Internal planning documents must never be tracked for public release.
+PRIVATE_RELEASE_PATHS=(
+    "docs/PRODUCT.md"
+    "docs/ROADMAP.md"
+    "docs/PROJECT_STATE.md"
+    "docs/LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md"
+    "docs/DEVELOPMENT_PLAN.md"
+    "docs/research/AI_STATION_DEVELOPMENT_PLAN.md"
+    "docs/DECISIONS.md"
+)
+
+for PRIVATE_PATH in "${PRIVATE_RELEASE_PATHS[@]}"; do
+    if git -c safe.directory="$ROOT" ls-files --error-unmatch -- "$PRIVATE_PATH" >/dev/null 2>&1; then
+        fail "Private planning document is tracked: $PRIVATE_PATH"
+    fi
+done
+
 # ------------------------------------------------------------
 # Build the exact set of files eligible for a Git commit
 # ------------------------------------------------------------
@@ -143,15 +160,10 @@ for FILE in "${RELEASE_FILES[@]}"; do
 
     # Only inspect text-like files with grep.
     if grep -Iq . "$FILE" 2>/dev/null; then
-        SECRET_MATCHES="$(
-            grep -nE \
-                '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' \
-                "$FILE" 2>/dev/null || true
-        )"
-
-        if [[ -n "$SECRET_MATCHES" ]]; then
+        if grep -qE -- \
+            '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' \
+            "$FILE" 2>/dev/null; then
             fail "Possible private key or access token found: $FILE"
-            printf '%s\n' "$SECRET_MATCHES"
         fi
 
         if ! is_path_allowlisted "$FILE"; then

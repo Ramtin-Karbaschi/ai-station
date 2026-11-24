@@ -7,29 +7,52 @@ import subprocess
 import sys
 import time
 import uuid
-from functools import lru_cache
+from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, AsyncIterator
 
 import httpx
+import anyio
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from apps.gateway.app.admission import admit
+from apps.gateway.app.catalog import (
+    CATALOG_PATH,
+    cached_catalog,
+    catalog_models,
+    load_catalog,
+    model_matches,
+    normalize_model_id,
+    public_model_id,
+    selectable_models,
+    valid_public_model_ids,
+)
+from apps.gateway.app.media import assert_media_idle
+from apps.gateway.app.lifecycle_lock import HELD_FD, LifecycleBusy, LifecycleLock
+from apps.gateway.app.lifecycle import (
+    clear_active_profile,
+    preferred_provider_by_service,
+    publish_active_profile,
+    read_active_profile,
+)
 from apps.gateway.app.paths import PROJECT_DIR
-from apps.gateway.app.stt import transcribe_station_audio
+from apps.gateway.app.stt import extract_audio_request, transcribe_station_audio
 from apps.gateway.app.providers import (
     heavy_services,
     provider_for_catalog_model,
     registry,
     service_profiles,
 )
+from apps.gateway.app.readiness import wait_ready
+from apps.gateway.app import translation as openai_translation
 
-CATALOG_PATH = Path(
-    os.getenv("AI_STATION_MODEL_CATALOG", str(PROJECT_DIR / "config/model-catalog.json"))
+COMPOSE_HELPER = Path(
+    os.getenv(
+        "AI_STATION_COMPOSE_HELPER",
+        str(PROJECT_DIR / "scripts" / "compose-ai-station.sh"),
+    )
 )
-
-COMPOSE_HELPER = PROJECT_DIR / "scripts" / "compose-ai-station.sh"
 COMPOSE_BASE = (
     [str(COMPOSE_HELPER)]
     if COMPOSE_HELPER.is_file()
@@ -95,50 +118,6 @@ def safe_upstream_error(error_bytes: bytes, status_code: int) -> tuple[str, str]
     return f"Local model returned HTTP {status_code}.", category
 
 
-def load_catalog() -> dict[str, Any]:
-    with CATALOG_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-@lru_cache(maxsize=1)
-def cached_catalog() -> dict[str, Any]:
-    return load_catalog()
-
-
-def catalog_models() -> list[dict[str, Any]]:
-    return cached_catalog().get("models", [])
-
-
-def normalize_model_id(model_id: str) -> str:
-    if "/" in model_id:
-        return model_id.split("/", 1)[-1]
-    return model_id
-
-
-def public_model_id(model: dict[str, Any]) -> str:
-    return str(model.get("public_model_id") or model["id"])
-
-
-def valid_public_model_ids() -> list[str]:
-    return [public_model_id(model) for model in selectable_models()]
-
-
-def selectable_models() -> list[dict[str, Any]]:
-    return [
-        m
-        for m in catalog_models()
-        if m.get("enabled") is True and m.get("kind") in {"chat", "vision"}
-    ]
-
-
-def model_matches(model: dict[str, Any], requested_id: str) -> bool:
-    return requested_id in {
-        public_model_id(model),
-        str(model.get("id")),
-        str(model.get("alias") or ""),
-    }
-
-
 def get_model(model_id: str) -> dict[str, Any]:
     requested_id = normalize_model_id(model_id)
     for model in selectable_models():
@@ -153,7 +132,15 @@ def get_model(model_id: str) -> dict[str, Any]:
     )
 
 
-def run_compose(args: list[str], timeout: int = 180) -> subprocess.CompletedProcess[str]:
+def run_compose(
+    args: list[str],
+    timeout: int = 180,
+    lifecycle_fd: int | None = None,
+    env_overrides: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    environment = os.environ.copy()
+    if env_overrides:
+        environment.update(env_overrides)
     return subprocess.run(
         COMPOSE_BASE + args,
         cwd=str(PROJECT_DIR),
@@ -161,11 +148,42 @@ def run_compose(args: list[str], timeout: int = 180) -> subprocess.CompletedProc
         capture_output=True,
         timeout=timeout,
         check=False,
+        pass_fds=(lifecycle_fd,) if lifecycle_fd is not None else (),
+        env=environment,
     )
 
 
-async def compose(args: list[str], timeout: int = 180) -> subprocess.CompletedProcess[str]:
-    return await asyncio.to_thread(run_compose, args, timeout)
+async def compose(
+    args: list[str],
+    timeout: int = 180,
+    env_overrides: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    # Do not release the cross-process lifecycle lock while Docker is still
+    # mutating state if the HTTP caller disconnects/cancels.  Drain the worker
+    # before propagating cancellation so the transition has a clear boundary.
+    task = asyncio.create_task(
+        asyncio.to_thread(run_compose, args, timeout, HELD_FD.get(), env_overrides)
+    )
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        current = asyncio.current_task()
+        worker_error: BaseException | None = None
+        with anyio.CancelScope(shield=True):
+            while not task.done():
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    if current is not None and hasattr(current, "uncancel"):
+                        current.uncancel()
+                except BaseException as exc:
+                    worker_error = exc
+                    break
+        if worker_error is not None and not task.done():
+            task.cancel()
+        if task.done() and not task.cancelled():
+            task.exception()
+        raise
 
 
 def profile_args_for_services(services: list[str]) -> list[str]:
@@ -180,62 +198,225 @@ def profile_args_for_services(services: list[str]) -> list[str]:
     return args
 
 
-async def stop_other_heavy(target_service: str) -> None:
-    to_stop = [s for s in heavy_services() if s != target_service]
+async def stop_other_heavy(
+    target_service: str,
+    active_provider_ids: list[str] | None = None,
+    stop_provider_ids: list[str] | None = None,
+) -> None:
+    global ACTIVE_MODEL_ID
+    services = heavy_services()
+    if active_provider_ids is not None:
+        owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+        active_services = {
+            str(owners[service].get("service"))
+            for service in owners
+            if str(owners[service].get("id"))
+            in (stop_provider_ids if stop_provider_ids is not None else active_provider_ids)
+        }
+        services = [service for service in services if service in active_services]
+    to_stop = [s for s in services if s != target_service]
     if not to_stop:
         return
-    await compose([*profile_args_for_services(to_stop), "stop", *to_stop], timeout=240)
-
-
-async def wait_ready(model: dict[str, Any], attempts: int = 480) -> None:
-    url = f"{model['base_url']}/models"
-
-    async with httpx.AsyncClient(timeout=5) as client:
-        last_error = None
-        for _ in range(attempts):
-            try:
-                response = await client.get(url)
-                if response.status_code == 200:
-                    return
-                last_error = f"HTTP {response.status_code}: {response.text[:500]}"
-            except Exception as exc:
-                last_error = repr(exc)
-            await asyncio.sleep(2)
-
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "stage": "wait_ready",
-            "model": model["id"],
-            "service": model.get("service"),
-            "url": url,
-            "last_error": last_error,
-        },
+    result = await compose(
+        [*profile_args_for_services(to_stop), "stop", *to_stop], timeout=240
     )
-
-
-def evaluate_admission(model: dict[str, Any]) -> dict[str, Any]:
-    provider = provider_for_catalog_model(model)
-    policy = (registry().get("admission") or {})
-    decision = admit(provider["id"])
-    payload = decision.to_dict()
-    payload["enforce"] = bool(policy.get("enforce", True))
-    if decision.decision == "REJECT" and payload["enforce"]:
+    if result.returncode != 0:
         raise HTTPException(
             status_code=503,
             detail={
-                "stage": "admission",
-                "decision": payload,
+                "stage": "stop_runtime",
+                "target_service": target_service,
+                "services": to_stop,
+                "returncode": result.returncode,
+                "message": (
+                    "Unable to stop conflicting runtime; launch was not attempted. "
+                    "Retry after the active runtime is stopped."
+                ),
             },
         )
-    if decision.decision == "FALLBACK" and payload["enforce"]:
+    ACTIVE_MODEL_ID = None
+
+
+async def verify_active_gpu_placements(
+    target_service: str,
+    active_provider_ids: list[str],
+    excluded_provider_ids: list[str] | None = None,
+) -> bool:
+    """Fail closed when an existing container's GPU reservation is unknown."""
+    owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+    excluded = set(excluded_provider_ids or [])
+    for provider in owners.values():
+        provider_id = str(provider.get("id"))
+        service = str(provider.get("service") or "")
+        if provider_id not in active_provider_ids or provider_id in excluded or service == target_service:
+            continue
+        try:
+            expected = str(int(provider.get("gpu_index") or 0))
+        except (TypeError, ValueError):
+            return False
+        observed = await compose(
+            [*profile_args_for_services([service]), "ps", "-q", service], timeout=30
+        )
+        container_id = next((line.strip() for line in observed.stdout.splitlines() if line.strip()), "")
+        if observed.returncode != 0 or not container_id:
+            return False
+        inspected = await asyncio.to_thread(
+            subprocess.run,
+            ["docker", "inspect", "--format", "{{json .HostConfig.DeviceRequests}}", container_id],
+            cwd=str(PROJECT_DIR),
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        if inspected.returncode != 0:
+            return False
+        try:
+            requests = json.loads(inspected.stdout.strip() or "null")
+        except (json.JSONDecodeError, TypeError):
+            return False
+        if not valid_gpu_device_requests(requests, expected):
+            return False
+    return True
+
+
+def valid_gpu_device_requests(requests: Any, expected: str) -> bool:
+    """Accept only one explicit NVIDIA device reservation, never ``all``."""
+    if not isinstance(requests, list) or len(requests) != 1:
+        return False
+    request = requests[0]
+    if not isinstance(request, dict):
+        return False
+    driver = request.get("Driver") or request.get("driver")
+    count = request.get("Count", request.get("count"))
+    device_ids = request.get("DeviceIDs", request.get("device_ids"))
+    if str(driver).casefold() != "nvidia" or count not in (0, "0"):
+        return False
+    return isinstance(device_ids, list) and device_ids == [expected]
+
+
+async def rollback_started_target(service: str) -> None:
+    """Best-effort stop for a target this transition started itself."""
+    emit_contract_telemetry("lifecycle_transition", state="stopping", service=service)
+    task = asyncio.create_task(
+        compose([*profile_args_for_services([service]), "stop", service], timeout=240)
+    )
+    current = asyncio.current_task()
+    error: BaseException | None = None
+    with anyio.CancelScope(shield=True):
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                if current is not None and hasattr(current, "uncancel"):
+                    current.uncancel()
+            except BaseException as exc:
+                error = exc
+                break
+    if error is not None:
+        emit_contract_telemetry("lifecycle_transition", state="rollback_failed", service=service, reason=type(error).__name__)
+        return
+    if task.cancelled():
+        emit_contract_telemetry("lifecycle_transition", state="rollback_failed", service=service, reason="cancelled")
+        return
+    try:
+        result = task.result()
+    except BaseException as exc:
+        emit_contract_telemetry("lifecycle_transition", state="rollback_failed", service=service, reason=type(exc).__name__)
+        return
+    if result.returncode != 0:
+        emit_contract_telemetry("lifecycle_transition", state="rollback_failed", service=service, reason=f"returncode_{result.returncode}")
+        return
+    emit_contract_telemetry("lifecycle_transition", state="rolled_back", service=service)
+
+
+async def reconcile_active_profile() -> list[str] | None:
+    """Reconcile the shared marker with known running and healthy services.
+
+    A Docker query failure is treated as unknown state: preserve the marker
+    and do not infer ownership.  When Docker is observable, registered heavy
+    services are returned as active even when health probes fail; health only
+    controls whether the shared ready marker may be published.  This also
+    catches a live ComfyUI runtime when the saved marker is stale.
+    """
+    saved = read_active_profile()
+    owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+    # Explicit profiles are required for Compose to include stopped/optional
+    # profile definitions in `ps`; without this, a live ComfyUI service can be
+    # mistaken for a missing workload.
+    try:
+        result = await compose(
+            [*profile_args_for_services(list(owners)), "ps", "--status", "running", "--services"],
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        emit_contract_telemetry("lifecycle_reconcile", state="unknown", reason="TimeoutExpired")
+        return None
+    if result.returncode != 0:
+        emit_contract_telemetry("lifecycle_reconcile", state="unknown", reason="compose_observation_failed")
+        return None
+    running = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    observed: list[dict[str, Any]] = []
+    healthy: list[dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=3) as client:
+        for service, provider in owners.items():
+            if service not in running:
+                continue
+            observed.append(provider)
+            endpoint = provider.get("health_endpoint")
+            if not endpoint:
+                continue
+            try:
+                response = await client.get(str(endpoint))
+            except Exception:
+                continue
+            if response.status_code == 200:
+                healthy.append(provider)
+
+    if len(healthy) == 1 and len(observed) == 1:
+        profile = str(healthy[0].get("profile") or "")
+        if profile:
+            if saved != profile:
+                publish_active_profile(profile)
+                emit_contract_telemetry("lifecycle_reconcile", state="ready", profile=profile)
+            return [str(observed[0].get("id"))]
+
+    # Docker is authoritative here.  A marker whose service disappeared or
+    # failed health is stale; multiple healthy owners are ambiguous, so clear
+    # rather than claim ownership of one of them.
+    if saved:
+        clear_active_profile(saved)
+        emit_contract_telemetry("lifecycle_reconcile", state="cleared", reason="stale_or_ambiguous")
+    return [str(provider.get("id")) for provider in observed]
+
+
+def evaluate_admission(model: dict[str, Any], active_heavy: list[str] | None = None) -> dict[str, Any]:
+    provider = provider_for_catalog_model(model)
+    policy = (registry().get("admission") or {})
+    decision = admit(provider["id"], active_heavy=active_heavy) if active_heavy is not None else admit(provider["id"])
+    payload = decision.to_dict()
+    payload["enforce"] = bool(policy.get("enforce", True))
+    if decision.decision in {
+        "REJECT",
+        "FALLBACK",
+        "QUEUE",
+        "START_WITH_REDUCED_CONTEXT",
+    } and payload["enforce"]:
+        message = {
+            "REJECT": None,
+            "FALLBACK": "Provider rejected; use fallback explicitly",
+            "QUEUE": "Wait until the conflicting runtime stops, then retry.",
+            "START_WITH_REDUCED_CONTEXT": (
+                "Provider requires reduced context, but this runtime uses its fixed configured context. "
+                "Retry after resources are available or choose a smaller provider."
+            ),
+        }[decision.decision]
+        detail = {"stage": "admission", "decision": payload}
+        if message:
+            detail["message"] = message
         raise HTTPException(
             status_code=503,
-            detail={
-                "stage": "admission",
-                "decision": payload,
-                "message": "Provider rejected; use fallback explicitly",
-            },
+            detail=detail,
         )
     return payload
 
@@ -247,356 +428,146 @@ async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
     if not service:
         raise HTTPException(status_code=400, detail=f"Model has no runtime service: {model['id']}")
 
-    admission = evaluate_admission(model)
-
-    if model.get("heavy"):
-        await stop_other_heavy(service)
-
-    result = await compose(
-        [*profile_args_for_services([service]), "up", "-d", service],
-        timeout=300,
-    )
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "stage": "start_runtime",
-                "model": model["id"],
-                "service": service,
-                "stdout": result.stdout[-4000:],
-                "stderr": result.stderr[-4000:],
-                "admission": admission,
-            },
-        )
-
-    await wait_ready(model)
-
-    if model.get("heavy"):
-        ACTIVE_MODEL_ID = public_model_id(model)
-
-    return admission
-
-
-def merge_system_prefix(prefix: str, content: Any) -> Any:
-    """Prepend prefix text to an existing system message's content.
-
-    Handles both plain string content and OpenAI-style multi-part list
-    content defensively, always returning a shape consistent with the
-    original content's type.
-    """
-    if isinstance(content, list):
-        return [{"type": "text", "text": prefix}] + list(content)
-    if content is None:
-        return prefix
-    return f"{prefix}\n{content}"
-
-
-def rewrite_messages(model: dict[str, Any], body: dict[str, Any]) -> dict[str, Any]:
-    body = dict(body)
-    body["model"] = model["backend_model"]
-
-    prefix = model.get("default_system_prefix") or ""
-    if prefix:
-        messages = list(body.get("messages", []))
-        first = messages[0] if messages else None
-        if isinstance(first, dict) and first.get("role") == "system":
-            # llama.cpp's Jinja chat template requires a single leading
-            # system message; merge instead of inserting a second one
-            # (see docs/adr/ADR-009-opencode-local-client.md).
-            merged = dict(first)
-            merged["content"] = merge_system_prefix(prefix, first.get("content"))
-            messages[0] = merged
-        else:
-            messages.insert(0, {"role": "system", "content": prefix})
-        body["messages"] = messages
-
-    return body
-
-
-def responses_content_to_chat(content: Any) -> Any:
-    if isinstance(content, str) or content is None:
-        return content or ""
-    if not isinstance(content, list):
-        return str(content)
-    parts: list[dict[str, Any]] = []
-    for part in content:
-        if isinstance(part, str):
-            parts.append({"type": "text", "text": part})
-            continue
-        if not isinstance(part, dict):
-            continue
-        part_type = part.get("type")
-        if part_type in {"input_text", "output_text", "text"}:
-            parts.append({"type": "text", "text": str(part.get("text") or "")})
-        elif part_type in {"input_image", "image_url"}:
-            image_url = part.get("image_url") or part.get("url")
-            if isinstance(image_url, str):
-                image_url = {"url": image_url}
-            if isinstance(image_url, dict):
-                parts.append({"type": "image_url", "image_url": image_url})
-    if len(parts) == 1 and parts[0].get("type") == "text":
-        return parts[0]["text"]
-    return parts
-
-
-def responses_input_to_messages(body: dict[str, Any]) -> list[dict[str, Any]]:
-    messages: list[dict[str, Any]] = []
-    instructions = body.get("instructions")
-    if instructions:
-        messages.append(
-            {
-                "role": "system",
-                "content": responses_content_to_chat(instructions),
-            }
-        )
-
-    items = body.get("input", "")
-    if isinstance(items, str):
-        messages.append({"role": "user", "content": items})
-        return messages
-    if isinstance(items, dict):
-        items = [items]
-    if not isinstance(items, list):
-        raise HTTPException(status_code=400, detail="Responses input must be text or a list")
-
-    for item in items:
-        if isinstance(item, str):
-            messages.append({"role": "user", "content": item})
-            continue
-        if not isinstance(item, dict):
-            continue
-        item_type = item.get("type")
-        role = item.get("role")
-        if role in {"system", "developer", "user", "assistant"}:
-            messages.append(
-                {
-                    "role": "system" if role == "developer" else role,
-                    "content": responses_content_to_chat(item.get("content")),
-                }
-            )
-        elif item_type == "function_call":
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": "",
-                    "tool_calls": [
-                        {
-                            "id": item.get("call_id") or item.get("id") or str(uuid.uuid4()),
-                            "type": "function",
-                            "function": {
-                                "name": item.get("name"),
-                                "arguments": item.get("arguments") or "{}",
-                            },
-                        }
-                    ],
-                }
-            )
-        elif item_type == "function_call_output":
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": item.get("call_id") or item.get("id"),
-                    "content": responses_content_to_chat(item.get("output")),
-                }
-            )
-    return messages
-
-
-def responses_tools_to_chat(tools: Any) -> list[dict[str, Any]]:
-    converted: list[dict[str, Any]] = []
-    if not isinstance(tools, list):
-        return converted
-    for tool in tools:
-        if not isinstance(tool, dict) or tool.get("type") != "function":
-            continue
-        if isinstance(tool.get("function"), dict):
-            converted.append(tool)
-            continue
-        function = {
-            "name": tool.get("name"),
-            "description": tool.get("description") or "",
-            "parameters": tool.get("parameters") or {"type": "object", "properties": {}},
-        }
-        if "strict" in tool:
-            function["strict"] = bool(tool["strict"])
-        converted.append({"type": "function", "function": function})
-    return converted
-
-
-def responses_to_chat_body(body: dict[str, Any]) -> dict[str, Any]:
-    chat: dict[str, Any] = {
-        "model": body.get("model"),
-        "messages": responses_input_to_messages(body),
-        "stream": False,
-    }
-    for key in ("temperature", "top_p", "parallel_tool_calls", "seed", "user"):
-        if key in body:
-            chat[key] = body[key]
-    if "max_output_tokens" in body:
-        chat["max_tokens"] = body["max_output_tokens"]
-    elif "max_tokens" in body:
-        chat["max_tokens"] = body["max_tokens"]
-    tools = responses_tools_to_chat(body.get("tools"))
-    if tools:
-        chat["tools"] = tools
-    tool_choice = body.get("tool_choice")
-    if isinstance(tool_choice, dict) and tool_choice.get("type") == "function":
-        chat["tool_choice"] = {
-            "type": "function",
-            "function": {"name": tool_choice.get("name")},
-        }
-    elif isinstance(tool_choice, str) and tool_choice in {"auto", "none", "required"}:
-        chat["tool_choice"] = tool_choice
-    text_format = (body.get("text") or {}).get("format")
-    if isinstance(text_format, dict) and text_format.get("type") in {
-        "json_object",
-        "json_schema",
-    }:
-        chat["response_format"] = text_format
-    return chat
-
-
-def chat_to_responses(
-    payload: dict[str, Any], requested_model: str, response_id: str | None = None
-) -> dict[str, Any]:
-    response_id = response_id or f"resp_{uuid.uuid4().hex}"
-    choice = (payload.get("choices") or [{}])[0]
-    message = choice.get("message") or {}
-    output: list[dict[str, Any]] = []
-    content = message.get("content")
-    if not content_is_empty(content):
-        if not isinstance(content, str):
-            content = json.dumps(content, ensure_ascii=False)
-        output.append(
-            {
-                "id": f"msg_{uuid.uuid4().hex}",
-                "type": "message",
-                "status": "completed",
-                "role": "assistant",
-                "content": [
-                    {"type": "output_text", "text": content, "annotations": []}
-                ],
-            }
-        )
-    for call in message.get("tool_calls") or []:
-        function = call.get("function") or {}
-        arguments = function.get("arguments") or "{}"
-        if not isinstance(arguments, str):
-            arguments = json.dumps(arguments, ensure_ascii=False)
-        output.append(
-            {
-                "id": f"fc_{uuid.uuid4().hex}",
-                "type": "function_call",
-                "status": "completed",
-                "call_id": call.get("id") or f"call_{uuid.uuid4().hex}",
-                "name": function.get("name"),
-                "arguments": arguments,
-            }
-        )
-
-    usage = payload.get("usage") or {}
-    input_tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
-    output_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
-    created_at = int(payload.get("created") or time.time())
-    return {
-        "id": response_id,
-        "object": "response",
-        "created_at": created_at,
-        "completed_at": int(time.time()),
-        "status": "completed",
-        "error": None,
-        "incomplete_details": None,
-        "instructions": None,
-        "model": requested_model,
-        "output": output,
-        "parallel_tool_calls": True,
-        "tool_choice": "auto",
-        "tools": [],
-        "temperature": None,
-        "top_p": None,
-        "usage": {
-            "input_tokens": input_tokens,
-            "input_tokens_details": {"cached_tokens": 0},
-            "output_tokens": output_tokens,
-            "output_tokens_details": {"reasoning_tokens": 0},
-            "total_tokens": int(usage.get("total_tokens") or input_tokens + output_tokens),
-        },
-    }
-
-
-def content_is_empty(content: Any) -> bool:
-    if content is None:
-        return True
-    if isinstance(content, str):
-        return not content.strip()
-    if isinstance(content, list):
-        texts: list[str] = []
-        for part in content:
-            if isinstance(part, str):
-                texts.append(part)
-            elif isinstance(part, dict):
-                texts.append(str(part.get("text") or ""))
-        return not "".join(texts).strip()
-    return False
-
-
-def flatten_reasoning_into_content(payload: Any) -> Any:
-    """Copy reasoning_content into content when content is empty.
-
-    OpenCode agent loops need message.content or tool_calls. Some llama.cpp
-    reasoning paths fill only reasoning_content. Preserve tool_calls.
-    """
-    if not isinstance(payload, dict):
-        return payload
-    choices = payload.get("choices")
-    if not isinstance(choices, list):
-        return payload
-    for choice in choices:
-        if not isinstance(choice, dict):
-            continue
-        for key in ("message", "delta"):
-            block = choice.get(key)
-            if not isinstance(block, dict):
-                continue
-            reasoning = block.get("reasoning_content")
-            if (
-                content_is_empty(block.get("content"))
-                and isinstance(reasoning, str)
-                and reasoning.strip()
-            ):
-                block["content"] = reasoning
-    return payload
-
-
-def flatten_sse_line(line: bytes) -> bytes:
-    raw = line.rstrip(b"\r\n")
-    suffix = line[len(raw) :]
-    if not raw.startswith(b"data:"):
-        return line
-    data = raw[5:].lstrip()
-    if data == b"[DONE]" or not data:
-        return line
     try:
-        payload = json.loads(data)
-    except json.JSONDecodeError:
-        return line
-    flatten_reasoning_into_content(payload)
-    return b"data: " + json.dumps(payload, ensure_ascii=False).encode("utf-8") + suffix
+        async with LifecycleLock(f"gateway-start:{service}"):
+            emit_contract_telemetry("lifecycle_transition", state="requested", service=service)
+            # Repair a marker left by a failed start or a dead Gateway before
+            # admission.  This is observation-only and remains under the
+            # shared lock with the subsequent Compose transition.
+            observed_active = await reconcile_active_profile()
+            if model.get("heavy") and observed_active is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "stage": "lifecycle_reconcile",
+                        "message": "Unable to observe Docker runtime safely; retry without stopping workloads.",
+                    },
+                )
+            admission = evaluate_admission(model, observed_active)
 
+            if any("tensor-parallel" in str(reason).casefold() for reason in admission.get("reasons", [])):
+                raise HTTPException(
+                    status_code=503,
+                    detail={"stage": "admission", "message": "Tensor-parallel placement is unsupported and cannot launch on one GPU."},
+                )
 
-async def iter_flattened_sse(chunks: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-    buffer = bytearray()
-    async for chunk in chunks:
-        buffer.extend(chunk)
-        while True:
-            idx = buffer.find(b"\n")
-            if idx < 0:
-                break
-            line = bytes(buffer[: idx + 1])
-            del buffer[: idx + 1]
-            yield flatten_sse_line(line)
-    if buffer:
-        yield flatten_sse_line(bytes(buffer))
+            if model.get("heavy"):
+                await assert_media_idle(admission, registry().get("providers", {}))
+                if (
+                    "stop_providers" in admission
+                    and observed_active
+                    and not await verify_active_gpu_placements(
+                        service,
+                        observed_active,
+                        admission.get("stop_providers") or [],
+                    )
+                ):
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "stage": "gpu_placement",
+                            "message": "Cannot verify active GPU placement; refusing concurrent heavy launch.",
+                        },
+                    )
+                target_was_running = False
+                try:
+                    target_provider = provider_for_catalog_model(model)
+                    owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+                    observed_services = {
+                        str(provider.get("service"))
+                        for provider in owners.values()
+                        if str(provider.get("id")) in (observed_active or [])
+                    }
+                    target_was_running = str(target_provider.get("service") or service) in observed_services
+                except KeyError:
+                    pass
+                # Admission already resolved GPU placement.  Stop only the
+                # providers it identified as conflicts; an empty list is a
+                # valid multi-GPU START decision and must not stop a distinct
+                # GPU owner.  Keep the legacy fallback for mocked/older
+                # admission payloads that omit stop_providers.
+                stop_provider_ids = (
+                    admission["stop_providers"]
+                    if "stop_providers" in admission
+                    else None
+                )
+                await stop_other_heavy(service, observed_active, stop_provider_ids)
+                # The previous owner was deliberately stopped.  Do not leave
+                # its marker visible while the replacement is warming up.
+                previous = read_active_profile()
+                target_profile = str(model.get("profile") or "")
+                if previous and previous != target_profile:
+                    clear_active_profile(previous)
+
+            emit_contract_telemetry("lifecycle_transition", state="starting", service=service)
+            try:
+                try:
+                    gpu_index = int(admission.get("gpu_index", 0))
+                except (TypeError, ValueError):
+                    raise HTTPException(status_code=503, detail={"stage": "admission", "message": "Invalid GPU placement decision."})
+                if gpu_index < 0:
+                    raise HTTPException(status_code=503, detail={"stage": "admission", "message": "Negative GPU placement is invalid."})
+                compose_kwargs: dict[str, Any] = {"timeout": 300}
+                if "gpu_index" in admission:
+                    compose_kwargs["env_overrides"] = {"AI_STATION_GPU_DEVICE_ID": str(gpu_index)}
+                result = await compose(
+                    [*profile_args_for_services([service]), "up", "-d", service],
+                    **compose_kwargs,
+                )
+                if result.returncode != 0:
+                    raise HTTPException(
+                        status_code=500,
+                        detail={
+                            "stage": "start_runtime",
+                            "model": model["id"],
+                            "service": service,
+                            "stdout": result.stdout[-4000:],
+                            "stderr": result.stderr[-4000:],
+                            "admission": admission,
+                        },
+                    )
+
+                emit_contract_telemetry("lifecycle_transition", state="probing", service=service)
+                await wait_ready(model)
+            except BaseException:
+                if model.get("heavy") and not target_was_running:
+                    await rollback_started_target(service)
+                raise
+
+            if model.get("heavy"):
+                ACTIVE_MODEL_ID = public_model_id(model)
+                profile = str(model.get("profile") or "")
+                if profile:
+                    # Publication is the final transition: the runtime is
+                    # reachable and all preceding lifecycle work succeeded.
+                    publish_active_profile(profile)
+                    emit_contract_telemetry("lifecycle_transition", state="ready", profile=profile)
+
+            return admission
+    except HTTPException:
+        # Marker mutation is intentionally confined to the lock body.  A
+        # rejected or failed same-profile start therefore preserves a valid
+        # prior marker; replacement starts clear the old marker only after the
+        # confirmed stop while still holding the lock.
+        emit_contract_telemetry("lifecycle_transition", state="failed", service=service)
+        raise
+    except LifecycleBusy as exc:
+        raise HTTPException(status_code=503, detail={"stage": "lifecycle_lock", "message": str(exc)}) from exc
+
+# Compatibility aliases: the public gateway module historically exposed these
+# helpers and tests/clients import them directly.  Keep that source contract
+# while routing all endpoint calls through the extracted pure boundary.
+merge_system_prefix = openai_translation.merge_system_prefix
+rewrite_messages = openai_translation.rewrite_messages
+responses_content_to_chat = openai_translation.responses_content_to_chat
+responses_input_to_messages = openai_translation.responses_input_to_messages
+responses_tools_to_chat = openai_translation.responses_tools_to_chat
+responses_to_chat_body = openai_translation.responses_to_chat_body
+chat_to_responses = openai_translation.chat_to_responses
+content_is_empty = openai_translation.content_is_empty
+flatten_reasoning_into_content = openai_translation.flatten_reasoning_into_content
+flatten_sse_line = openai_translation.flatten_sse_line
+iter_flattened_sse = openai_translation.iter_flattened_sse
 
 
 @app.get("/health")
@@ -663,11 +634,20 @@ async def admission_dry_run(request: Request) -> dict[str, Any]:
 
 @app.post("/v1/audio/transcriptions")
 async def audio_transcriptions(request: Request) -> dict[str, Any]:
-    audio = await request.body()
-    language = request.query_params.get("language")
+    body = bytearray()
+    async for chunk in request.stream():
+        if len(body) + len(chunk) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Audio request exceeds 25 MiB")
+        body.extend(chunk)
+    try:
+        audio, language = extract_audio_request(
+            bytes(body),
+            content_type=request.headers.get("content-type"),
+            language=request.query_params.get("language"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
     want_timestamps = request.query_params.get("timestamps") in {"1", "true", "yes"}
-    if not audio:
-        raise HTTPException(status_code=400, detail="Empty audio body")
     result = await asyncio.to_thread(
         transcribe_station_audio,
         audio,
@@ -684,6 +664,49 @@ async def audio_transcriptions(request: Request) -> dict[str, Any]:
     if result.timestamps:
         payload["segments"] = result.timestamps
     return payload
+
+
+@app.post("/v1/audio/speech")
+async def audio_speech() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "tts_pending_smoke",
+            "status": "pending_smoke",
+            "message": (
+                "No loopback speech synthesizer yet. Return text from "
+                "chat completions. Do not start a second heavy GPU TTS "
+                "engine beside chat."
+            ),
+            "asr": "http://127.0.0.1:8888/v1/audio/transcriptions",
+        },
+    )
+
+
+async def cancel_on_disconnect(
+    request: Request, work: Coroutine[Any, Any, JSONResponse]
+) -> Response:
+    async def wait_for_disconnect() -> None:
+        while (await request.receive())["type"] != "http.disconnect":
+            pass
+
+    # The request body has been consumed. Watch ASGI receive independently of
+    # the model lock and the upstream socket, which may both wait indefinitely.
+    disconnect = asyncio.create_task(wait_for_disconnect())
+    pending_response = asyncio.create_task(work)
+    try:
+        await asyncio.wait(
+            (disconnect, pending_response), return_when=asyncio.FIRST_COMPLETED
+        )
+        if pending_response.done():
+            return pending_response.result()
+        disconnect.result()
+        return Response(status_code=499)
+    finally:
+        for task in (disconnect, pending_response):
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(disconnect, pending_response, return_exceptions=True)
 
 
 @app.post("/v1/chat/completions")
@@ -711,7 +734,7 @@ async def chat(request: Request):
             media_type="text/event-stream",
         )
 
-    try:
+    async def complete() -> JSONResponse:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
             admission = await start_runtime(model)
@@ -738,6 +761,9 @@ async def chat(request: Request):
                     **response_shape(content),
                 )
                 return JSONResponse(content=content, status_code=response.status_code)
+
+    try:
+        return await cancel_on_disconnect(request, complete())
     finally:
         if item in QUEUE:
             QUEUE.remove(item)
@@ -787,7 +813,9 @@ async def stream_proxy(
                         )
                         yield f"data: {error_event}\n\ndata: [DONE]\n\n".encode()
                         return
-                    async for chunk in iter_flattened_sse(response.aiter_bytes()):
+                    async for chunk in iter_flattened_sse(
+                        response.aiter_bytes(), flatten_reasoning=False
+                    ):
                         if await request.is_disconnected():
                             break
                         raw = chunk.strip()
@@ -1044,7 +1072,7 @@ async def responses(request: Request):
             media_type="text/event-stream",
         )
 
-    try:
+    async def complete() -> JSONResponse:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
             admission = await start_runtime(model)
@@ -1064,6 +1092,9 @@ async def responses(request: Request):
                 flatten_reasoning_into_content(payload)
                 converted = chat_to_responses(payload, str(requested))
                 return JSONResponse(content=converted, status_code=upstream.status_code)
+
+    try:
+        return await cancel_on_disconnect(request, complete())
     finally:
         if item in QUEUE:
             QUEUE.remove(item)

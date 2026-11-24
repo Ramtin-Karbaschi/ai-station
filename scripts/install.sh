@@ -125,6 +125,7 @@ for REQUIRED_FILE in \
     compose.local-builds.yaml \
     compose.images.lock.yaml \
     .env.example \
+    .env.models.example \
     scripts/preflight-install.sh \
     scripts/verify-build-lock.sh \
     scripts/verify-image-lock.sh \
@@ -262,6 +263,7 @@ if [[ "$SOURCE_DIR" != "$INSTALL_ROOT" ]]; then
         --delete \
         --exclude='.git/' \
         --exclude='.env' \
+        --exclude='.env.models' \
         --exclude='_archive/' \
         --exclude='backups/' \
         --exclude='data/' \
@@ -279,6 +281,9 @@ cd "$INSTALL_ROOT"
 
 if [[ ! -f .env ]]; then
     cp .env.example .env
+fi
+if [[ ! -f .env.models ]]; then
+    install -m 0600 .env.models.example .env.models
 fi
 
 python3 - ".env" "$EXPECTED_COMPOSE_FILE" <<'PY'

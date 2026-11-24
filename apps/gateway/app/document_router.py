@@ -130,7 +130,10 @@ def extract_document(
                 )
     tess_fn = tesseract_fn or tika_fn
     tess_text = tess_fn(file_bytes, filename, mime)
-    engine = "tesseract" if tesseract_fn is not None else "tika-ocr"
+    distinct_tesseract = (
+        tesseract_fn is not None and tesseract_fn is not tika_fn
+    )
+    engine = "tesseract" if distinct_tesseract else "tika-ocr"
     return ExtractionResult(
         text=tess_text,
         engine=engine,

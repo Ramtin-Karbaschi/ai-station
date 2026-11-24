@@ -1,0 +1,22 @@
+[Unit]
+Description=AI Station Grounded Tool Gateway
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ai-station
+Environment=PYTHONPATH=/opt/ai-station
+Environment=AI_STATION_SEARXNG_URL=http://127.0.0.1:8889
+Environment=AI_STATION_TOOL_ASSET_ROOT=/srv/ai-station/data/grounding/assets
+ExecStart=/opt/ai-station/.venvs/gateway/bin/uvicorn apps.tool_gateway.app.main:app --host 127.0.0.1 --port 8892
+Restart=unless-stopped
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/ai-station/data/grounding
+
+[Install]
+WantedBy=multi-user.target
