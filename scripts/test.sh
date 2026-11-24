@@ -82,7 +82,13 @@ export AI_STATION_PROJECT_DIR="${AI_STATION_PROJECT_DIR:-$ROOT}"
 echo "Python: $PYTHON ($("$PYTHON" --version 2>&1))"
 echo "Running offline unit and contract tests..."
 "$PYTHON" -m compileall -q apps benchmarks/runners scripts tests
-"$PYTHON" -m unittest discover -s tests -p 'test_*.py' -v
+# Keep fixture lifecycle markers and locks in a disposable directory.
+offline_state_dir="$(mktemp -d "${TMPDIR:-/tmp}/ai-station-test-state.XXXXXX")"
+trap 'rm -rf -- "$offline_state_dir"' EXIT
+env -u AI_ACTIVE_PROFILE_FILE -u AI_STATION_ACTIVE_PROFILE_FILE \
+  -u AI_LIFECYCLE_LOCK_FILE -u AI_LIFECYCLE_LOCK_FD \
+  AI_STATE_DIR="$offline_state_dir" \
+  "$PYTHON" -m unittest discover -s tests -p 'test_*.py' -v
 
 if [[ "$live" -eq 1 ]]; then
   echo

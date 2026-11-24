@@ -1,0 +1,14 @@
+[
+  {
+    "context": 262144,
+    "kv": "q8_0",
+    "start_ok": true,
+    "n_ctx": "262144",
+    "vram_used_before_mib": 17350,
+    "vram_used_after_mib": 23967,
+    "vram_free_after_mib": 171,
+    "vram_total_mib": 24463,
+    "ingest_ok": false,
+    "ingest_error": "TimeoutError: timed out"
+  }
+]

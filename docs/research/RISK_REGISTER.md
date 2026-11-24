@@ -9,7 +9,7 @@ impact × likelihood on this single-workstation deployment.
 |---|---|---|---|---|---|
 | R1 | Host gateways listen beyond approved local interfaces | security | high | **mitigated** | Application listeners use loopback; `verify.sh` permits only loopback plus the exact private `docker0` proxy address for the host gateway and rejects wildcard/LAN binds. |
 | R2 | Models missing from manifest / orphans | reproducibility | high | **mitigated** | reasoning/vision/mmproj in manifest; orphan coder quarantined then removed |
-| R3 | GPU near capacity with default profile | reliability | high | **accepted** | admission budgets + one-heavy-profile policy; embedder shares VRAM |
+| R3 | GPU near capacity with default profile | reliability | high | **accepted** | admission budgets + one-heavy-profile policy; CPU embedder (ADR-022) no longer shares VRAM |
 | R4 | Blind model switch can OOM | reliability | medium | **mitigated** | `ai provider … --dry-run` admission decisions |
 | R5 | Hardcoded engine lifecycle in gateway | maintainability | medium | **mitigated** | `config/providers.yaml` + admission module |
 | R6 | No benchmark evidence | evidence | medium | **mitigated** | harness + llama.cpp baseline; SGLang failure JSON |

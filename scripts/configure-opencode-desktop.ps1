@@ -100,8 +100,8 @@ Get-ChildItem -LiteralPath $resolvedNativeConfig -Filter "opencode.jsonc.bak-*" 
 $nativeGuard = [ordered]@{
     '$schema' = "https://opencode.ai/config.json"
     enabled_providers = @("ai-station")
-    model = "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4"
-    small_model = "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4"
+    model = "ai-station/Ornith-1.5-35B-Q4_K_M"
+    small_model = "ai-station/Ornith-1.5-35B-Q4_K_M"
     default_agent = "build"
     share = "disabled"
     autoupdate = $false
@@ -127,24 +127,19 @@ $nativeGuard = [ordered]@{
                 timeout = 600000
             }
             models = [ordered]@{
-                "Qwen3-Coder-30B-A3B-Instruct-Q4" = [ordered]@{
-                    name = "Qwen3 Coder"
-                    tool_call = $true
-                    limit = [ordered]@{ context = 16384; output = 4096 }
-                }
-                "Qwen3.6-35B-A3B-UD-Q4_K_M" = [ordered]@{
-                    name = "Qwen3.6 General"
-                    tool_call = $true
-                    limit = [ordered]@{ context = 8192; output = 2048 }
-                }
-                "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" = [ordered]@{
-                    name = "DeepSeek R1 Reasoning"
-                    reasoning = $true
-                    tool_call = $false
-                    limit = [ordered]@{ context = 8192; output = 2048 }
-                }
                 "Ornith-1.5-35B-Q4_K_M" = [ordered]@{
                     name = "Ornith Coding"
+                    tool_call = $true
+                    limit = [ordered]@{ context = 8192; output = 4096 }
+                }
+                "Qwen3.8-27B-UD-Q4_K_M" = [ordered]@{
+                    name = "Qwen3.8 General"
+                    tool_call = $true
+                    limit = [ordered]@{ context = 8192; output = 2048 }
+                }
+                "Qwen3.8-27B-Reasoning-UD-Q4_K_M" = [ordered]@{
+                    name = "Qwen3.8 Reasoning"
+                    reasoning = $true
                     tool_call = $true
                     limit = [ordered]@{ context = 8192; output = 2048 }
                 }

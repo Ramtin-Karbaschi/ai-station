@@ -1,0 +1,11 @@
+{
+  "open_webui": "pass",
+  "open_webui_config": "pass",
+  "litellm": "pass",
+  "tika": "pass",
+  "searxng": "pass",
+  "n8n": "pass",
+  "opencode_health": "pass",
+  "graphify_status": "pass",
+  "opencode_doctor": "pass"
+}

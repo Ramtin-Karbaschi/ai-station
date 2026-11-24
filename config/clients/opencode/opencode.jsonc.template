@@ -1,30 +1,58 @@
 // AI Station OpenCode 1.18 template. No secrets. ai opencode configure injects apiKey.
 {
   "$schema": "https://opencode.ai/config.json",
-  "enabled_providers": ["ai-station"],
-  "model": "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4",
-  "small_model": "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4",
+  "enabled_providers": [
+    "ai-station"
+  ],
+  "model": "ai-station/Ornith-1.5-35B-Q4_K_M",
+  "small_model": "ai-station/Ornith-1.5-35B-Q4_K_M",
   "default_agent": "build",
   "share": "disabled",
   "autoupdate": false,
   "lsp": {
     "pyright": {
-      "command": ["/usr/local/bin/pyright-langserver", "--stdio"],
-      "extensions": [".py", ".pyi"]
+      "command": [
+        "/usr/local/bin/pyright-langserver",
+        "--stdio"
+      ],
+      "extensions": [
+        ".py",
+        ".pyi"
+      ]
     },
     "bash": {
-      "command": ["/usr/local/bin/bash-language-server", "start"],
-      "extensions": [".sh", ".bash"]
+      "command": [
+        "/usr/local/bin/bash-language-server",
+        "start"
+      ],
+      "extensions": [
+        ".sh",
+        ".bash"
+      ]
     }
   },
   "formatter": {
     "ruff": {
-      "command": ["/usr/local/bin/ruff", "format", "$FILE"],
-      "extensions": [".py", ".pyi"]
+      "command": [
+        "/usr/local/bin/ruff",
+        "format",
+        "$FILE"
+      ],
+      "extensions": [
+        ".py",
+        ".pyi"
+      ]
     },
     "shfmt": {
-      "command": ["/usr/bin/shfmt", "-w", "$FILE"],
-      "extensions": [".sh", ".bash"]
+      "command": [
+        "/usr/bin/shfmt",
+        "-w",
+        "$FILE"
+      ],
+      "extensions": [
+        ".sh",
+        ".bash"
+      ]
     }
   },
   "snapshot": true,
@@ -37,7 +65,9 @@
     ]
   },
   "skills": {
-    "paths": ["/opt/ai-station/config/skills"]
+    "paths": [
+      "/opt/ai-station/config/skills"
+    ]
   },
   "permission": {
     "read": "allow",
@@ -70,36 +100,28 @@
         "timeout": 600000
       },
       "models": {
-        "Qwen3-Coder-30B-A3B-Instruct-Q4": {
-          "name": "Qwen3 Coder",
-          "tool_call": true,
-          "limit": {
-            "context": 16384,
-            "output": 4096
-          }
-        },
-        "Qwen3.6-35B-A3B-UD-Q4_K_M": {
-          "name": "Qwen3.6 General",
-          "tool_call": true,
-          "limit": {
-            "context": 8192,
-            "output": 2048
-          }
-        },
-        "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M": {
-          "name": "DeepSeek R1 Reasoning",
-          "reasoning": true,
-          "tool_call": false,
-          "limit": {
-            "context": 8192,
-            "output": 2048
-          }
-        },
         "Ornith-1.5-35B-Q4_K_M": {
           "name": "Ornith Coding",
           "tool_call": true,
           "limit": {
             "context": 8192,
+            "output": 4096
+          }
+        },
+        "Qwen3.8-27B-UD-Q4_K_M": {
+          "name": "Qwen3.8 General",
+          "tool_call": true,
+          "limit": {
+            "context": 262144,
+            "output": 2048
+          }
+        },
+        "Qwen3.8-27B-Reasoning-UD-Q4_K_M": {
+          "name": "Qwen3.8 Reasoning",
+          "reasoning": true,
+          "tool_call": true,
+          "limit": {
+            "context": 262144,
             "output": 2048
           }
         }

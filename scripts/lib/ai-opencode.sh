@@ -1,13 +1,13 @@
 # OpenCode integration for AI Station.
 # Sourced by scripts/ai after core lifecycle commands are defined.
 
-OPENCODE_CODER_MODEL="Qwen3-Coder-30B-A3B-Instruct-Q4"
-OPENCODE_GENERAL_MODEL="Qwen3.6-35B-A3B-UD-Q4_K_M"
-OPENCODE_REASONING_MODEL="DeepSeek-R1-Distill-Qwen-32B-Q4_K_M"
+OPENCODE_CODER_MODEL="Ornith-1.5-35B-Q4_K_M"
+OPENCODE_GENERAL_MODEL="Qwen3.8-27B-UD-Q4_K_M"
+OPENCODE_REASONING_MODEL="Qwen3.8-27B-Reasoning-UD-Q4_K_M"
 OPENCODE_ORNITH_MODEL="Ornith-1.5-35B-Q4_K_M"
 OPENCODE_PROJECT_ID="opencode"
 OPENCODE_API_KEY_PLACEHOLDER="__AI_STATION_OPENCODE_API_KEY__"
-OPENCODE_ALLOWED_MODELS="${OPENCODE_CODER_MODEL},${OPENCODE_GENERAL_MODEL},${OPENCODE_REASONING_MODEL},${OPENCODE_ORNITH_MODEL}"
+OPENCODE_ALLOWED_MODELS="${OPENCODE_CODER_MODEL},${OPENCODE_GENERAL_MODEL},${OPENCODE_REASONING_MODEL},Qwen3.8-27B-Vision-UD-Q4_K_M"
 OPENCODE_MANAGER="$ROOT/scripts/opencode_config.py"
 OPENCODE_RUNTIME_MANIFEST="$ROOT/config/clients/opencode/runtime.json"
 
@@ -73,7 +73,18 @@ cmd_opencode() {
   case "$sub" in
     install) "$ROOT/scripts/install-opencode-wsl.sh" "$@" ;;
     configure) cmd_opencode_configure "$@" ;;
-    doctor) python3 "$ROOT/scripts/opencode_doctor.py" "$@" ;;
+    doctor)
+      local dev_user
+      dev_user="$(ai_opencode_developer_user)"
+      if [[ "$(id -un)" == "$dev_user" ]]; then
+        python3 "$ROOT/scripts/opencode_doctor.py" "$@"
+      elif [[ "$(id -u)" -eq 0 ]]; then
+        runuser -u "$dev_user" -- python3 "$ROOT/scripts/opencode_doctor.py" "$@"
+      else
+        # Private developer config stays private; inspect it as its owner.
+        sudo -n -u "$dev_user" -- python3 "$ROOT/scripts/opencode_doctor.py" "$@"
+      fi
+      ;;
     parity) python3 "$ROOT/scripts/opencode_parity.py" "$@" ;;
     run) cmd_opencode_run "$@" ;;
     acceptance) cmd_opencode_acceptance "$@" ;;

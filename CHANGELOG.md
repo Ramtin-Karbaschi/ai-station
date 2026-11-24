@@ -4,6 +4,80 @@ All notable project changes should be recorded in this file.
 
 ## Unreleased
 
+- **The WSL default user can commit the `aidev` worktree:** that user is
+  in group `aidev`, `.git` is `core.sharedRepository=group` with setgid
+  and a user ACL, and `ai opencode install` re-applies that sharing so
+  `git commit` does not need sudo.
+- **n8n uses local LiteLLM models:** `ai n8n start` creates the `n8n`
+  LiteLLM project, writes `N8N_LLM_API_KEY`, and sets Instance AI to
+  `http://llm-gateway:4000/v1` with `Qwen3.8-27B-UD-Q4_K_M`. The
+  Assistant wizard no longer requires an Anthropic/OpenAI cloud key.
+- **n8n AI Assistant sandbox:** `ai n8n start` generates sandbox API
+  keys and starts official `sandbox-api` / privileged runner on the
+  Compose network only (`http://sandbox-api:8080`). No host ports and
+  no Daytona. The UI should show Code sandbox as found in server
+  configuration — do not paste a secret into Service URL / API key.
+- **n8n hang on local Qwen:** Instance AI omitted `max_tokens`, so
+  llama.cpp used `n_predict=-1` and generated 10k+ tokens with a 37k
+  prompt. Chat models now default to **4096** output tokens (LiteLLM +
+  `--n-predict 4096`). Browser-use tools are off. LongWriter stays
+  uncapped.
+- **LiteLLM virtual keys have no TPM/RPM by default:** `ai projects
+  create` no longer applies 100000 TPM / 60 RPM. Existing keys are
+  cleared with `ai projects unlimit`. Optional `--tpm`/`--rpm` remain
+  as explicit caps (ADR-029).
+- **Start no longer dies on a missing Tool Gateway unit:** Control Panel
+  option 1 runs `ai start` as root. If `ai-station-tool-gateway.service`
+  is not installed, Start now installs that system unit instead of
+  `systemctl --user restart` (systemd exit 5 aborted the whole start).
+- **Vision reasoning off:** `llm-vision` now passes `--reasoning off` and
+  `--reasoning-budget 0`, matching `llm-general`. The shared Qwen3.8
+  weights still support thinking; the vision profile must not enter
+  thinking mode for critic/observe calls.
+- **Qwen3.8 context:** general/reasoning now use **262144** with Q4 KV and
+  flash-attn. Measured 2026-08-27: 138801-token ingest in 190.4 s at
+  22401 MiB VRAM (`benchmarks/results/20260827/qwen38-262144-q4-ingest-128k.json`).
+- **Document intelligence:** Tika first, PaddleOCR-VL-1.6 when available,
+  Tesseract fallback. Rerankers are never in the OCR path (ADR-006).
+- **Speech:** `POST /v1/audio/transcriptions` on the host gateway.
+  Qwen3-ASR-1.7B is primary; faster-whisper-large-v3 stays the fallback
+  (ADR-027).
+- **Local AI Studio:** capability map in `config/studio/capabilities.yaml`.
+  All 70 studio-era manifest ids size-match (**361.62 GiB**), including
+  LTX-2.5 NVFP4 and Hunyuan3D 2.1 Comfy-Org checkpoint. New packs stay
+  `configured_pending_smoke` until a local ComfyUI smoke. Fish S2 Pro is
+  local/personal use.
+- **Open WebUI RAG:** Knowledge is `halfvec(4096)` with
+  `PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH=4096` and
+  `PGVECTOR_USE_HALFVEC=true`. A sentinel HNSW on `subvector(...,4000)`
+  satisfies Open WebUI's index check (pgvector HNSW max is 4000-d).
+  Retrieval stays exact cosine. The previous default 1536 restarted the
+  UI after the 8B embedding migration.
+- **Compose orphans:** `COMPOSE_FILE` includes
+  `compose.comfyui.experimental.yaml` so option 1 / `ai start` no longer
+  warns that `ai-station-comfyui-experimental` is an orphan. Overlay
+  start/stop use the same project chain. `--remove-orphans` is still
+  forbidden (it would delete chat or media containers).
+- **Chat output cap:** Open WebUI `DEFAULT_MODEL_PARAMS.max_tokens` is 4096
+  (was 1024). Mid-sentence cuts were `finish_reason=length` on the client
+  output budget, not the 8192 context window. LiteLLM has no second cap.
+- **ADR-022 Accepted:** the 0.6B embedder runs CPU-only (`gpus: []`,
+  `-ngl 0`) so Open WebUI RAG stays up beside one heavy GPU chat
+  profile. The GPU embedder had been exiting 0 after a CUDA error.
+  ComfyUI start no longer stops the embedder.
+- **Service directory:** `ai start` and `ai status` print always-on vs
+  on-demand loopback URLs (Open WebUI, LiteLLM API/Admin, SearXNG, Tika,
+  embedding, reranker, ComfyUI, n8n, Graphify, OpenCode). README local
+  endpoints match. Windows Manager labels ComfyUI as the media studio,
+  not experimental.
+- **Live ops:** `scripts/live-ops-smoke.sh` sequentially probed every
+  catalog chat profile through LiteLLM `:4000`, CPU embed/rerank, and
+  workstation tools. Summary:
+  `benchmarks/results/20260823/live-ops-summary.json`.
+- **ADR-021 Accepted:** optional n8n workflow client on loopback
+  `:5678`. CPU-only, off by default, digest-pinned. Workflows call
+  LiteLLM `:4000/v1` only. Does not replace OpenCode, Open WebUI, or
+  ComfyUI.
 - **Retained models:** Ornith 1.5, Qwen3.8, LongWriter-Zero Q4, and
   ComfyUI MiniMax Music 3 / MiniMax H3 / FLUX.2 are never experimental
   and must never be deleted. Manifest marks them `operator_retained`;

@@ -53,7 +53,10 @@ The installer:
 - verifies the GitHub release SHA-256 before installation;
 - installs a root-owned binary under `/usr/local/lib/ai-station/opencode/`;
 - exposes `/usr/local/bin/opencode`;
-- optionally makes `aidev` the Git-worktree owner.
+- optionally makes `aidev` the Git-worktree owner;
+- adds the WSL default user to group `aidev` and sets
+  `core.sharedRepository=group` plus a user ACL on `.git`, so both
+  accounts can commit without taking the worktree away from `aidev`.
 
 It does not grant `aidev` Docker-group or root privileges.
 
@@ -135,10 +138,10 @@ verified.
 
 | Profile | OpenCode capability | Context/output |
 |---|---|---:|
-| coder | default agentic developer | 16384 / 4096 |
-| general | tool-capable general work | 8192 / 2048 |
-| ornith | optional tool-capable coding | 8192 / 2048 |
-| reasoning | analysis/chat only; no verified tools | 8192 / 2048 |
+| coder | default agentic developer | 8192 / 4096 |
+| general | tool-capable general work | 262144 / 2048 |
+| ornith | optional tool-capable coding | 8192 / 4096 |
+| reasoning | analysis/chat; tool_call true | 262144 / 2048 |
 
 All provider entries use
 `http://127.0.0.1:4000/v1`. Ports `:8888`, `:8083`, GGUF paths, and

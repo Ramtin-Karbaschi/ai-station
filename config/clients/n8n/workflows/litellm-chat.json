@@ -1,0 +1,102 @@
+{
+  "name": "AI Station LiteLLM chat",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## AI Station LiteLLM chat\n\n1. Run `ai n8n configure` and create an HTTP Header Auth credential named Authorization with value `Bearer <LLM_API_KEY>` from `projects/n8n.env`.\n2. Attach that credential to the LiteLLM Chat node.\n3. Call only `http://llm-gateway:4000/v1` from inside Compose. Never `:8888` or llama.cpp ports.\n4. Canonical model: `Qwen3.8-27B-UD-Q4_K_M`.",
+        "height": 320,
+        "width": 420
+      },
+      "id": "note-litellm-chat",
+      "name": "Station notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-220, -80]
+    },
+    {
+      "parameters": {},
+      "id": "manual-litellm-chat",
+      "name": "When clicking Test workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [280, 80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prompt",
+              "name": "prompt",
+              "value": "Reply with one short sentence confirming you are the local AI Station model.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-prompt",
+      "name": "Set prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://llm-gateway:4000/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"Qwen3.8-27B-UD-Q4_K_M\", \"messages\": [ { \"role\": \"user\", \"content\": \"{{ $json.prompt }}\" } ], \"max_tokens\": 128 }",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "http-litellm-chat",
+      "name": "LiteLLM Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 80]
+    }
+  ],
+  "connections": {
+    "When clicking Test workflow": {
+      "main": [
+        [
+          {
+            "node": "Set prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set prompt": {
+      "main": [
+        [
+          {
+            "node": "LiteLLM Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

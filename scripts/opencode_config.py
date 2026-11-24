@@ -16,16 +16,15 @@ from typing import Any
 
 API_BASE = "http://127.0.0.1:4000/v1"
 MODELS = {
-    "coder": "Qwen3-Coder-30B-A3B-Instruct-Q4",
-    "general": "Qwen3.6-35B-A3B-UD-Q4_K_M",
-    "reasoning": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
+    "coder": "Ornith-1.5-35B-Q4_K_M",
+    "general": "Qwen3.8-27B-UD-Q4_K_M",
+    "reasoning": "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
     "ornith": "Ornith-1.5-35B-Q4_K_M",
 }
 EXPECTED = {
-    MODELS["coder"]: (16384, 4096, True),
-    MODELS["general"]: (8192, 2048, True),
-    MODELS["reasoning"]: (8192, 2048, False),
-    MODELS["ornith"]: (8192, 2048, True),
+    MODELS["coder"]: (8192, 4096, True),
+    MODELS["general"]: (262144, 2048, True),
+    MODELS["reasoning"]: (262144, 2048, True),
 }
 FORBIDDEN = (":8888", ":8083", ":11434", ":30890", ".gguf")
 

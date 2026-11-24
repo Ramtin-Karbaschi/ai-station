@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from apps.gateway.app.paths import PROJECT_DIR
+from apps.gateway.app.lifecycle import active_profile_path
 
 PROVIDERS_PATH = Path(
     os.getenv("AI_STATION_PROVIDERS", str(PROJECT_DIR / "config/providers.yaml"))
@@ -30,12 +31,7 @@ HARDWARE_PATH = Path(
         str(PROJECT_DIR / "config/hardware-profile.json"),
     )
 )
-ACTIVE_PROFILE_FILE = Path(
-    os.getenv(
-        "AI_STATION_ACTIVE_PROFILE_FILE",
-        "/srv/ai-station/runtime/active-heavy-profile",
-    )
-)
+ACTIVE_PROFILE_FILE = active_profile_path()
 
 DecisionName = str
 
@@ -55,6 +51,7 @@ class AdmissionDecision:
     fallback_provider: str | None = None
     reasons: list[str] = field(default_factory=list)
     budget: dict[str, Any] = field(default_factory=dict)
+    gpu_index: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -63,6 +60,7 @@ class AdmissionDecision:
         lines = [
             f"decision: {self.decision}",
             f"provider: {self.provider_id}",
+            f"gpu_index: {self.gpu_index}",
             f"requested_context: {self.requested_context}",
             f"effective_context: {self.effective_context}",
             f"required_vram_mib: {self.required_vram_mib}",
@@ -109,19 +107,111 @@ def load_hardware(path: Path | None = None) -> dict[str, Any]:
     return json.loads((path or HARDWARE_PATH).read_text(encoding="utf-8"))
 
 
+def list_gpus(hardware: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = hardware.get("gpus")
+    gpus: list[dict[str, Any]] = []
+    if isinstance(raw, list):
+        for index, item in enumerate(raw):
+            if not isinstance(item, dict):
+                continue
+            gpu = dict(item)
+            gpu.setdefault("index", index)
+            gpus.append(gpu)
+    if gpus:
+        return gpus
+    gpu = hardware.get("gpu")
+    if isinstance(gpu, dict) and gpu:
+        item = dict(gpu)
+        item.setdefault("index", 0)
+        return [item]
+    return []
+
+
+def npu_present(hardware: dict[str, Any]) -> bool:
+    npu = hardware.get("npu")
+    if not isinstance(npu, dict):
+        return False
+    if npu.get("present") is True:
+        return True
+    status = str(npu.get("status") or "").strip().casefold()
+    return status not in {"", "absent", "unknown", "none"}
+
+
+def provider_gpu_index(provider: dict[str, Any]) -> int:
+    try:
+        return int(provider.get("gpu_index") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def effective_max_heavy(policy: dict[str, Any], hardware: dict[str, Any]) -> int:
+    gpus = list_gpus(hardware)
+    configured = int(
+        policy.get("max_heavy_providers")
+        or policy.get("max_active_heavy")
+        or 1
+    )
+    if configured < 1:
+        configured = 1
+    if len(gpus) <= 1:
+        return 1
+    return min(configured, len(gpus))
+
+
+def exclusive_conflicts(
+    provider: dict[str, Any],
+    *,
+    registry: dict[str, Any],
+    active_heavy: list[str],
+    max_heavy: int,
+) -> list[str]:
+    provider_id = provider["id"]
+    my_index = provider_gpu_index(provider)
+    same_gpu: list[str] = []
+    exclusive_active: list[str] = []
+    for pid in active_heavy:
+        if pid == provider_id:
+            continue
+        try:
+            other = get_provider(registry, pid)
+        except KeyError:
+            exclusive_active.append(pid)
+            same_gpu.append(pid)
+            continue
+        if not uses_gpu_exclusivity(other):
+            continue
+        exclusive_active.append(pid)
+        if provider.get("tensor_parallel") or other.get("tensor_parallel"):
+            same_gpu.append(pid)
+            continue
+        if provider_gpu_index(other) == my_index:
+            same_gpu.append(pid)
+    if same_gpu:
+        return same_gpu
+    if len(exclusive_active) >= max_heavy:
+        return exclusive_active
+    return []
+
+
 def get_provider(registry: dict[str, Any], provider_id: str) -> dict[str, Any]:
     providers = registry.get("providers") or {}
     if provider_id in providers:
         return dict(providers[provider_id])
+    runtime_matches = []
     for provider in providers.values():
         if provider_id in (provider.get("catalog_ids") or []):
             return dict(provider)
         if provider_id in (provider.get("model_aliases") or []):
             return dict(provider)
-        if provider_id == provider.get("profile"):
+        if provider_id in (provider.get("profile"), provider.get("service")):
+            runtime_matches.append(provider)
+    # Capability aliases can share a container. Resolve its marker to the
+    # provider named by that runtime's lifecycle command, independent of order.
+    for provider in runtime_matches:
+        if provider.get("lifecycle_command") == f"ai provider start {provider.get('id')}":
             return dict(provider)
-        if provider_id == provider.get("service"):
-            return dict(provider)
+    if runtime_matches:
+        return dict(runtime_matches[0])
     raise KeyError(f"Unknown provider: {provider_id}")
 
 
@@ -140,11 +230,18 @@ def read_active_heavy_profiles() -> list[str]:
     return [value] if value else []
 
 
-def probe_free_vram_mib() -> int:
+def probe_free_vram_mib(gpu_index: int = 0) -> int:
     try:
+        executable = shutil.which("nvidia-smi")
+        if not executable and Path("/usr/lib/wsl/lib/nvidia-smi").is_file():
+            executable = "/usr/lib/wsl/lib/nvidia-smi"
+        if not executable:
+            return 0
         result = subprocess.run(
             [
-                "nvidia-smi",
+                executable,
+                "--id",
+                str(gpu_index),
                 "--query-gpu=memory.free",
                 "--format=csv,noheader,nounits",
             ],
@@ -179,7 +276,12 @@ def vram_probe_looks_stale(
     """
     if not active_heavy:
         return None
-    gpu_total = hardware.get("gpu", {}).get("vram_total_mib")
+    gpu_total = None
+    gpus = list_gpus(hardware)
+    if gpus:
+        gpu_total = gpus[0].get("vram_total_mib")
+    if gpu_total is None:
+        gpu_total = hardware.get("gpu", {}).get("vram_total_mib")
     try:
         gpu_total = int(gpu_total)
     except (TypeError, ValueError):
@@ -224,6 +326,19 @@ def estimate_required_vram_mib(provider: dict[str, Any], context: int) -> int:
     return base + kv
 
 
+def uses_gpu_exclusivity(provider: dict[str, Any]) -> bool:
+    """Return whether this provider competes for exclusive GPU VRAM.
+
+    RAM and storage are already checked before this gate. Non-heavy and
+    ``resource_group: cpu`` providers must start beside a full GPU (ADR-022,
+    n8n). A mis-set ``heavy: true`` on a CPU provider must not stop the
+    active GPU profile.
+    """
+    if provider.get("resource_group") == "cpu":
+        return False
+    return bool(provider.get("heavy"))
+
+
 def admit(
     provider_id: str,
     *,
@@ -252,14 +367,16 @@ def admit(
 
     margin_vram = int(policy.get("safety_margin_vram_mib") or 1024)
     margin_ram = int(policy.get("safety_margin_ram_mib") or 4096)
-    max_heavy = int(policy.get("max_active_heavy") or 1)
+    max_heavy = effective_max_heavy(policy, hardware)
+    gpu_index = provider_gpu_index(provider)
+    gpus = list_gpus(hardware)
     allow_auto_stop = bool(policy.get("allow_auto_stop_production", True))
     fallback = provider.get("fallback_provider") or policy.get(
         "default_fallback_provider"
     )
 
     if free_vram_mib is None:
-        free_vram_mib = probe_free_vram_mib()
+        free_vram_mib = probe_free_vram_mib(gpu_index)
     if free_ram_mib is None:
         free_ram_mib = probe_free_ram_mib()
     if free_storage_mib is None:
@@ -282,8 +399,14 @@ def admit(
         "safety_margin_vram_mib": margin_vram,
         "safety_margin_ram_mib": margin_ram,
         "max_active_heavy": max_heavy,
+        "max_heavy_providers": max_heavy,
+        "gpu_index": gpu_index,
+        "gpu_count": len(gpus),
+        "npu_present": npu_present(hardware),
         "gpu_vram_total_mib": (
-            hardware.get("gpu", {}).get("vram_total_mib")
+            (gpus[gpu_index].get("vram_total_mib") if gpu_index < len(gpus) else None)
+            if gpus
+            else hardware.get("gpu", {}).get("vram_total_mib")
         ),
         "wsl_visible_ram_gib": (
             hardware.get("memory", {}).get("wsl_visible_total_gib")
@@ -332,14 +455,66 @@ def admit(
             budget=budget,
         )
 
-    required_full = estimate_required_vram_mib(provider, requested_context)
-    conflicts = [pid for pid in active_heavy if pid != provider_id]
+    if provider.get("tensor_parallel"):
+        return AdmissionDecision(
+            decision="REJECT",
+            provider_id=provider_id,
+            requested_context=requested_context,
+            effective_context=requested_context,
+            required_vram_mib=estimate_required_vram_mib(provider, requested_context),
+            free_vram_mib=free_vram_mib,
+            free_ram_mib=free_ram_mib,
+            free_storage_mib=free_storage_mib,
+            active_heavy=list(active_heavy),
+            fallback_provider=fallback if fallback != provider_id else None,
+            reasons=["tensor-parallel placement is not implemented; refusing single-device launch"],
+            budget=budget,
+            gpu_index=gpu_index,
+        )
 
-    if provider.get("heavy") and conflicts and len(conflicts) >= max_heavy:
+    if not uses_gpu_exclusivity(provider):
+        # GPU conflict / VRAM reduction runs only for exclusive GPU
+        # heavies. RAM and storage already passed above, so mixed
+        # CPU+GPU load is validated without stopping the GPU.
+        reasons.append(
+            "non-exclusive GPU provider; VRAM exclusivity does not apply"
+        )
+
+        reasons.append("RAM/storage budgets satisfied")
+        return AdmissionDecision(
+            decision="START",
+            provider_id=provider_id,
+            requested_context=requested_context,
+            effective_context=requested_context,
+            required_vram_mib=0,
+            free_vram_mib=free_vram_mib,
+            free_ram_mib=free_ram_mib,
+            free_storage_mib=free_storage_mib,
+            active_heavy=list(active_heavy),
+            reasons=reasons,
+            budget=budget,
+        )
+
+    required_full = estimate_required_vram_mib(provider, requested_context)
+    conflicts = exclusive_conflicts(
+        provider,
+        registry=registry,
+        active_heavy=active_heavy,
+        max_heavy=max_heavy,
+    )
+    reasons.append(f"gpu_index={gpu_index} gpu_count={len(gpus)} max_heavy={max_heavy}")
+
+    if conflicts:
         if allow_auto_stop:
             # After stop, assume nearly full GPU VRAM becomes available.
             gpu_total = int(
-                hardware.get("gpu", {}).get("vram_total_mib")
+                (
+                    gpus[gpu_index].get("vram_total_mib")
+                    if gpu_index < len(gpus)
+                    else None
+                )
+                or (gpus[0].get("vram_total_mib") if gpus else None)
+                or hardware.get("gpu", {}).get("vram_total_mib")
                 or (free_vram_mib + 1)
             )
             projected_free = max(free_vram_mib, gpu_total - margin_vram)
@@ -364,6 +539,7 @@ def admit(
                     stop_providers=conflicts,
                     reasons=reasons,
                     budget=budget,
+                    gpu_index=gpu_index,
                 )
             reasons.append(
                 "conflicting heavy provider present but projected VRAM "
@@ -407,16 +583,23 @@ def admit(
 
     available = free_vram_mib
     # If we will stop conflicts, recompute against projected free.
-    if conflicts and allow_auto_stop and provider.get("heavy"):
+    if conflicts and allow_auto_stop:
         gpu_total = int(
-            hardware.get("gpu", {}).get("vram_total_mib") or free_vram_mib
+            (
+                gpus[gpu_index].get("vram_total_mib")
+                if gpu_index < len(gpus)
+                else None
+            )
+            or (gpus[0].get("vram_total_mib") if gpus else None)
+            or hardware.get("gpu", {}).get("vram_total_mib")
+            or free_vram_mib
         )
         available = max(free_vram_mib, gpu_total - margin_vram)
 
     if available >= required_full + margin_vram:
         decision = (
             "STOP_CONFLICTING_PROVIDER_AND_START"
-            if conflicts and provider.get("heavy") and allow_auto_stop
+            if conflicts and allow_auto_stop
             else "START"
         )
         if decision == "STOP_CONFLICTING_PROVIDER_AND_START":
@@ -436,6 +619,7 @@ def admit(
             stop_providers=conflicts if decision.startswith("STOP") else [],
             reasons=reasons,
             budget=budget,
+            gpu_index=gpu_index,
         )
 
     # Try reduced context.
@@ -450,22 +634,12 @@ def admit(
             reasons.append(
                 f"reduced_context={reduced} requires={required_reduced} MiB"
             )
-            decision = (
-                "STOP_CONFLICTING_PROVIDER_AND_START"
-                if conflicts and provider.get("heavy") and allow_auto_stop
-                else "START_WITH_REDUCED_CONTEXT"
-            )
-            # Prefer explicit reduced-context decision name when no stop needed.
-            if not (conflicts and provider.get("heavy") and allow_auto_stop):
-                decision = "START_WITH_REDUCED_CONTEXT"
-            else:
-                # Still communicate reduced context via effective_context.
+            if conflicts and allow_auto_stop:
                 reasons.append(
                     "will stop conflicting provider and start with reduced context"
                 )
-                decision = "START_WITH_REDUCED_CONTEXT"
             return AdmissionDecision(
-                decision=decision,
+                decision="START_WITH_REDUCED_CONTEXT",
                 provider_id=provider_id,
                 requested_context=requested_context,
                 effective_context=reduced,
@@ -475,9 +649,7 @@ def admit(
                 free_storage_mib=free_storage_mib,
                 active_heavy=list(active_heavy),
                 stop_providers=(
-                    conflicts
-                    if conflicts and provider.get("heavy") and allow_auto_stop
-                    else []
+                    conflicts if conflicts and allow_auto_stop else []
                 ),
                 reasons=reasons,
                 budget=budget,

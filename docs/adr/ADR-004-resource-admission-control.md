@@ -2,6 +2,10 @@
 
 - Status: Accepted
 - Date: 2026-07-23
+- Later amendment: 2026-09-02 — "at most one heavy GPU provider"
+  is the default for a one-GPU host. [ADR-031](ADR-031-multi-gpu-default-one.md)
+  extends admission to `gpu_index` placement when more than one
+  GPU is present.
 
 ## Context
 

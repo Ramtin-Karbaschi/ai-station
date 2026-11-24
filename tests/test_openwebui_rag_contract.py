@@ -21,6 +21,18 @@ ADR = ROOT / "docs/adr/ADR-005-retrieval-engine.md"
 
 
 class OpenWebuiRagContractTests(unittest.TestCase):
+    def test_native_web_search_is_available_by_default_in_chat(self) -> None:
+        env = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"][
+            "open-webui"
+        ]["environment"]
+        metadata = json.loads(env["DEFAULT_MODEL_METADATA"])
+        params = json.loads(env["DEFAULT_MODEL_PARAMS"])
+        self.assertIn("web_search", metadata["defaultFeatureIds"])
+        self.assertTrue(metadata["capabilities"]["web_search"])
+        self.assertEqual(params["function_calling"], "default")
+        self.assertEqual(env["ENABLE_WEB_SEARCH"], "True")
+        self.assertEqual(env["WEB_SEARCH_ENGINE"], "searxng")
+
     def test_hybrid_search_uses_local_cpu_reranker(self) -> None:
         env = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"][
             "open-webui"
@@ -35,8 +47,12 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertEqual(env["RAG_TOP_K_RERANKER"], "3")
         self.assertEqual(env["RAG_FULL_CONTEXT"], "False")
         self.assertEqual(env["VECTOR_DB"], "pgvector")
+        self.assertEqual(env["PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH"], "4096")
+        self.assertEqual(env["PGVECTOR_USE_HALFVEC"], "true")
         self.assertIn("function_calling", env["DEFAULT_MODEL_PARAMS"])
         self.assertIn("default", env["DEFAULT_MODEL_PARAMS"])
+        self.assertIn('"max_tokens": 4096', env["DEFAULT_MODEL_PARAMS"])
+        self.assertNotIn('"max_tokens": 1024', env["DEFAULT_MODEL_PARAMS"])
         self.assertNotIn("BAAI/", env["RAG_RERANKING_MODEL"])
         self.assertNotIn("huggingface", env["RAG_EXTERNAL_RERANKER_URL"])
 
@@ -49,6 +65,16 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertIn("ai_wait_compose_service reranker healthy 180", start)
         self.assertIn("http://127.0.0.1:8091/v1/models|Reranker", start)
         self.assertIn("http://127.0.0.1:8091/v1/models", verify)
+        self.assertIn("ai_retry_compose --profile asr up -d asr-qwen3", start)
+        self.assertIn("ai_wait_compose_service asr-qwen3 healthy 180", start)
+        self.assertIn("http://127.0.0.1:8092/v1/models", verify)
+        self.assertIn("http://127.0.0.1:8888/v1/audio/transcriptions", verify)
+        self.assertIn("Host Gateway unified STT route", verify)
+        reindex = (ROOT / "scripts/reindex-openwebui-embeddings.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("halfvec", reindex)
+        self.assertIn("subvector(vector, 1, 4000)", reindex)
 
     def test_reranker_stays_cpu_and_production(self) -> None:
         providers = yaml.safe_load(PROVIDERS.read_text(encoding="utf-8"))
@@ -59,7 +85,29 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertEqual(reranker["port"], 8091)
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
         by_id = {item["id"]: item for item in catalog["models"]}
-        self.assertIn("ai start", by_id["reranker-qwen3-0_6b"]["note"])
+        self.assertIn("ai start", by_id["reranker-qwen3-4b"]["note"])
+
+    def test_embedder_is_cpu_only_like_reranker(self) -> None:
+        compose = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
+        embedder = compose["services"]["embedder"]
+        self.assertEqual(embedder.get("gpus"), [])
+        cmd = embedder["command"]
+        self.assertEqual(cmd[cmd.index("-ngl") + 1], "0")
+        providers = yaml.safe_load(PROVIDERS.read_text(encoding="utf-8"))
+        spec = providers["providers"]["llama-cpp-embedder"]
+        self.assertEqual(spec["resource_group"], "cpu")
+        self.assertEqual(spec["minimum_vram_mib"], 0)
+        self.assertEqual(spec.get("required_features") or [], [])
+        self.assertFalse(spec["heavy"])
+        catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+        by_id = {item["id"]: item for item in catalog["models"]}
+        self.assertIn("CPU-only", by_id["embedding-qwen3-8b"]["note"])
+        start = CLI.read_text(encoding="utf-8")
+        self.assertNotIn("ai_compose stop embedder", start)
+        adr = (ROOT / "docs/adr/ADR-022-cpu-embedder-coexistence.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Status: Accepted", adr)
 
     def test_operator_docs_separate_notebooks_from_api_projects(self) -> None:
         docs = DOCS.read_text(encoding="utf-8")
@@ -67,6 +115,8 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         self.assertIn("ai projects", docs)
         self.assertIn("does not store PDFs", docs)
         self.assertIn("function_calling=default", docs)
+        self.assertIn("max_tokens 4096", docs)
+        self.assertIn("262144-token", docs)
         manager = MANAGER.read_text(encoding="utf-8")
         self.assertIn("Workspace -> Knowledge", manager)
         win_readme = WIN_README.read_text(encoding="utf-8")

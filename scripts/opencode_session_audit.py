@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-EXPECTED_MODEL = "Qwen3-Coder-30B-A3B-Instruct-Q4"
+EXPECTED_MODEL = "Ornith-1.5-35B-Q4_K_M"
 EXPECTED_VERSION = "1.18.19"
 
 

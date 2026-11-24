@@ -650,7 +650,7 @@ if [[ ! -f "$MANIFEST_FILE" ]]; then
 fi
 
 if ! grep -Eq \
-    '^COMPOSE_FILE=compose\.yml:compose\.models\.yml:compose\.hardening\.yaml:compose\.local-builds\.yaml:compose\.images\.lock\.yaml$' \
+    '^COMPOSE_FILE=compose\.yml:compose\.models\.yml:compose\.comfyui\.experimental\.yaml:compose\.hardening\.yaml:compose\.local-builds\.yaml:compose\.images\.lock\.yaml$' \
     .env; then
     echo "FAIL: .env does not activate the image lock."
     exit 1

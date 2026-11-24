@@ -161,4 +161,13 @@ benchmarks/results/**/retrieval/*
 # Local generated manifests containing runtime details
 compose-resolved-sensitive.yaml
 
+# Internal planning documents remain in private local copies.
+/docs/PRODUCT.md
+/docs/ROADMAP.md
+/docs/PROJECT_STATE.md
+/docs/LOCAL_CONTENT_STUDIO_GROUNDED_ACCURACY_SPEC.md
+/docs/DEVELOPMENT_PLAN.md
+/docs/research/AI_STATION_DEVELOPMENT_PLAN.md
+/docs/DECISIONS.md
+
 # END AI-STATION RELEASE EXCLUSIONS

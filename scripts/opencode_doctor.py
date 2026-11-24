@@ -19,7 +19,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_MANIFEST = ROOT / "config/clients/opencode/runtime.json"
 TOOLCHAIN_MANIFEST = ROOT / "config/clients/opencode/toolchain.json"
-MODEL_REF = "ai-station/Qwen3-Coder-30B-A3B-Instruct-Q4"
+MODEL_REF = "ai-station/Ornith-1.5-35B-Q4_K_M"
 API_BASE = "http://127.0.0.1:4000/v1"
 
 
@@ -127,11 +127,11 @@ def main() -> int:
         f"baseURL={options.get('baseURL')!r}",
     )
     models = provider.get("models") or {}
-    coder = models.get("Qwen3-Coder-30B-A3B-Instruct-Q4") or {}
+    coder = models.get("Ornith-1.5-35B-Q4_K_M") or {}
     check(
         "coder_contract",
         bool(coder.get("tool_call"))
-        and (coder.get("limit") or {}).get("context") == 16384
+        and (coder.get("limit") or {}).get("context") == 8192
         and (coder.get("limit") or {}).get("output") >= 4096,
         f"tool_call={coder.get('tool_call')}, limit={coder.get('limit')}",
     )

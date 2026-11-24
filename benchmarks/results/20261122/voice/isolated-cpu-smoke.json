@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-22",
+  "scope": "isolated Windows CPU synthesis with the production GPU available to chat",
+  "qwen3_tts": {
+    "model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "package_version": "0.1.1",
+    "language": "English",
+    "voice": "Ryan",
+    "http_status": 200,
+    "media_type": "audio/wav",
+    "sample_rate_hz": 24000,
+    "duration_seconds": 4.16,
+    "request_seconds": 15.693,
+    "persian_advertised_by_model": false
+  },
+  "piper": {
+    "model": "fa_IR-ganji-medium",
+    "revision": "929396f9d01ab9078f9c29ef519c25d9d4940258",
+    "package_version": "1.8.0",
+    "language": "Persian",
+    "sample_rate_hz": 22050,
+    "duration_seconds": 4.34,
+    "synthesis_seconds": 1.234,
+    "offline_whisper_expected_keyword_count": 5,
+    "offline_whisper_matched_keyword_count": 4
+  },
+  "isolated_litellm_proxy": {
+    "date": "2026-11-23",
+    "version": "1.93.0",
+    "language": "Persian",
+    "http_status": 200,
+    "media_type": "audio/mpeg",
+    "codec": "mp3",
+    "sample_rate_hz": 22050,
+    "channels": 1,
+    "response_bytes": 41839,
+    "request_seconds": 0.752
+  },
+  "production_speech_route_enabled": false
+}

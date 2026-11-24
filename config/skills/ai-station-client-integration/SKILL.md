@@ -1,6 +1,6 @@
 ---
 name: ai-station-client-integration
-description: Connect OpenCode or any OpenAI-compatible application to AI Station, create/revoke project keys, select public models, set rate limits, and diagnose client authentication or routing. Use whenever a user asks for an SDK example, base URL, API key, project integration, OpenCode setup, or multi-project isolation. Always routes clients through LiteLLM :4000/v1 and never through llama.cpp or the host gateway directly.
+description: Connect OpenCode or any OpenAI-compatible application to AI Station, create/revoke project keys, select public models, optionally cap rate limits, and diagnose client authentication or routing. Use whenever a user asks for an SDK example, base URL, API key, project integration, OpenCode setup, or multi-project isolation. Always routes clients through LiteLLM :4000/v1 and never through llama.cpp or the host gateway directly.
 compatibility: Requires a running AI Station LiteLLM gateway and the `ai` CLI; client examples use OpenAI-compatible SDK semantics.
 ---
 
@@ -25,7 +25,8 @@ Inspect public models, then create one key per application/use-case:
 
 ~~~bash
 ai models list
-ai projects create <project-id> --models <public-id-1,public-id-2> --rpm 60 --tpm 120000
+ai projects create <project-id> --models <public-id-1,public-id-2>
+# optional caps only: --rpm 60 --tpm 120000
 ai projects show <project-id>
 ~~~
 
@@ -45,7 +46,7 @@ client = OpenAI(
     api_key=os.environ["LLM_API_KEY"],
 )
 response = client.chat.completions.create(
-    model="Qwen3-Coder-30B-A3B-Instruct-Q4",
+    model="Ornith-1.5-35B-Q4_K_M",
     messages=[{"role": "user", "content": "Explain this function."}],
 )
 ~~~
@@ -71,7 +72,7 @@ OpenCode runs inside WSL as the dedicated non-root `aidev` user; Windows
 Manager launches that same runtime. One provider (`ai-station`) keeps all
 picker models visible. Coder is default. Use `doctor` for read-only checks and
 `acceptance` when a real edit-and-test proof is authorized. General and Ornith
-are also tool-capable. DeepSeek is selectable for non-tool reasoning and
+are also tool-capable. Qwen3.8 Reasoning is selectable for non-tool reasoning and
 should not back build/debug agents.
 
 ## Diagnose client failures

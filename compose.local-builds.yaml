@@ -1,6 +1,84 @@
 # Local images built from repository-controlled sources.
+x-ocr-device: &ocr-device
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          capabilities: [gpu]
+          device_ids: ["${AI_STATION_GPU_DEVICE_ID:-0}"]
+
 services:
+  ocr-vl-engine:
+    profiles: ["ocr-vl"]
+    image: ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlepaddle/paddleocr-genai-vllm-server@sha256:bffd525308facf5dba2f8eca44ab476704a0ae3bfdcba25f77655973e4c0a7ca
+    container_name: ai-station-ocr-vl-engine
+    restart: "no"
+    deploy: *ocr-device
+    environment:
+      # WSL exposes libcuda.so.1 to the runtime but Triton's JIT linker needs
+      # the unversioned libcuda.so shim from this host-provided directory.
+      LIBRARY_PATH: /usr/lib/wsl/lib
+      LD_LIBRARY_PATH: /usr/lib/wsl/lib:/usr/local/cuda/lib64
+    command:
+      - paddleocr
+      - genai_server
+      - --model_name
+      - PaddleOCR-VL-1.6-0.9B
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8118"
+      - --backend
+      - vllm
+      - --backend_config
+      - /opt/station-ocr/vllm-config.yaml
+    volumes:
+      - ./infra/paddleocr-vl/vllm-config.yaml:/opt/station-ocr/vllm-config.yaml:ro
+      - /usr/lib/wsl/lib:/usr/lib/wsl/lib:ro
+    expose:
+      - "8118"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8118/health', timeout=5)\" >/dev/null || exit 1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
   tika:
     build:
       context: "./infra/tika-fa"
       dockerfile: "Dockerfile"
+  ocr-vl:
+    profiles: ["ocr-vl"]
+    build:
+      context: "./infra/paddleocr-vl"
+      dockerfile: "Dockerfile"
+    image: ai-station/paddleocr-vl:1.6
+    container_name: ai-station-ocr-vl
+    restart: "no"
+    deploy: *ocr-device
+    environment:
+      PADDLEOCR_VL_MODEL_DIR: /models/ocr/paddleocr-vl-1.6
+      PADDLEOCR_VL_DEVICE: cuda
+      PADDLEOCR_VL_BACKEND_URL: http://ocr-vl-engine:8118/v1
+    depends_on:
+      ocr-vl-engine:
+        condition: service_healthy
+    volumes:
+      - ${AI_STATION_DATA:-/srv/ai-station}/models/ocr/paddleocr-vl-1.6:/models/ocr/paddleocr-vl-1.6:ro
+    ports:
+      - "127.0.0.1:${PADDLEOCR_VL_PORT:-8093}:8093"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8093/health')\" >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s

@@ -1,0 +1,13 @@
+{
+  "source_repo": "Qwen/Qwen3-Reranker-4B",
+  "source_revision": "22e683669bc0f0bd69640a1354a6d0aebcfeede5",
+  "llama_cpp_revision": "4fc4ec5541b243957ae5099edb67372f8f3b550e",
+  "quantization": "Q6_K",
+  "size_bytes": 3305699168,
+  "sha256": "33e92e5d354031bbf370894dd30a447c6368ec0f7b70e5810424f5925aec7384",
+  "converted_at": "2026-08-27T08:51:56Z",
+  "commands": [
+    "python convert_hf_to_gguf.py --outtype f16 --outfile Qwen3-Reranker-4B-f16.gguf hf/",
+    "llama quantize Qwen3-Reranker-4B-f16.gguf Qwen3-Reranker-4B-Q6_K.gguf Q6_K"
+  ]
+}

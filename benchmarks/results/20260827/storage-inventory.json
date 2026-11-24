@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-08-27T13:51:45Z",
+  "manifest_ids": 70,
+  "size_matched": 70,
+  "partial": 0,
+  "missing": 0,
+  "installed_ok_gib": 361.62,
+  "manifest_advertised_gib": 361.62,
+  "models_dir_du_note": "see `du -sb /srv/ai-station/models`",
+  "missing_or_partial": [],
+  "legacy_llm_absent": true,
+  "hf_cache_gib_note": "duplicate hub caches removed after destination size-match",
+  "free_bytes_srv": 534933831680,
+  "free_gib_srv": 498.2,
+  "models_dir_bytes": 388291200738,
+  "hf_cache_bytes": 191,
+  "models_dir_gib": 361.62,
+  "hf_cache_gib": 0.0,
+  "legacy_tencent_hunyuan_split_deleted": true
+}

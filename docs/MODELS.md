@@ -25,8 +25,8 @@ are planning hints, not guarantees:
 
 | VRAM (approx.) | Start with |
 |---|---|
-| ≥ 22 GiB | Core `general` (Qwen3.6 35B-A3B Q4) plus embeddings |
-| ≥ 18 GiB | `coder` (Qwen3 Coder 30B-A3B Q4) for OpenCode |
+| ≥ 22 GiB | Core `general` (Qwen3.8 27B Q4) plus embeddings |
+| ≥ 18 GiB | `coder` (Ornith 1.5 35B-A3B Q4) for OpenCode |
 | ≥ 16 GiB | A smaller Q4 GGUF registered with `ai models add` |
 | < 16 GiB | Do not expect the default 30–35B Q4 pack to fit |
 
@@ -45,17 +45,17 @@ source is named. At most one heavy GPU profile runs at a time.
 
 | Manifest id | Role | Size (GiB) | Measured performance (this GPU) |
 |---|---|---:|---|
-| `general-qwen3.6-35b-a3b-q4` | Default chat / tools | 20.61 | Dated llama.cpp bench 2026-07-23: ~3.4–4 decode tok/s at ~24 GiB VRAM. Production default. |
-| `coder-qwen3-30b-a3b-q4` | OpenCode default | 16.45 | 2026-08-19 context smoke: 16384 ctx with q8 KV, ~20.7 GiB VRAM, short chat and tools passed. |
-| `ornith-1.5-35b-q4` | Retained coding | 20.22 | 2026-08-23 LiteLLM `:4000`: identity 0.941 s, JSON 0.568 s, tools 0.893 s (pass). |
-| `qwen38-27b-q4` | Retained dense VL + tools | 15.33 | 2026-08-23 LiteLLM `:4000`: identity 1.29 s, JSON 2.845 s (`max_tokens=256`, thinking on), tools 3.247 s (pass). |
+| `qwen38-27b-q4` | Shared general / reasoning / vision base | 15.33 | 2026-08-23 LiteLLM `:4000`: identity 1.29 s, JSON 2.845 s (`max_tokens=256`, thinking on), tools 3.247 s (pass). |
+| `ornith-1.5-35b-q4` | OpenCode default / agentic coding | 20.22 | 2026-08-23 LiteLLM `:4000`: identity 0.941 s, JSON 0.568 s, tools 0.893 s (pass). |
 | `qwen38-27b-mmproj-f16` | Qwen3.8 vision projector | 0.86 | Required with `qwen38-27b-q4`. Combined Qwen3.8 pack **16.19 GiB**. |
 | `longwriter-zero-32b-q4` | Retained long-form writing | 18.49 | Q4_K_M chosen after Q8_0 failed (~2.7 tok/s). Selection smoke: 5.696 s / 22.47 tok/s. Checked-in 2026-08-23 JSON: 164.0 s / 0.78 tok/s under disk contention. |
-| `reasoning-deepseek-r1-32b-q4` | Reasoning, no tools | 18.49 | High latency. 2026-08-20 short chat timed out at 180 s; not advertised for tools. |
-| `vision-qwen3-vl-32b-q4` | Multimodal chat | 18.40 | Fits this ~24 GiB GPU with mmproj; no 2026-08-23 tok/s smoke. |
-| `vision-qwen3-vl-32b-mmproj-q8` | Vision projector | 0.72 | Required with `vision-qwen3-vl-32b-q4`. Combined vision pack **19.12 GiB**. |
-| `embedding-qwen3-0.6b-q8` | Retrieval embeddings | 0.60 | CPU/GPU embedder on `:8090`; started with `ai start`. |
-| `reranker-qwen3-0.6b-q8` | Hybrid RAG rerank | 0.60 | CPU on `:8091`; started with `ai start`. |
+| `embedding-qwen3-8b-q4_k_m` | Retrieval embeddings | 4.36 | CPU on `:8090` (ADR-022); upgraded to Qwen3 8B Q4_K_M for stronger multilingual retrieval. |
+| `reranker-qwen3-4b-q6_k` | Hybrid RAG rerank | 3.08 | CPU on `:8091`; official Qwen conversion via llama.cpp `4fc4ec55` then Q6_K (ADR-024). |
+| `asr-qwen3-1.7b-q8` | Primary speech-to-text | 2.02 | ggml-org Q8_0; CPU profile `asr` on `:8092` (ADR-027). Weights installed; unified `/v1/audio/transcriptions` on the host gateway. |
+| `asr-qwen3-1.7b-mmproj-q8` | Qwen3-ASR audio projector | 0.33 | Required with `asr-qwen3-1.7b-q8`. |
+
+PaddleOCR-VL-1.6 sidecars (tokenizer, config, custom Python) live under
+`models/ocr/paddleocr-vl-1.6/` as `ocr-paddleocr-vl-1.6-*` ids.
 
 ### ComfyUI media (GPU-exclusive overlay)
 
@@ -70,17 +70,39 @@ That overlay stops the active llama.cpp heavy profile.
 | MiniMax H3 | `experimental-comfyui-h3-fl2va-int8`, `experimental-comfyui-h3-ref2va-int8`, `experimental-comfyui-h3-text-encoder-nvfp4`, `experimental-comfyui-h3-video-vae`, `experimental-comfyui-h3-audio-vae`, `experimental-comfyui-h3-fl2v-turbo-lora`, `experimental-comfyui-h3-ref2v-turbo-lora` | 62.73 | Text-to-video 302.3 s |
 | FLUX.2-dev | `experimental-comfyui-flux2-dit-q4`, `experimental-comfyui-flux2-text-encoder-fp4`, `experimental-comfyui-flux2-vae` | 30.45 | Text-to-image 262.3 s |
 
+Studio 2026 additions are not production until a local smoke exists (ADR-028):
+
+| Pack | Manifest ids | Size (GiB) | Status |
+|---|---|---:|---|
+| Z-Image-Turbo NVFP4 | `studio-z-image-turbo-nvfp4`, `studio-z-image-text-encoder-fp4`, `studio-z-image-vae` | 7.75 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| Qwen-Image-Edit-2511 | `studio-qwen-image-edit-2511-fp8mixed` | 19.12 | Verified 2026-08-29 with the official Plus reference workflow (40 steps, CFG 4); evidence under `/srv/ai-station/runtime/evals` |
+| FLUX.2-klein-4B | `studio-flux2-klein-4b`, `studio-flux2-klein-text-encoder-fp4`, `studio-flux2-klein-vae` | 11.12 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| Qwen-Image-2512 | `studio-qwen-image-2512-fp8`, `studio-qwen-image-text-encoder-nvfp4`, `studio-qwen-image-vae` | 24.96 | Official Comfy-Org pin; DiT/TE/VAE on disk; pending ComfyUI smoke |
+| LTX-2.5 distilled NVFP4 | `studio-ltx25-distilled-nvfp4`, `studio-ltx25-text-encoder-int8`, `studio-ltx25-video-vae`, `studio-ltx25-audio-vae` | 33.43 | Official Lightricks NVFP4 pin; size-matched on disk; pending ComfyUI smoke |
+| H3 ControlNet Union | `studio-h3-controlnet-union` | 6.34 | Official alibaba-pai pin; on disk; pending ComfyUI smoke |
+| ACE-Step 1.5 | `studio-ace-step-1.5-turbo-aio`, `studio-ace-step-1.5-xl-sft`, `studio-ace-step-1.5-text-encoder-4b`, `studio-ace-step-1.5-vae` | 26.72 | Official Comfy-Org pin; on disk; pending ComfyUI smoke |
+| InfiniteTalk | `studio-infinitetalk-single` | 2.53 | Official MeiGen ComfyUI pack; on disk; pending ComfyUI smoke |
+| LatentSync 1.6 | `studio-latentsync-1.6-unet`, `studio-latentsync-1.6-syncnet` | 6.22 | Official ByteDance pin; on disk; pending ComfyUI smoke |
+| SeedVR2-7B NVFP4 | `studio-seedvr2-7b-nvfp4`, `studio-seedvr2-vae` | 4.90 | Official Comfy-Org pin; 3B not kept; on disk; pending ComfyUI smoke |
+| ThinkSound | `studio-thinksound`, `studio-thinksound-vae`, `studio-thinksound-synchformer` | 22.85 | Official FunAudioLLM pin; on disk; pending ComfyUI smoke |
+| Fish Audio S2 Pro | `studio-fish-s2-pro-00001`, `studio-fish-s2-pro-00002`, `studio-fish-s2-pro-codec` | 10.23 | Official fishaudio pin; on disk; local/personal use; check LICENSE.md before any commercial use |
+| Qwen3-TTS 1.7B | `studio-qwen3-tts-1.7b-customvoice`, `studio-qwen3-tts-1.7b-voicedesign`, `studio-qwen3-tts-tokenizer` | 7.77 | Official Qwen 12Hz CustomVoice + VoiceDesign; on disk; pending smoke |
+| Hunyuan3D 2.1 | `studio-hunyuan3d-2_1-comfy-checkpoint` | 6.86 | Official Comfy-Org `hunyuan_3d_v2.1.safetensors`; SHA-256 verified 2026-08-27; runs on the shared ComfyUI overlay; pending smoke |
+| PaddleOCR-VL-1.6 | `ocr-paddleocr-vl-1.6` plus sidecars `ocr-paddleocr-vl-1.6-tokenizer-json`, `ocr-paddleocr-vl-1.6-tokenizer-model`, `ocr-paddleocr-vl-1.6-config-json`, `ocr-paddleocr-vl-1.6-tokenizer-config-json`, `ocr-paddleocr-vl-1.6-special-tokens-map-json`, `ocr-paddleocr-vl-1.6-preprocessor-config-json`, `ocr-paddleocr-vl-1.6-processor-config-json`, `ocr-paddleocr-vl-1.6-generation-config-json`, `ocr-paddleocr-vl-1.6-added-tokens-json`, `ocr-paddleocr-vl-1.6-modeling-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-configuration-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-image-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-processing-paddleocr-vl-py`, `ocr-paddleocr-vl-1.6-chat-template-jinja` | 1.80 | Official PaddlePaddle pin; weights on disk; image `ai-station/paddleocr-vl:1.6` built; profile `ocr-vl` off while llama.cpp holds the GPU |
+
 ### Pack totals (weights only)
 
 | Pack | Size (GiB) |
 |---|---:|
-| Core (`general` + embedding) | 21.21 |
-| Other chat/vision/rerank GGUFs | 54.66 |
+| Core (`general` + embedding) | 15.93 |
+| Other chat/vision/rerank GGUFs | 40.17 |
 | Retained chat (Ornith + Qwen3.8 + LongWriter) | 54.91 |
 | ComfyUI MiniMax Music 3 | 11.10 |
 | ComfyUI MiniMax H3 | 62.73 |
 | ComfyUI FLUX.2-dev | 30.45 |
-| **All manifest weights** | **235.05** |
+| Speech (Qwen3-ASR 1.7B Q8 + mmproj) | 2.35 |
+| Studio 2026 + OCR (pinned, not all accepted) | 192.66 |
+| **All manifest weights** | **361.62** |
 
 Evidence files: `benchmarks/results/20260823/` (LiteLLM and ComfyUI
 smokes). Hardware planning remains in the table above, not a guarantee
@@ -98,9 +120,13 @@ Model GGUF and safetensors are **not** in Git. They live under
 | Optional local Python virtualenvs (`.venvs/`) | not part of Git | Workstation-only; do not treat as product size. |
 | Digest-pinned Compose images | tens of GiB | Runtime containers, not model weights and not the Git tree. |
 
+Current production-plus-studio manifest total after Qwen3.8/Ornith
+consolidation plus pinned (not yet all locally accepted) studio/ASR/OCR
+weights: **361.62 GiB**.
+
 The official project size **without AI model weights** is the Git
-application: about **1.2 MiB** of tracked source. A full recommended
-weight set is **235.05 GiB** under `/srv/ai-station` and is provisioned
+application: about **1.2 MiB** of tracked source. The current manifest
+weight set is **361.62 GiB** under `/srv/ai-station` and is provisioned
 separately with `ai models install` / `make models-core`.
 
 ## Manifest fields
@@ -126,8 +152,8 @@ Each model entry contains:
 
 Default operational models:
 
-- Qwen3.6 35B-A3B general (GGUF);
-- Qwen3 Embedding 0.6B.
+- Qwen3.8 27B shared general/reasoning GGUF;
+- Qwen3 Embedding 8B Q4_K_M.
 
 ~~~bash
 ./scripts/provision-models.sh --profile core
@@ -141,13 +167,10 @@ Core plus selectable heavy roles. These retained packs are never
 experimental and must never be deleted: Ornith 1.5, Qwen3.8, LongWriter
 Q4, and ComfyUI MiniMax Music 3 / MiniMax H3 / FLUX.2.
 
-- Qwen3 Coder 30B-A3B;
-- DeepSeek-R1 Distill Qwen 32B (reasoning);
-- Qwen3-VL 32B + mmproj (vision);
-- Ornith-1.5 35B Q4 (retained coding profile; does not replace coder);
-- Qwen3.8 27B UD-Q4_K_M + mmproj (retained dense VL+tools; does not replace general or vision);
+- Ornith-1.5 35B Q4 (default coding profile);
+- Qwen3.8 27B UD-Q4_K_M + mmproj (shared general, reasoning, and vision profile);
 - LongWriter-Zero 32B Q4_K_M (retained long-form / RL writing; does not replace general);
-- Qwen3 Reranker 0.6B (CPU; started with `ai start` for hybrid RAG).
+- Qwen3 Reranker 4B Q6_K (CPU; started with `ai start` for hybrid RAG).
 
 ~~~bash
 ./scripts/provision-models.sh --profile all
@@ -240,6 +263,7 @@ silently overwritten.
 /srv/ai-station/models/embedding
 /srv/ai-station/models/reranker
 /srv/ai-station/models/whisper
+/srv/ai-station/models/asr
 /srv/ai-station/models/custom
 /srv/ai-station/models/comfyui
 ~~~

@@ -28,6 +28,7 @@ required_files = [
     "CONTRIBUTING.md",
     "CHANGELOG.md",
     "docs/ARCHITECTURE.md",
+    "docs/PLATFORM.md",
     "docs/INSTALLATION.md",
     "docs/IMAGE_LOCK.md",
     "docs/MODELS.md",
@@ -37,8 +38,12 @@ required_files = [
     "docs/clients/OPENCODE.md",
     "docs/clients/OPENWEBUI.md",
     "docs/clients/COMFYUI.md",
+    "docs/clients/N8N.md",
     "docs/ops/AI_STATION_CURRENT_STATE.md",
+    "docs/ops/DISASTER_RECOVERY.md",
+    "docs/ops/DATA_GOVERNANCE.md",
     "docs/adr/README.md",
+    "docs/adr/ADR-037-voice-mvp-loopback.md",
     "docs/assets/ai-station-banner.svg",
 ]
 

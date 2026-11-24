@@ -1,0 +1,42 @@
+{
+  "date": "2026-08-27",
+  "session_groups": ["ramtin"],
+  "aidev_docker_groups_in_process": false,
+  "llama_cpp_general": {
+    "port": 8082,
+    "n_params": 27320697856,
+    "n_ctx": 8192,
+    "n_ctx_train": 262144,
+    "n_embd": 5120,
+    "completion_probe": "general-ok",
+    "http": 200
+  },
+  "host_gateway_models": [
+    "Qwen3.8-27B-UD-Q4_K_M",
+    "Ornith-1.5-35B-Q4_K_M",
+    "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
+    "Qwen3.8-27B-Vision-UD-Q4_K_M",
+    "LongWriter-Zero-32B-Q4_K_M"
+  ],
+  "embedding": {
+    "port": 8090,
+    "n_embd": 4096,
+    "n_params": 7567295488,
+    "probe_dim": 4096,
+    "sha256_match": true
+  },
+  "reranker": {
+    "port": 8091,
+    "n_params": 4410057216,
+    "http": 200,
+    "sha256_match": true,
+    "quality_accepted": false,
+    "note": "degenerate scores and wrong order on loopback/API fixture"
+  },
+  "litellm": {
+    "yaml_on_disk_canonical": true,
+    "project_keys_still_old_allowlist": true,
+    "qwen38_via_opencode_key": 403,
+    "qwen36_via_opencode_key": 400
+  }
+}

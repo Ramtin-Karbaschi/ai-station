@@ -1,0 +1,259 @@
+{
+  "checked_at": "2026-08-23T14:09:47.140993+00:00",
+  "restore_profile": "general",
+  "tools": {
+    "open_webui": "pass",
+    "open_webui_config": "pass",
+    "litellm": "pass",
+    "tika": "pass",
+    "searxng": "pass",
+    "n8n": "pass",
+    "opencode_health": "pass",
+    "graphify_status": "pass",
+    "opencode_doctor": "pass",
+    "embedding": {
+      "engine": "llama.cpp",
+      "placement": "cpu",
+      "elapsed_s": 0.049,
+      "dim": 1024,
+      "http": 200,
+      "pass": true
+    },
+    "reranker": {
+      "elapsed_s": 1.463,
+      "n_results": 2,
+      "http": 200,
+      "pass": true,
+      "body_keys": [
+        "model",
+        "object",
+        "results",
+        "usage"
+      ]
+    },
+    "comfyui_health": "pass"
+  },
+  "profiles": {
+    "general": {
+      "identity": {
+        "model": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.64,
+        "pass": true,
+        "finish_reason": "stop",
+        "content_preview": "PONG",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 3,
+          "prompt_tokens": 28,
+          "total_tokens": 31,
+          "prompt_tokens_details": {
+            "cached_tokens": 8
+          }
+        }
+      },
+      "tools": {
+        "model": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 1.028,
+        "pass": true,
+        "finish_reason": "tool_calls",
+        "content_preview": "",
+        "tool_names": [
+          "get_time"
+        ],
+        "usage": {
+          "completion_tokens": 26,
+          "prompt_tokens": 279,
+          "total_tokens": 305,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "pass": true
+    },
+    "coder": {
+      "identity": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct-Q4",
+        "http": 200,
+        "elapsed_s": 0.523,
+        "pass": true,
+        "finish_reason": "stop",
+        "content_preview": "PONG",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 3,
+          "prompt_tokens": 16,
+          "total_tokens": 19,
+          "prompt_tokens_details": {
+            "cached_tokens": 3
+          }
+        }
+      },
+      "tools": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct-Q4",
+        "http": 200,
+        "elapsed_s": 0.842,
+        "pass": true,
+        "finish_reason": "tool_calls",
+        "content_preview": "",
+        "tool_names": [
+          "get_time"
+        ],
+        "usage": {
+          "completion_tokens": 22,
+          "prompt_tokens": 279,
+          "total_tokens": 301,
+          "prompt_tokens_details": {
+            "cached_tokens": 1
+          }
+        }
+      },
+      "pass": true
+    },
+    "ornith": {
+      "identity": {
+        "model": "Ornith-1.5-35B-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.582,
+        "pass": true,
+        "finish_reason": "stop",
+        "content_preview": "PONG",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 3,
+          "prompt_tokens": 28,
+          "total_tokens": 31,
+          "prompt_tokens_details": {
+            "cached_tokens": 8
+          }
+        }
+      },
+      "tools": {
+        "model": "Ornith-1.5-35B-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.901,
+        "pass": true,
+        "finish_reason": "tool_calls",
+        "content_preview": "",
+        "tool_names": [
+          "get_time"
+        ],
+        "usage": {
+          "completion_tokens": 26,
+          "prompt_tokens": 279,
+          "total_tokens": 305,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "pass": true
+    },
+    "qwen38": {
+      "identity": {
+        "model": "Qwen3.8-27B-UD-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 1.18,
+        "pass": true,
+        "finish_reason": "length",
+        "content_preview": "We need to respond to user: \"Reply with the single token PONG.\"",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 60,
+          "total_tokens": 76,
+          "prompt_tokens_details": {
+            "cached_tokens": 42
+          }
+        }
+      },
+      "tools": {
+        "model": "Qwen3.8-27B-UD-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 2.494,
+        "pass": true,
+        "finish_reason": "tool_calls",
+        "content_preview": "The user is asking to call get_time with the timezone UTC.\n",
+        "tool_names": [
+          "get_time"
+        ],
+        "usage": {
+          "completion_tokens": 42,
+          "prompt_tokens": 311,
+          "total_tokens": 353,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "pass": true
+    },
+    "longwriter": {
+      "identity": {
+        "model": "LongWriter-Zero-32B-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.976,
+        "pass": true,
+        "finish_reason": "length",
+        "content_preview": " <think>\nThe user's request is straightforward: reply with the single token \"",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 265,
+          "total_tokens": 281,
+          "prompt_tokens_details": {
+            "cached_tokens": 254
+          }
+        }
+      },
+      "tools": null,
+      "pass": true
+    },
+    "vision": {
+      "identity": {
+        "model": "Qwen3-VL-32B-Instruct-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.485,
+        "pass": true,
+        "finish_reason": "stop",
+        "content_preview": "PONG",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 3,
+          "prompt_tokens": 16,
+          "total_tokens": 19,
+          "prompt_tokens_details": {
+            "cached_tokens": 3
+          }
+        }
+      },
+      "tools": null,
+      "pass": true
+    },
+    "reasoning": {
+      "identity": {
+        "model": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
+        "http": 200,
+        "elapsed_s": 0.941,
+        "pass": true,
+        "finish_reason": "length",
+        "content_preview": "\nOkay, so I need to figure out how to respond to this query",
+        "tool_names": [],
+        "usage": {
+          "completion_tokens": 16,
+          "prompt_tokens": 11,
+          "total_tokens": 27,
+          "prompt_tokens_details": {
+            "cached_tokens": 2
+          }
+        }
+      },
+      "tools": null,
+      "pass": true
+    }
+  },
+  "overall_required_pass": true,
+  "overall_pass": true
+}

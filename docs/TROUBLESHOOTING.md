@@ -29,6 +29,11 @@ Common causes:
 - required secret values are missing;
 - Tika or the embedding service has not started;
 - the CPU reranker on `:8091` is down (hybrid RAG needs it);
+- Knowledge vectors are 4096-d `halfvec` and Open WebUI is missing
+  `PGVECTOR_USE_HALFVEC=true` (restart loop: VECTOR_LENGTH 1536, or
+  HNSW "more than 4000 dimensions"). Re-run
+  `scripts/reindex-openwebui-embeddings.py` so
+  `idx_document_chunk_vector` exists as HNSW on `subvector(...,4000)`;
 - the Open WebUI persistent volume contains incompatible state;
 - port 3000 is already in use.
 
@@ -47,7 +52,7 @@ Common causes:
 - Knowledge collection is not attached to the chat;
 - Native function calling is on (station default is `default` so chunks
   auto-inject);
-- ComfyUI holds the GPU, so the embedder and chat model are stopped;
+- ComfyUI holds the GPU, so the chat model is stopped (CPU embedder stays up; ADR-022);
 - hybrid search cannot reach `http://reranker:8091/v1/rerank`.
 
 See [clients/OPENWEBUI.md](clients/OPENWEBUI.md).
@@ -66,6 +71,42 @@ docker logs --tail=200 ai-station-comfyui-experimental
 
 If the GPU still holds a llama.cpp profile, stop it first
 (`ai models stop`). See [clients/COMFYUI.md](clients/COMFYUI.md).
+
+## n8n is unavailable
+
+n8n is optional and off by default (`ai start` does not launch it).
+It is CPU-only and does not stop llama.cpp.
+
+~~~bash
+ai n8n status
+ai provider start n8n --dry-run
+curl -v http://127.0.0.1:5678/healthz
+ai logs n8n
+~~~
+
+Common causes:
+
+- `N8N_ENCRYPTION_KEY` missing from `.env` (first start writes it);
+- `/srv/ai-station/runtime/n8n` not writable by uid 1000;
+- LiteLLM `:4000` is down, so imported workflows fail even if the UI loads;
+- Instance AI wizard asks for Anthropic/OpenAI: run `ai n8n configure`
+  then `ai n8n start` so `N8N_LLM_API_KEY` is in the container. If the
+  wizard remains, pick Self-hosted / OpenAI-compatible at
+  `http://llm-gateway:4000/v1` with model `Qwen3.8-27B-UD-Q4_K_M`.
+- Sandbox wizard asks for Service URL / API key: do not paste a host
+  URL. Start n8n so env sets `http://sandbox-api:8080` and
+  `N8N_SANDBOX_SERVICE_API_KEY`. Daytona is not used.
+- Assistant sits on “working” for many minutes with no new UI text:
+  n8n did not send `max_tokens`. Check `docker logs ai-station-llm-general`
+  for rising `n_decoded`. Restart general after the 4096 cap
+  (`ai models use general`) if an old unbounded request is still on
+  the GPU.
+- `Rate limit exceeded … Limit type: tokens` on `/assistant`: a LiteLLM
+  virtual key still has a TPM cap. Run `ai projects unlimit` (or
+  `ai n8n configure` for the n8n key). This is not the 262144 context
+  window. New keys are unlimited unless you pass `--tpm`/`--rpm`.
+
+See [clients/N8N.md](clients/N8N.md).
 
 ## Open WebUI shows stale or missing model names
 
@@ -272,6 +313,31 @@ curl -v http://127.0.0.1:8888/health
 curl -v http://127.0.0.1:8890/health
 ~~~
 
+## Cannot git commit in `/opt/ai-station`
+
+The worktree and `.git` are owned by `aidev`. The active WSL session may
+run as a user that is not in `aidev` and has no sudo. Repair as root (does
+not take the worktree away from `aidev`).
+This WSL user has no sudo; from WSL run:
+
+~~~bash
+/mnt/c/WINDOWS/system32/wsl.exe -d Ubuntu -u root -- /opt/ai-station/scripts/ai opencode install
+~~~
+
+That adds the WSL default user to group `aidev`, sets
+`core.sharedRepository=group`, makes `.git` setgid/group-writable, and
+applies a user ACL so even a session that has not yet refreshed groups
+can write the index. Confirm with:
+
+~~~bash
+id
+git -C /opt/ai-station config --get core.sharedRepository
+touch /opt/ai-station/.git/index.lock && rm /opt/ai-station/.git/index.lock
+~~~
+
+`id` should include `aidev`. A new login picks up the
+group; the ACL covers the current process immediately.
+
 ## OpenCode cannot develop or reach local models
 
 The supported client is OpenCode running **inside WSL as `aidev`**. Native
@@ -328,9 +394,9 @@ is complete only when each deliverable has filesystem or test evidence.
 
 ## OpenCode input exceeds its client context
 
-OpenCode advertises a 16384-token coder limit and 4096-token output budget even
-though the shared coder runtime can accept 32768. The other local
-profiles have 8192/2048. Avoid attaching generated artifacts, model files,
+OpenCode advertises a 8192-token Ornith/coder limit and 4096-token output
+budget. Qwen3.8 general/reasoning advertise 262144 after the 2026-08-27
+GPU probe. Avoid attaching generated artifacts, model files,
 complete logs, or `GRAPH_REPORT.md`. Use Graphify queries and bounded log
 snapshots instead.
 
@@ -344,9 +410,35 @@ Re-read the exact file after a failed edit and apply a smaller patch with stable
 ASCII context around the target. Verify UTF-8 and run the relevant test. Do not
 replace an entire user file merely to work around a patch-context mismatch.
 
-## Whisper failure
+
+## Chat replies stop mid-sentence
+
+Open WebUI default `max_tokens` is 4096 (raised from 1024). A mid-sentence cut
+with `finish_reason` `length` means the completion budget or the 262144-token
+context window filled.
 
 ~~~bash
+# Inspect the last completion via LiteLLM (not llama.cpp :8888)
+curl -sS http://127.0.0.1:4000/v1/chat/completions \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"Qwen3.8-27B-UD-Q4_K_M","messages":[{"role":"user","content":"ping"}],"max_tokens":16}'
+~~~
+
+`choices[0].finish_reason` should be `stop` for short answers. `length` on a
+short prompt is an output-cap problem; `length` on a long RAG thread is the
+262144 context window. Recreate Open WebUI after changing
+`DEFAULT_MODEL_PARAMS`.
+
+## Whisper failure
+
+Station transcription is `POST http://127.0.0.1:8888/v1/audio/transcriptions`
+(Qwen3-ASR on `:8092` first; faster-whisper-large-v3 for timestamps or
+when Qwen is down). Open WebUI still keeps a local Whisper cache for
+its own audio path.
+
+~~~bash
+curl -fsS http://127.0.0.1:8092/v1/models
 docker exec -it ai-station-open-webui-1 \
   find /app/backend/data/cache/whisper/models \
   -maxdepth 2 \

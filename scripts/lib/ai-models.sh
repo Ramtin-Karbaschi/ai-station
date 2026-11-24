@@ -7,6 +7,7 @@ Usage:
   ai models list
   ai models active
   ai models catalog [--json]
+  ai models review [--json] [--before-replace ID] [--allow-experimental]
   ai models add --id ID --repo REPO --filename FILE --role ROLE --revision SHA \
       --sha256 HEX --size-bytes N [--destination REL] [--confirm]
   ai models add <manifest-id>
@@ -49,6 +50,25 @@ PY
 
 cmd_models_catalog() {
   "$ROOT/scripts/model_manager.py" catalog "$@"
+}
+
+ai_provider_id_for_profile() {
+  local profile="${1:-}"
+  [[ -n "$profile" ]] || return 1
+  PYTHONPATH="$ROOT" python3 - "$profile" <<'PY'
+import sys
+from apps.gateway.app.admission import load_providers
+
+profile = sys.argv[1]
+for provider_id, provider in (load_providers().get("providers") or {}).items():
+    if provider.get("heavy") and str(provider.get("profile") or "") == profile:
+        print(provider.get("id") or provider_id)
+        break
+PY
+}
+
+cmd_models_review() {
+  python3 "$ROOT/scripts/lib/catalog_review.py" "$@"
 }
 
 cmd_models_add() {
@@ -147,11 +167,18 @@ cmd_models_use() {
     return 0
   fi
 
+  # cmd_start already owns the lifecycle lock when it calls this function.
+  # Direct model switches must share the lock with provider start/stop so a
+  # media worker cannot race another profile transition.
+  if [[ -z "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
+    ai_lifecycle_lock "models-use-${profile}"
+  fi
+  current="$(ai_active_heavy_profile || true)"
+
   echo "Switching heavy model profile -> ${profile}"
-  if [[ "$current" == "comfyui-experimental" || "$current" == "sglang-experimental" ]]; then
-    # sglang-experimental is retired; still clear a stale profile name.
-    echo "Stopping experimental overlay: $current"
-    ai_stop_experimental_gpu_overlays
+  ai_stop_experimental_gpu_overlays
+  if [[ "$current" == "comfyui-experimental" || "$current" == "ocr-vl" || "$current" == "sglang-experimental" ]]; then
+    echo "Stopped GPU overlay: $current"
     ai_set_active_heavy_profile ""
     current=""
   fi
@@ -176,19 +203,34 @@ cmd_models_use() {
   done
 
   ai_compose --profile "$profile" up -d "$service"
+  # Publish only after readiness and warm-up succeed. The marker is the
+  # operator-visible active state, not an intent signal; clear it explicitly
+  # when startup fails so a partially started profile is never advertised.
+  if ! ai_wait_url "http://127.0.0.1:${port}/v1/models" "Model $profile" 300; then
+    ai_set_active_heavy_profile ""
+    return 1
+  fi
+  if ! ai_litellm_warmup_chat "$profile"; then
+    ai_set_active_heavy_profile ""
+    return 1
+  fi
   ai_set_active_heavy_profile "$profile"
-  ai_wait_url "http://127.0.0.1:${port}/v1/models" "Model $profile" 300
-  ai_litellm_warmup_chat "$profile"
 
   echo "Active model: $(public_name_for_profile "$profile") (profile=${profile}, port=${port})"
 }
 
 cmd_models_stop() {
+  if [[ -z "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
+    ai_lifecycle_lock "models-stop"
+  fi
   local p
+  # Check ComfyUI before stopping llama.cpp. If a media generation is in
+  # flight, ai_stop_experimental_gpu_overlays rejects the transition and the
+  # existing model service must remain available.
+  ai_stop_experimental_gpu_overlays
   for p in "${HEAVY_PROFILES[@]}"; do
     ai_compose --profile "$p" stop "$(ai_profile_service "$p")" 2>/dev/null || true
   done
-  ai_stop_experimental_gpu_overlays
   ai_set_active_heavy_profile ""
   echo "All heavy model profiles stopped."
 }
@@ -215,6 +257,7 @@ cmd_models() {
       ;;
     active) cmd_models_active ;;
     catalog) cmd_models_catalog "$@" ;;
+    review) cmd_models_review "$@" ;;
     add) cmd_models_add "$@" ;;
     install) cmd_models_install "$@" ;;
     verify) cmd_models_verify "$@" ;;

@@ -1,0 +1,13 @@
+{
+  "name": "n8n",
+  "classification": "optional_profile",
+  "version": "2.35.6",
+  "image": "docker.n8n.io/n8nio/n8n:2.35.6",
+  "listen": "127.0.0.1",
+  "port": 5678,
+  "health_path": "/healthz",
+  "provider_id": "n8n",
+  "compose_profile": "n8n",
+  "license": "Sustainable Use License",
+  "adr": "docs/adr/ADR-021-optional-n8n-automation-client.md"
+}

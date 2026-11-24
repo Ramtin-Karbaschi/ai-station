@@ -4,31 +4,34 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
+import subprocess
+import tempfile
 import unittest
 import urllib.request
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import yaml
+from fastapi import HTTPException
 
 from apps.gateway.app import main as gateway_main
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_CHAT_MODELS = [
-    "Qwen3.6-35B-A3B-UD-Q4_K_M",
-    "Qwen3-Coder-30B-A3B-Instruct-Q4",
-    "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M",
-    "Qwen3-VL-32B-Instruct-Q4_K_M",
-    "Ornith-1.5-35B-Q4_K_M",
     "Qwen3.8-27B-UD-Q4_K_M",
+    "Ornith-1.5-35B-Q4_K_M",
+    "Qwen3.8-27B-Reasoning-UD-Q4_K_M",
+    "Qwen3.8-27B-Vision-UD-Q4_K_M",
     "LongWriter-Zero-32B-Q4_K_M",
 ]
 CANONICAL_UTILITY_MODELS = [
-    "Qwen3-Embedding-0.6B-Q8_0",
-    "Qwen3-Reranker-0.6B-Q8_0",
+    "Qwen3-Embedding-8B-Q4_K_M",
+    "Qwen3-Reranker-4B-Q6_K",
 ]
+CANONICAL_AUDIO_MODELS = ["ai-station-asr", "ai-station-speech"]
 INVALID_PUBLIC_NAMES = {
     "general-qwen3.6",
     "local-general",
@@ -52,19 +55,18 @@ class CatalogContractTests(unittest.TestCase):
             (ROOT / "config/model-catalog.json").read_text(encoding="utf-8")
         )
         by_id = {m["id"]: m for m in catalog["models"]}
-        self.assertTrue(by_id["general-qwen3_6-35b-a3b"].get("supports_tools"))
-        self.assertTrue(by_id["coder-qwen3-coder-30b-a3b"].get("supports_tools"))
-        self.assertTrue(
-            by_id["general-qwen3_6-35b-a3b"].get("supports_json_schema")
-        )
-        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_tools"))
-        self.assertTrue(by_id["ornith-1_5-35b"].get("supports_json_schema"))
-        self.assertEqual(by_id["ornith-1_5-35b"]["port"], 8086)
-        self.assertEqual(by_id["ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4")
-        self.assertEqual(by_id["ornith-1_5-35b"]["alias"], "local-ornith")
-        self.assertTrue(by_id["ornith-1_5-35b"].get("enabled"))
+        self.assertTrue(by_id["general-qwen38-27b"].get("supports_tools"))
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("supports_tools"))
+        self.assertTrue(by_id["general-qwen38-27b"].get("supports_json_schema"))
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("supports_json_schema"))
+        self.assertEqual(by_id["coder-ornith-1_5-35b"]["port"], 8083)
         self.assertEqual(
-            by_id["ornith-1_5-35b"].get("default_system_prefix"), "/no_think"
+            by_id["coder-ornith-1_5-35b"]["manifest_id"], "ornith-1.5-35b-q4"
+        )
+        self.assertEqual(by_id["coder-ornith-1_5-35b"]["alias"], "local-coder")
+        self.assertTrue(by_id["coder-ornith-1_5-35b"].get("enabled"))
+        self.assertEqual(
+            by_id["coder-ornith-1_5-35b"].get("default_system_prefix"), ""
         )
         self.assertNotIn("ornith-1_0-35b", by_id)
         manifest = json.loads(
@@ -76,14 +78,14 @@ class CatalogContractTests(unittest.TestCase):
             "fbbaed45c2f0e200276ffa51701a24d45dc7f57e",
         )
         self.assertNotIn("ornith-1.0-35b-q4", by_manifest)
-        self.assertEqual(by_id["qwen38-27b"]["port"], 8087)
-        self.assertEqual(by_id["qwen38-27b"]["alias"], "local-qwen38")
-        self.assertEqual(by_id["qwen38-27b"]["manifest_id"], "qwen38-27b-q4")
-        self.assertTrue(by_id["qwen38-27b"].get("supports_tools"))
-        self.assertTrue(by_id["qwen38-27b"].get("supports_vision"))
-        self.assertTrue(by_id["qwen38-27b"].get("supports_json_schema"))
-        self.assertEqual(by_id["qwen38-27b"].get("default_system_prefix"), "")
-        self.assertTrue(by_id["qwen38-27b"].get("enabled"))
+        self.assertEqual(by_id["vision-qwen38-27b"]["port"], 8085)
+        self.assertEqual(by_id["vision-qwen38-27b"]["alias"], "local-vision")
+        self.assertEqual(by_id["vision-qwen38-27b"]["manifest_id"], "qwen38-27b-q4")
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_tools"))
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_vision"))
+        self.assertTrue(by_id["vision-qwen38-27b"].get("supports_json_schema"))
+        self.assertEqual(by_id["vision-qwen38-27b"].get("default_system_prefix"), "")
+        self.assertTrue(by_id["vision-qwen38-27b"].get("enabled"))
         self.assertEqual(
             by_manifest["qwen38-27b-q4"]["revision"],
             "4ca720788d1e01f1bff70c033e0d0028fd02e502",
@@ -134,7 +136,7 @@ class CatalogContractTests(unittest.TestCase):
         )
         self.assertIn("ornith", registry["runtime_policy"]["heavy_profiles"])
         self.assertEqual(registry["runtime_policy"]["max_active_heavy_profiles"], 1)
-        self.assertEqual(registry["models"]["local-ornith"]["status"], "optional")
+        self.assertEqual(registry["models"]["local-ornith"]["status"], "compatibility")
         self.assertEqual(registry["models"]["local-coder"]["status"], "production")
 
     def test_qwen38_provider_is_optional_and_does_not_replace_defaults(self) -> None:
@@ -158,7 +160,7 @@ class CatalogContractTests(unittest.TestCase):
         )
         self.assertIn("qwen38", registry["runtime_policy"]["heavy_profiles"])
         self.assertEqual(registry["runtime_policy"]["max_active_heavy_profiles"], 1)
-        self.assertEqual(registry["models"]["local-qwen38"]["status"], "optional")
+        self.assertEqual(registry["models"]["local-qwen38"]["status"], "compatibility")
         self.assertEqual(registry["models"]["local-general"]["status"], "production")
 
     def test_qwen38_compose_keeps_vision_mmproj_and_thinking(self) -> None:
@@ -183,6 +185,11 @@ class CatalogContractTests(unittest.TestCase):
             lock["services"]["llm-qwen38"]["image"],
             lock["services"]["llm-general"]["image"],
         )
+        self.assertEqual(
+            lock["services"]["asr-qwen3"]["image"],
+            lock["services"]["llm-general"]["image"],
+        )
+        self.assertEqual(lock["services"]["ocr-vl"]["pull_policy"], "build")
 
     def test_longwriter_provider_is_optional_q4_with_full_offload(self) -> None:
         providers = yaml.safe_load(
@@ -224,15 +231,38 @@ class CatalogContractTests(unittest.TestCase):
         self.assertIn("longwriter", registry["runtime_policy"]["heavy_profiles"])
         self.assertEqual(registry["models"]["local-longwriter"]["status"], "optional")
 
-    def test_ornith_compose_disables_reasoning(self) -> None:
+    def test_ornith_compatibility_profile_matches_coder_capacity(self) -> None:
         compose = yaml.safe_load(
             (ROOT / "compose.models.yml").read_text(encoding="utf-8")
         )
         cmd = compose["services"]["llm-ornith"]["command"]
         self.assertIn("--reasoning", cmd)
-        self.assertEqual(cmd[cmd.index("--reasoning") + 1], "off")
+        self.assertEqual(cmd[cmd.index("--reasoning") + 1], "auto")
         self.assertIn("--reasoning-budget", cmd)
-        self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "0")
+        self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "2048")
+        self.assertEqual(cmd[cmd.index("-c") + 1], "${LLM_ORNITH_CONTEXT:-8192}")
+        self.assertEqual(cmd[cmd.index("-ngl") + 1], "${LLM_ORNITH_GPU_LAYERS:-999}")
+        self.assertEqual(cmd[cmd.index("--cache-type-k") + 1], "${LLM_ORNITH_CACHE_TYPE_K:-q4_0}")
+
+    def test_vision_compose_enables_template_detected_reasoning(self) -> None:
+        compose = yaml.safe_load(
+            (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        )
+        cmd = compose["services"]["llm-vision"]["command"]
+        self.assertIn("--mmproj", cmd)
+        self.assertIn("--reasoning", cmd)
+        self.assertEqual(cmd[cmd.index("--reasoning") + 1], "auto")
+        self.assertIn("--reasoning-budget", cmd)
+        self.assertEqual(cmd[cmd.index("--reasoning-budget") + 1], "2048")
+        self.assertEqual(cmd[cmd.index("-c") + 1], "${VISION_CONTEXT:-16384}")
+        general = compose["services"]["llm-general"]["command"]
+        self.assertEqual(general[general.index("--reasoning") + 1], "auto")
+        self.assertEqual(general[general.index("--n-predict") + 1], "8192")
+        self.assertIn("--mmproj", general)
+        self.assertIn("--no-mmproj-offload", general)
+        catalog = json.loads((ROOT / "config/model-catalog.json").read_text(encoding="utf-8"))
+        general_model = next(model for model in catalog["models"] if model["id"] == "general-qwen38-27b")
+        self.assertTrue(general_model["supports_vision"])
 
     def test_reasoning_compose_enables_jinja_for_tools(self) -> None:
         compose = yaml.safe_load(
@@ -270,8 +300,6 @@ class CatalogContractTests(unittest.TestCase):
                 "local-coder",
                 "local-reasoning",
                 "local-vision",
-                "local-ornith",
-                "local-qwen38",
                 "local-longwriter",
                 "local-embedding",
                 "local-reranker",
@@ -285,8 +313,18 @@ class CatalogContractTests(unittest.TestCase):
         litellm_model_names = [entry["model_name"] for entry in litellm["model_list"]]
         self.assertEqual(
             litellm_model_names,
-            CANONICAL_CHAT_MODELS + CANONICAL_UTILITY_MODELS,
+            CANONICAL_CHAT_MODELS + CANONICAL_UTILITY_MODELS + CANONICAL_AUDIO_MODELS,
         )
+
+        self.assertIs(litellm["general_settings"]["cancel_on_disconnect"], True)
+        routes = {entry["model_name"]: entry for entry in litellm["model_list"]}
+        self.assertEqual(routes["ai-station-asr"]["model_info"]["mode"], "audio_transcription")
+        self.assertEqual(routes["ai-station-speech"]["model_info"]["mode"], "audio_speech")
+        self.assertNotIn("ports", compose["services"]["station-voice"])
+        audio_env = compose["services"]["open-webui"]["environment"]
+        for kind, model in zip(("STT", "TTS"), CANONICAL_AUDIO_MODELS):
+            self.assertEqual(audio_env[f"AUDIO_{kind}_OPENAI_API_BASE_URL"], "http://llm-gateway:4000/v1")
+            self.assertEqual(audio_env[f"AUDIO_{kind}_MODEL"], model)
 
         openai_configs = json.loads(
             compose["services"]["open-webui"]["environment"]["OPENAI_API_CONFIGS"]
@@ -338,16 +376,183 @@ class CatalogContractTests(unittest.TestCase):
         self.assertNotIn("0.0.0.0:8888", verifier)
         self.assertIn("host.docker.internal", unit)
 
+    def test_chat_models_have_explicit_output_caps(self) -> None:
+        litellm = yaml.safe_load(
+            (ROOT / "config/gateway/litellm.yaml").read_text(encoding="utf-8")
+        )
+        for entry in litellm["model_list"]:
+            if entry["model_info"].get("mode") != "chat":
+                continue
+            if entry["model_name"] == "LongWriter-Zero-32B-Q4_K_M":
+                self.assertNotIn("max_tokens", entry["litellm_params"])
+                continue
+            expected = 8192 if entry["model_name"] == "Ornith-1.5-35B-Q4_K_M" else 4096
+            self.assertEqual(entry["litellm_params"].get("max_tokens"), expected)
+
 
 class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.enterContext(patch.dict(os.environ, {"AI_ACTIVE_PROFILE_FILE": str(directory / "active")}))
+
+        class NullLifecycleLock:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        self._lifecycle_lock_patcher = patch.object(
+            gateway_main, "LifecycleLock", NullLifecycleLock
+        )
+        self._lifecycle_lock_patcher.start()
         gateway_main.cached_catalog.cache_clear()
         gateway_main.QUEUE.clear()
         gateway_main.ACTIVE_MODEL_ID = None
 
     async def asyncTearDown(self) -> None:
+        self._lifecycle_lock_patcher.stop()
         gateway_main.QUEUE.clear()
         gateway_main.ACTIVE_MODEL_ID = None
+
+    async def test_denied_admission_does_not_start_compose(self) -> None:
+        model = {"id": "test-model", "service": "llm-test", "heavy": False}
+        compose_calls: list[list[str]] = []
+
+        class FakeDecision:
+            def __init__(self, decision: str):
+                self.decision = decision
+
+            def to_dict(self):
+                return {"decision": self.decision}
+
+        async def fake_compose(args, timeout=180):
+            compose_calls.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        for decision_name in ("QUEUE", "START_WITH_REDUCED_CONTEXT"):
+            compose_calls.clear()
+            with (
+                patch.object(
+                    gateway_main,
+                    "admit",
+                    return_value=FakeDecision(decision_name),
+                ),
+                patch.object(
+                    gateway_main,
+                    "provider_for_catalog_model",
+                    return_value={"id": "provider"},
+                ),
+                patch.object(
+                    gateway_main,
+                    "registry",
+                    return_value={"admission": {"enforce": True}},
+                ),
+                patch.object(gateway_main, "compose", fake_compose),
+                patch.object(gateway_main, "reconcile_active_profile", new=AsyncMock(return_value=[])),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    await gateway_main.start_runtime(model)
+
+            self.assertEqual(raised.exception.status_code, 503)
+            self.assertEqual(
+                raised.exception.detail["decision"]["decision"], decision_name
+            )
+            self.assertEqual(compose_calls, [])
+
+    async def test_admission_shadow_mode_preserves_non_start_decision(self) -> None:
+        class FakeDecision:
+            decision = "QUEUE"
+
+            def to_dict(self):
+                return {"decision": self.decision}
+
+        with (
+            patch.object(gateway_main, "admit", return_value=FakeDecision()),
+            patch.object(
+                gateway_main,
+                "provider_for_catalog_model",
+                return_value={"id": "provider"},
+            ),
+            patch.object(
+                gateway_main,
+                "registry",
+                return_value={"admission": {"enforce": False}},
+            ),
+        ):
+            payload = gateway_main.evaluate_admission({"id": "test-model"})
+
+        self.assertEqual(payload["decision"], "QUEUE")
+        self.assertFalse(payload["enforce"])
+
+    async def test_failed_conflict_stop_does_not_start_target(self) -> None:
+        model = {"id": "test-model", "service": "llm-target", "heavy": True}
+        compose_calls: list[list[str]] = []
+
+        async def fake_compose(args, timeout=180):
+            compose_calls.append(args)
+            return subprocess.CompletedProcess(
+                args, 1, "secret stdout", "secret stderr"
+            )
+
+        with (
+            patch.object(
+                gateway_main, "evaluate_admission", return_value={"decision": "START"}
+            ),
+            patch.object(
+                gateway_main,
+                "heavy_services",
+                return_value=["llm-other", "llm-target"],
+            ),
+            patch.object(gateway_main, "compose", fake_compose),
+            patch.object(gateway_main, "reconcile_active_profile", new=AsyncMock(return_value=["other"])),
+            patch.object(gateway_main, "preferred_provider_by_service", return_value={"llm-other": {"id": "other", "service": "llm-other"}}),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                await gateway_main.start_runtime(model)
+
+        self.assertEqual(raised.exception.status_code, 503)
+        detail = raised.exception.detail
+        self.assertEqual(detail["stage"], "stop_runtime")
+        self.assertNotIn("secret stdout", str(detail))
+        self.assertNotIn("secret stderr", str(detail))
+        self.assertEqual(len(compose_calls), 1)
+        self.assertIn("stop", compose_calls[0])
+
+    async def test_successful_transition_stops_then_starts_target(self) -> None:
+        model = {"id": "test-model", "service": "llm-target", "heavy": True}
+        compose_calls: list[list[str]] = []
+
+        async def fake_compose(args, timeout=180):
+            compose_calls.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        async def fake_wait_ready(_model):
+            return None
+
+        with (
+            patch.object(
+                gateway_main, "evaluate_admission", return_value={"decision": "START"}
+            ),
+            patch.object(
+                gateway_main,
+                "heavy_services",
+                return_value=["llm-other", "llm-target"],
+            ),
+            patch.object(gateway_main, "compose", fake_compose),
+            patch.object(gateway_main, "reconcile_active_profile", new=AsyncMock(return_value=["other"])),
+            patch.object(gateway_main, "preferred_provider_by_service", return_value={"llm-other": {"id": "other", "service": "llm-other"}}),
+            patch.object(gateway_main, "wait_ready", fake_wait_ready),
+        ):
+            admission = await gateway_main.start_runtime(model)
+
+        self.assertEqual(admission["decision"], "START")
+        self.assertEqual(len(compose_calls), 2)
+        self.assertIn("stop", compose_calls[0])
+        self.assertEqual(compose_calls[1][-3:], ["up", "-d", "llm-target"])
 
     async def test_models_endpoint_returns_only_canonical_public_names(self) -> None:
         transport = httpx.ASGITransport(app=gateway_main.app)
@@ -560,6 +765,28 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
         parsed = json.loads(line.decode("utf-8").split("data:", 1)[-1].strip())
         self.assertEqual(parsed["choices"][0]["delta"]["content"], "pong")
         self.assertEqual(gateway_main.flatten_sse_line(b"data: [DONE]\n"), b"data: [DONE]\n")
+
+    async def test_stream_preserves_reasoning_and_content_delta_boundaries(self) -> None:
+        source = (
+            'data: {"choices":[{"delta":{"reasoning_content":" \\u0641\\u06a9\\u0631  ",'
+            '"content":" \\u0633\\u0644\\u0627\\u0645  "}}]}\r\n\r\n'
+            'data: [DONE]\r\n\r\n'
+        ).encode("utf-8")
+
+        async def chunks():
+            for offset in (0, 7, 19, 41):
+                if offset < len(source):
+                    next_offset = {0: 7, 7: 19, 19: 41, 41: len(source)}[offset]
+                    yield source[offset:next_offset]
+
+        output = b"".join(
+            [chunk async for chunk in gateway_main.iter_flattened_sse(chunks(), flatten_reasoning=False)]
+        )
+        self.assertEqual(output, source)
+        event = json.loads(output.split(b"data: ", 1)[1].split(b"\r\n", 1)[0])
+        delta = event["choices"][0]["delta"]
+        self.assertEqual(delta["reasoning_content"], " \u0641\u06a9\u0631  ")
+        self.assertEqual(delta["content"], " \u0633\u0644\u0627\u0645  ")
 
 
 def live_json_contract(endpoint: str, model: str) -> None:

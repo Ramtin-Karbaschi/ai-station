@@ -1,0 +1,19 @@
+{
+  "model": "Qwen3-Coder-30B-A3B-Instruct-Q4",
+  "http": 200,
+  "elapsed_s": 0.842,
+  "pass": true,
+  "finish_reason": "tool_calls",
+  "content_preview": "",
+  "tool_names": [
+    "get_time"
+  ],
+  "usage": {
+    "completion_tokens": 22,
+    "prompt_tokens": 279,
+    "total_tokens": 301,
+    "prompt_tokens_details": {
+      "cached_tokens": 1
+    }
+  }
+}

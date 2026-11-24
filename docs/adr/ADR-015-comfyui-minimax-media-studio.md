@@ -101,8 +101,8 @@ Uninstall overlay (stops the container only):
 ## Consequences
 
 Operators keep chat on Open WebUI and open ComfyUI for MiniMax music
-and video. Starting ComfyUI stops llama.cpp and the GPU embedder.
-Chat is unavailable until a llama.cpp profile is restored.
+and video. Starting ComfyUI stops llama.cpp. As of ADR-022 the CPU
+embedder stays up; RAG embeddings do not require the GPU.
 
 ## Risks
 

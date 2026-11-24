@@ -2,6 +2,10 @@
 # AI Station platform CLI — production control plane for local GenAI.
 set -Eeuo pipefail
 
+# Never trust an inherited descriptor as proof that this process owns the
+# lifecycle lock; restart keeps the descriptor only within this shell.
+unset AI_LIFECYCLE_LOCK_FD
+
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-common.sh"
@@ -22,18 +26,33 @@ Usage:
   ai models add|install|verify|remove|restore ...
   ai provider list|status|inspect|start|stop|doctor ...
       # experimental media: comfyui-media-experimental (http://127.0.0.1:8188)
-  ai projects list|create|revoke|show ...
+      # optional n8n: n8n (http://127.0.0.1:5678)
+  ai projects list|create|update|revoke|show|unlimit ...
   ai opencode install|configure|doctor|parity|run|acceptance ...
   ai opencode use general|coder|reasoning|ornith
   ai opencode test [--model general|coder|reasoning|ornith]
   ai graphify install|configure|status|extract|query|path|explain|view|uninstall
+  ai n8n start|stop|status|configure|uninstall
+  ai tools start|stop|status|smoke|capabilities
   ai output show|set|open|path media|graphify|export
   ai test [--live] [--endpoint URL] [--model NAME]
-  ai logs [gateway|general|coder|reasoning|vision|ornith|qwen38|longwriter|embedder|webui]
+  ai logs [gateway|general|coder|reasoning|vision|ornith|qwen38|longwriter|embedder|webui|n8n]
   ai logs snapshot [all|gateway|webui|tika|general]
   ai gateway url
   ai verify [--stability [seconds]]
   ai backup
+  ai restore --dry-run [--id YYYYMMDD-HHMMSS]
+  ai retention status|enable|disable|apply [--ttl-days N] [--dry-run]
+  ai alerts [--dry-run]
+  ai sso status|configure|probe|disable [--dry-run]
+  ai hardware detect [--dry-run]
+  ai media guard --file WORKFLOW.json [--dry-run]
+  ai media audit
+  ai roi [--days N] [--tariff PATH] [--dry-run]
+  ai models review [--json] [--before-replace ID]
+  ai lora status|validate|plan|train|register|apply|disable
+  ai tenants status|list|create|show|disable|doctor
+  ai voice setup|status|smoke|turn --dry-run
   ai disk
   ai git
   ai vscode
@@ -53,36 +72,77 @@ EOF
 
 public_name_for_profile() {
   case "$1" in
-    general) echo "Qwen3.6-35B-A3B-UD-Q4_K_M" ;;
-    coder) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
-    reasoning) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
-    vision) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
+    general) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
+    coder) echo "Ornith-1.5-35B-Q4_K_M" ;;
+    reasoning) echo "Qwen3.8-27B-Reasoning-UD-Q4_K_M" ;;
+    vision) echo "Qwen3.8-27B-Vision-UD-Q4_K_M" ;;
     ornith) echo "Ornith-1.5-35B-Q4_K_M" ;;
     qwen38) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
     longwriter) echo "LongWriter-Zero-32B-Q4_K_M" ;;
-    reranker) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
+    reranker) echo "Qwen3-Reranker-4B-Q6_K" ;;
+    comfyui-experimental) echo "ComfyUI media studio" ;;
     *) return 1 ;;
   esac
 }
 
 public_name_for_model_id() {
   case "$1" in
-    local-general|Qwen3.6-35B-A3B-UD-Q4_K_M) echo "Qwen3.6-35B-A3B-UD-Q4_K_M" ;;
-    local-coder|Qwen3-Coder-30B-A3B-Instruct-Q4) echo "Qwen3-Coder-30B-A3B-Instruct-Q4" ;;
-    local-reasoning|DeepSeek-R1-Distill-Qwen-32B-Q4_K_M) echo "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M" ;;
-    local-vision|Qwen3-VL-32B-Instruct-Q4_K_M) echo "Qwen3-VL-32B-Instruct-Q4_K_M" ;;
+    local-general|Qwen3.8-27B-UD-Q4_K_M|Qwen3.8-27B-UD-Q4_K_M) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
+    local-coder|Ornith-1.5-35B-Q4_K_M|Ornith-1.5-35B-Q4_K_M) echo "Ornith-1.5-35B-Q4_K_M" ;;
+    local-reasoning|Qwen3.8-27B-Reasoning-UD-Q4_K_M|Qwen3.8-27B-Reasoning-UD-Q4_K_M) echo "Qwen3.8-27B-Reasoning-UD-Q4_K_M" ;;
+    local-vision|Qwen3.8-27B-Vision-UD-Q4_K_M|Qwen3.8-27B-Vision-UD-Q4_K_M) echo "Qwen3.8-27B-Vision-UD-Q4_K_M" ;;
     local-ornith|Ornith-1.5-35B-Q4_K_M|Ornith-1.0-35B-Q4_K_M) echo "Ornith-1.5-35B-Q4_K_M" ;;
     local-qwen38|Qwen3.8-27B-UD-Q4_K_M) echo "Qwen3.8-27B-UD-Q4_K_M" ;;
     local-longwriter|LongWriter-Zero-32B-Q4_K_M|LongWriter-Zero-32B-Q8_0) echo "LongWriter-Zero-32B-Q4_K_M" ;;
-    local-embedding|Qwen3-Embedding-0.6B-Q8_0) echo "Qwen3-Embedding-0.6B-Q8_0" ;;
-    local-reranker|Qwen3-Reranker-0.6B-Q8_0) echo "Qwen3-Reranker-0.6B-Q8_0" ;;
+    local-embedding|Qwen3-Embedding-8B-Q4_K_M|Qwen3-Embedding-0.6B-Q8_0) echo "Qwen3-Embedding-8B-Q4_K_M" ;;
+    local-reranker|Qwen3-Reranker-4B-Q6_K|Qwen3-Reranker-0.6B-Q8_0) echo "Qwen3-Reranker-4B-Q6_K" ;;
     *) echo "$1" ;;
   esac
 }
 
-# LiteLLM only accepts catalog public ids (Ornith-1.5-35B-Q4_K_M), not
-# llama.cpp aliases like local-ornith. After /v1/models is up, retry chat
-# until ready. HTTP 400 for an unknown model is a config error, not a load delay.
+ai_print_service_directory() {
+  local profile="${1:-}"
+  local public=""
+  local port=""
+  if [[ -n "$profile" ]] && ai_is_heavy_profile "$profile"; then
+    public="$(public_name_for_profile "$profile")"
+    port="$(ai_profile_port "$profile")"
+  fi
+  cat <<'EOF'
+Always-on (after ai start):
+  Open WebUI          http://127.0.0.1:3000
+  LiteLLM API         http://127.0.0.1:4000/v1
+  LiteLLM Admin       http://127.0.0.1:4000/ui
+  SearXNG             http://127.0.0.1:8889
+  Tool Gateway        http://127.0.0.1:8892/v1
+  Tika                http://127.0.0.1:9998
+  Embedding           http://127.0.0.1:8090/v1
+  Reranker            http://127.0.0.1:8091/v1
+  Speech (ASR)        http://127.0.0.1:8092/v1
+EOF
+  if [[ -n "$public" ]]; then
+    echo "  Heavy model         ${public} (profile=${profile}) :${port}"
+  else
+    echo "  Heavy model         (none active; last-used or general on next start)"
+  fi
+  cat <<'EOF'
+
+On demand:
+  ComfyUI             http://127.0.0.1:8188   (ai provider start comfyui-media-experimental)
+  n8n                 http://127.0.0.1:5678   (ai n8n start)
+  Graphify map        http://127.0.0.1:4174/  (ai graphify view)
+  OpenCode            http://127.0.0.1:4096   (ai opencode doctor)
+
+Internal (not a client contract):
+  Host Gateway        http://127.0.0.1:8888
+  UI Gateway          http://127.0.0.1:8890
+EOF
+}
+
+# The external warm-up uses catalog public ids (for example,
+# Ornith-1.5-35B-Q4_K_M), not llama.cpp aliases like local-ornith. While a
+# CLI transition owns the lifecycle lock, warm-up probes the runtime directly.
+# HTTP 400 for an unknown model is a config error, not a load delay.
 ai_litellm_warmup_chat() {
   local profile="$1"
   local public_name key tmp code body attempt
@@ -91,13 +151,55 @@ ai_litellm_warmup_chat() {
     echo "ERROR: no public model id for profile '${profile}'" >&2
     return 1
   }
+  tmp="$(mktemp)"
+
+  # A CLI transition already owns the shared lifecycle flock. Calling the
+  # host gateway here would re-enter that lock while the gateway waits on the
+  # same transition. Probe the backend directly with its exact catalog model.
+  if [[ -n "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
+    local runtime_port runtime_code backend_model
+    runtime_port="$(ai_profile_port "$profile")"
+    backend_model="$(PYTHONPATH="$ROOT" python3 - "$ROOT/config/model-catalog.json" "$profile" <<'PY'
+import json, sys
+from pathlib import Path
+catalog = json.loads(Path(sys.argv[1]).read_text())
+for model in catalog.get("models", []):
+    if model.get("profile") == sys.argv[2] and model.get("backend_model"):
+        print(model["backend_model"])
+        break
+PY
+    )"
+    if [[ -z "$backend_model" ]]; then
+      case "$profile" in
+        ornith|qwen38) backend_model="ai-station-${profile}" ;;
+      esac
+    fi
+    [[ -n "$backend_model" ]] || { echo "ERROR: no backend model for ${profile}" >&2; rm -f "$tmp"; return 1; }
+    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+      runtime_code="$(curl -sS -o "$tmp" -w "%{http_code}" --max-time 90 \
+        -H "Content-Type: application/json" \
+        -d "{\"model\":\"${backend_model}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}" \
+        "http://127.0.0.1:${runtime_port}/v1/chat/completions" || true)"
+      if [[ "$runtime_code" == "200" ]]; then
+        echo "OK: direct runtime warm-up (${public_name})"
+        rm -f "$tmp"
+        return 0
+      fi
+      echo "warm-up ${public_name} attempt ${attempt}/${max_attempts}: HTTP ${runtime_code:-000}"
+      (( attempt < max_attempts )) && sleep 5
+    done
+    echo "ERROR: direct runtime warm-up failed for ${public_name}" >&2
+    rm -f "$tmp"
+    return 1
+  fi
+
   key="$(ai_master_key)"
   if [[ -z "$key" ]]; then
     echo "WARNING: skipping LiteLLM warm-up (no master key)"
+    rm -f "$tmp"
     return 0
   fi
 
-  tmp="$(mktemp)"
   for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     code="$(
       curl -sS -o "$tmp" -w "%{http_code}" --max-time 90 \
@@ -148,9 +250,17 @@ cmd_status() {
     "http://127.0.0.1:4000/health/liveliness|LiteLLM Gateway" \
     "http://127.0.0.1:8888/health|Host Gateway" \
     "http://127.0.0.1:8890/health|UI Gateway" \
+    "http://127.0.0.1:8892/healthz|Tool Gateway" \
     "http://127.0.0.1:3000|Open WebUI" \
+    "http://127.0.0.1:8889|SearXNG" \
+    "http://127.0.0.1:9998|Tika" \
     "http://127.0.0.1:8090/v1/models|Embedding" \
-    "http://127.0.0.1:8091/v1/models|Reranker"; do
+    "http://127.0.0.1:8091/v1/models|Reranker" \
+    "http://127.0.0.1:8092/v1/models|Qwen3-ASR" \
+    "http://127.0.0.1:5678/healthz|n8n" \
+    "http://127.0.0.1:8188/system_stats|ComfyUI" \
+    "http://127.0.0.1:4174/|Graphify map" \
+    "http://127.0.0.1:4096/global/health|OpenCode"; do
     IFS='|' read -r url label <<<"$pair"
     if curl -fsS --max-time 3 "$url" >/dev/null 2>&1; then
       echo "OK   $label"
@@ -171,6 +281,14 @@ cmd_status() {
   else
     echo "---- No heavy model profile active"
   fi
+  echo
+  echo "=== Service directory ==="
+  ai_print_service_directory "$active_profile"
+  if [[ -d "$AI_STATE_DIR/alerts" ]]; then
+    echo
+    echo "=== Alerts ==="
+    python3 "$ROOT/scripts/lib/station_alerts.py" summary 2>/dev/null || true
+  fi
 }
 
 cmd_health() {
@@ -178,6 +296,7 @@ cmd_health() {
   ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 5 || fail=1
   ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 5 || fail=1
   ai_wait_url "http://127.0.0.1:8091/v1/models" "Reranker" 5 || fail=1
+  ai_wait_url "http://127.0.0.1:8092/v1/models" "Qwen3-ASR" 5 || fail=1
   ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 5 || fail=1
   local active
   active="$(ai_active_heavy_profile || true)"
@@ -227,10 +346,13 @@ cmd_start() {
   ai_wait_compose_service tika healthy 90
   ai_wait_compose_service embedder healthy 180
   ai_wait_compose_service reranker healthy 180
+  ai_retry_compose --profile asr up -d asr-qwen3
+  ai_wait_compose_service asr-qwen3 healthy 180
 
   "$ROOT/scripts/sync-litellm-db-url.sh"
   "$ROOT/scripts/ensure-litellm-db.sh"
 
+  ai_start_voice_if_provisioned
   ai_retry_compose up -d llm-gateway
   ai_wait_url "http://127.0.0.1:4000/health/liveliness" "LiteLLM Gateway" 120
 
@@ -238,35 +360,49 @@ cmd_start() {
   # when already healthy to avoid needless flaps during overlapping starts.
   ai_ensure_host_gateway ai-station-gateway "http://127.0.0.1:8888/health" "Host Gateway"
   ai_ensure_host_gateway ai-station-ui-gateway "http://127.0.0.1:8890/health" "UI Gateway"
+  ai_tools_start
 
   # Start the model before Open WebUI so the UI does not open onto a cold backend.
   ai_retry_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
-  ai_set_active_heavy_profile "$profile"
-  ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300
+  if ! ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300; then
+    ai_set_active_heavy_profile ""
+    return 1
+  fi
 
   ai_retry_compose up -d open-webui
 
-  ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180
-  ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 180
+  if ! ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180 \
+    || ! ai_wait_url "http://127.0.0.1:8092/v1/models" "Qwen3-ASR" 180 \
+    || ! ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 180; then
+    ai_set_active_heavy_profile ""
+    return 1
+  fi
 
-  # Warm-up via LiteLLM public model id until chat-ready.
-  ai_litellm_warmup_chat "$profile"
+  # Warm up the selected runtime until chat-ready (direct under the CLI lock).
+  if ! ai_litellm_warmup_chat "$profile"; then
+    ai_set_active_heavy_profile ""
+    return 1
+  fi
+
+  # Publish only after the selected model, required auxiliary services, and
+  # the actual LiteLLM warm-up are all ready. The marker is an observed state,
+  # not a startup intent signal.
+  ai_set_active_heavy_profile "$profile"
 
   echo
   echo "AI Station ready."
-  echo "  UI:      http://127.0.0.1:3000"
-  echo "  Gateway: http://127.0.0.1:4000/v1"
-  echo "  Model:   $(public_name_for_profile "$profile") (profile=${profile})"
+  ai_print_service_directory "$profile"
 }
 
 cmd_stop() {
   ai_lifecycle_lock "stop"
   ai_ensure_docker || true
   ai_stop_experimental_gpu_overlays
-  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile qwen38 --profile longwriter --profile reranker \
-    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker 2>/dev/null || true
+  ai_compose --profile general --profile coder --profile reasoning --profile vision --profile ornith --profile qwen38 --profile longwriter --profile reranker --profile n8n \
+    stop llm-general llm-coder llm-reasoning llm-vision llm-ornith llm-qwen38 llm-longwriter reranker n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
   ai_compose stop open-webui llm-gateway embedder searxng tika redis postgres 2>/dev/null || true
   systemctl stop ai-station-ui-gateway 2>/dev/null || true
+  ai_tools_stop
   systemctl stop ai-station-gateway 2>/dev/null || true
   ai_set_active_heavy_profile ""
   echo "AI Station stopped."
@@ -295,9 +431,10 @@ cmd_restart() {
   fi
 
   echo "Restarting AI Station (profile=${profile})..."
-  # Sequential child processes keep the lifecycle lock exclusive per phase.
-  "$ROOT/scripts/ai" stop || true
-  exec "$ROOT/scripts/ai" start --profile "$profile"
+  # Hold one lock across the complete stop/start transition.
+  ai_lifecycle_lock "restart"
+  cmd_stop
+  cmd_start --profile "$profile"
 }
 
 cmd_logs_snapshot() {
@@ -329,6 +466,9 @@ cmd_logs_snapshot() {
       ;;
     tika|ocr|logs-tika|logs-ocr)
       docker logs --tail 120 ai-station-tika 2>&1 || true
+      ;;
+    n8n)
+      docker logs --tail 120 ai-station-n8n 2>&1 || true
       ;;
     general|logs-general)
       docker logs --tail 120 ai-station-llm-general 2>&1 \
@@ -384,19 +524,21 @@ Admin / health:    http://127.0.0.1:4000/health/liveliness
 LiteLLM UI:        http://127.0.0.1:4000/ui
 
 Canonical public model names:
-  Qwen3.6-35B-A3B-UD-Q4_K_M
-  Qwen3-Coder-30B-A3B-Instruct-Q4
-  DeepSeek-R1-Distill-Qwen-32B-Q4_K_M
-  Qwen3-VL-32B-Instruct-Q4_K_M
+  Qwen3.8-27B-UD-Q4_K_M
   Ornith-1.5-35B-Q4_K_M
-  Qwen3-Embedding-0.6B-Q8_0
-  Qwen3-Reranker-0.6B-Q8_0
+  Qwen3.8-27B-Reasoning-UD-Q4_K_M
+  Qwen3.8-27B-Vision-UD-Q4_K_M
+  LongWriter-Zero-32B-Q4_K_M
+  Qwen3-Embedding-8B-Q4_K_M
+  Qwen3-Reranker-4B-Q6_K
 
 Heavy chat and vision requests go through LiteLLM to the host gateway, which
 auto-switches the matching heavy runtime when needed.
 
 Create a project key:
-  ai projects create <id> --models Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0
+  ai projects create <id> --models Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M
+Update an existing key allowlist (does not rotate the secret):
+  ai projects update <id> --models Ornith-1.5-35B-Q4_K_M,Qwen3.8-27B-UD-Q4_K_M,Qwen3.8-27B-Reasoning-UD-Q4_K_M
 
 Python example:
   from openai import OpenAI
@@ -492,14 +634,32 @@ cmd_provider_start() {
 
   local args=("$id")
   [[ -n "$context" ]] && args+=(--context "$context")
+
+  if (( ! dry_run )); then
+    # Live admission and the subsequent Compose transition share one lock.
+    ai_lifecycle_lock "provider-start-${id}"
+  fi
+
+  # Admission must account for a live heavy container even when the CLI
+  # marker has not been published yet (for example after a cold boot).  The
+  # shared helper observes Docker first and falls back to the marker only
+  # when Docker cannot be queried; do not invent registry state here.
+  local observed_profile observed_provider
+  observed_profile="$(ai_active_heavy_profile || true)"
+  if [[ -n "$observed_profile" ]]; then
+    observed_provider="$(ai_provider_id_for_profile "$observed_profile" || true)"
+    [[ -n "$observed_provider" ]] && args+=(--active-heavy "$observed_provider")
+  fi
   if (( dry_run )); then
     PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission "${args[@]}"
     return 0
   fi
 
-  local decision profile
-  decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission "${args[@]}" --json)"
+  local decision profile admission_status=0
+  decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission "${args[@]}" --json)" || admission_status=$?
   echo "$decision" | PYTHONPATH="$ROOT" python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["decision"]); print("\n".join(d.get("reasons") or []))'
+  (( admission_status == 0 )) || return "$admission_status"
+  printf '%s\n' "$decision" | ai_assert_admission_startable
 
   profile="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
 import sys
@@ -524,29 +684,9 @@ PY
 )"
   if [[ -n "$compose_files" ]]; then
     # Experimental / alternate Compose overlays (ComfyUI).
-    if [[ "$profile" == "comfyui-experimental" ]]; then
-      ai_prepare_comfyui_runtime_dirs
-    fi
-    cmd_models_stop
-    ai_compose stop embedder 2>/dev/null || true
-    local -a file_args=()
-    local f
-    for f in $compose_files; do
-      file_args+=(-f "$f")
-    done
-    local -a env_file_args=()
-    mapfile -t env_file_args < <(ai_compose_env_file_args)
-    (
-      cd "$ROOT"
-      # Avoid inheriting production COMPOSE_FILE when overlay files are explicit.
-      env -u COMPOSE_FILE docker compose \
-        --project-name ai-station \
-        "${env_file_args[@]}" \
-        "${file_args[@]}" \
-        --profile "$profile" \
-        up -d "$service"
-    )
-    ai_set_active_heavy_profile "$profile"
+    # CPU embedder (ADR-022) stays up so RAG survives ComfyUI GPU occupancy.
+    # Stay on the one Compose project so chat containers are not orphans.
+    ai_start_gpu_overlay "$profile" "$service"
     return 0
   fi
   if ai_is_heavy_profile "$profile"; then
@@ -554,6 +694,24 @@ PY
   else
     case "$profile" in
       reranker) cmd_models_start_reranker ;;
+      asr)
+        ai_retry_compose --profile asr up -d asr-qwen3
+        ai_wait_url "http://127.0.0.1:8092/v1/models" "Qwen3-ASR" 180
+        echo "ASR: http://127.0.0.1:8092/v1"
+        ;;
+      n8n)
+        ai_prepare_n8n_runtime_dirs
+        ai_ensure_n8n_encryption_key
+        ai_n8n_ensure_project
+        ai_n8n_sync_litellm_key
+        ai_ensure_n8n_sandbox_secrets
+        ai_retry_compose --profile n8n up -d sandbox-certs sandbox-api sandbox-runner-1
+        ai_retry_compose --profile n8n up -d --force-recreate n8n
+        ai_wait_url "http://127.0.0.1:5678/healthz" "n8n" 90
+        echo "n8n UI: http://127.0.0.1:5678"
+        echo "Instance AI: LiteLLM http://llm-gateway:4000/v1 (Qwen3.8-27B-UD-Q4_K_M)"
+        echo "Sandbox: http://sandbox-api:8080 (internal; key is N8N_SANDBOX_SERVICE_API_KEY)"
+        ;;
       default|"")
         [[ -n "$service" ]] && ai_compose up -d "$service"
         ;;
@@ -565,6 +723,9 @@ PY
 cmd_provider_stop() {
   local id="${1:-}"
   [[ -n "$id" ]] || { echo "Usage: ai provider stop <id>" >&2; exit 2; }
+  if [[ -z "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
+    ai_lifecycle_lock "provider-stop-${id}"
+  fi
   local profile service compose_files
   profile="$(PYTHONPATH="$ROOT" python3 - "$id" <<'PY'
 import sys
@@ -587,26 +748,8 @@ print(" ".join(str(f) for f in files))
 PY
 )"
   if [[ -n "$compose_files" ]]; then
-    local -a file_args=()
-    local f
-    for f in $compose_files; do
-      file_args+=(-f "$f")
-    done
-    (
-      cd "$ROOT"
-      env -u COMPOSE_FILE docker compose \
-        --project-name ai-station \
-        --env-file .env \
-        "${file_args[@]}" \
-        --profile "$profile" \
-        stop "$service" 2>/dev/null || true
-      env -u COMPOSE_FILE docker compose \
-        --project-name ai-station \
-        --env-file .env \
-        "${file_args[@]}" \
-        --profile "$profile" \
-        rm -f "$service" 2>/dev/null || true
-    )
+    ai_compose --profile "$profile" stop "$service" 2>/dev/null || true
+    ai_compose --profile "$profile" rm -f "$service" 2>/dev/null || true
     if [[ "$(ai_active_heavy_profile || true)" == "$profile" ]]; then
       ai_set_active_heavy_profile ""
     fi
@@ -617,6 +760,11 @@ PY
     fi
   elif [[ "$profile" == "reranker" ]]; then
     cmd_models_stop_reranker
+  elif [[ "$profile" == "asr" ]]; then
+    ai_compose --profile asr stop asr-qwen3 2>/dev/null || true
+  elif [[ "$profile" == "n8n" ]]; then
+    ai_compose --profile n8n stop n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
+    ai_compose --profile n8n rm -f n8n sandbox-runner-1 sandbox-api sandbox-certs 2>/dev/null || true
   else
     ai_compose stop "$service" 2>/dev/null || true
   fi
@@ -672,18 +820,38 @@ else:
 PY
 }
 
+cmd_projects_unlimit() {
+  local alias=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --alias) alias="$2"; shift 2 ;;
+      *) echo "Usage: ai projects unlimit [--alias <id>]" >&2; exit 2 ;;
+    esac
+  done
+  if ! curl -fsS --max-time 5 "http://127.0.0.1:4000/health/liveliness" >/dev/null; then
+    echo "ERROR: LiteLLM gateway is not healthy on :4000" >&2
+    exit 1
+  fi
+  local args=(unlimit)
+  if [[ -n "$alias" ]]; then
+    args+=(--alias "$alias")
+  fi
+  python3 "$ROOT/scripts/lib/litellm_keys.py" "${args[@]}"
+}
+
 cmd_projects_create() {
   local id="${1:-}"
   shift || true
   if [[ -z "$id" || ! "$id" =~ ^[a-z0-9][a-z0-9_-]{1,62}$ ]]; then
     echo "Usage: ai projects create <id> [--models a,b] [--rpm N] [--tpm N]" >&2
     echo "ID must match: ^[a-z0-9][a-z0-9_-]{1,62}$" >&2
+    echo "TPM/RPM are off by default. Pass --tpm/--rpm only to cap a key." >&2
     exit 2
   fi
 
-  local models="Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0"
-  local rpm=60
-  local tpm=100000
+  local models="Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M"
+  local rpm=""
+  local tpm=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --models) models="$2"; shift 2 ;;
@@ -705,18 +873,17 @@ cmd_projects_create() {
     exit 1
   fi
 
-  local models_json
-  models_json="$(python3 - <<PY
-import json
-print(json.dumps([m.strip() for m in "$models".split(",") if m.strip()]))
-PY
-)"
+  local payload
+  payload="$(
+    python3 "$ROOT/scripts/lib/litellm_keys.py" generate-payload \
+      --alias "$id" --models "$models" --rpm "$rpm" --tpm "$tpm"
+  )"
 
   local response
   response="$(curl -fsS --max-time 30 \
     -H "Authorization: Bearer ${key}" \
     -H "Content-Type: application/json" \
-    -d "{\"key_alias\":\"${id}\",\"models\":${models_json},\"rpm_limit\":${rpm},\"tpm_limit\":${tpm},\"metadata\":{\"project\":\"${id}\",\"platform\":\"ai-station\"}}" \
+    -d "$payload" \
     "http://127.0.0.1:4000/key/generate")"
 
   python3 - "$id" "$models" "$response" <<'PY'
@@ -763,7 +930,7 @@ if "defaults" not in data:
         "base_url_host": "http://127.0.0.1:4000/v1",
         "base_url_docker": "http://llm-gateway:4000/v1",
         "docker_network": "ai-platform",
-        "default_model": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+        "default_model": "Qwen3.8-27B-UD-Q4_K_M",
         "timeout_seconds": 120,
     }
 registry_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
@@ -777,7 +944,7 @@ env_path.write_text(
             "LLM_BASE_URL=http://127.0.0.1:4000/v1",
             "LLM_BASE_URL_DOCKER=http://llm-gateway:4000/v1",
             f"LLM_API_KEY={api_key}",
-            f"LLM_MODEL={(models_csv.split(',')[0] or 'Qwen3.6-35B-A3B-UD-Q4_K_M').strip()}",
+            f"LLM_MODEL={(models_csv.split(',')[0] or 'Qwen3.8-27B-UD-Q4_K_M').strip()}",
             "LLM_TIMEOUT_SECONDS=120",
             "LLM_DOCKER_NETWORK=ai-platform",
             "",
@@ -791,6 +958,126 @@ print(f"Credentials:     {env_path}")
 print(f"Host endpoint:   http://127.0.0.1:4000/v1")
 print(f"Docker endpoint: http://llm-gateway:4000/v1  (network=ai-platform)")
 print("Attach project compose services to external network ai-platform.")
+PY
+}
+
+cmd_projects_update() {
+  local id="${1:-}"
+  shift || true
+  local models=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --models) models="$2"; shift 2 ;;
+      *) echo "Unknown argument: $1" >&2; exit 2 ;;
+    esac
+  done
+  if [[ -z "$id" || -z "$models" ]]; then
+    echo "Usage: ai projects update <id> --models a,b,c" >&2
+    echo "Updates the LiteLLM virtual-key allowlist in place. Does not rotate the secret." >&2
+    exit 2
+  fi
+
+  local master_key
+  master_key="$(ai_master_key)"
+  if [[ -z "$master_key" ]]; then
+    echo "ERROR: LITELLM_MASTER_KEY is not set in .env" >&2
+    exit 1
+  fi
+
+  local env_path="$ROOT/projects/${id}.env"
+  if [[ ! -f "$env_path" ]]; then
+    echo "ERROR: missing project credentials: $env_path" >&2
+    exit 1
+  fi
+
+  local project_key
+  project_key="$(python3 - "$env_path" <<'PY'
+import sys
+from pathlib import Path
+for raw in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    line = raw.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    if key.strip() == "LLM_API_KEY":
+        value = value.strip().strip('"').strip("'")
+        print("" if value == "REVOKED" else value)
+        raise SystemExit(0)
+print("")
+PY
+)"
+  if [[ -z "$project_key" ]]; then
+    echo "ERROR: LLM_API_KEY missing or REVOKED in $env_path" >&2
+    exit 1
+  fi
+
+  if ! curl -fsS --max-time 5 "http://127.0.0.1:4000/health/liveliness" >/dev/null; then
+    echo "ERROR: LiteLLM gateway is not healthy on :4000" >&2
+    exit 1
+  fi
+
+  local models_json
+  models_json="$(python3 - <<PY
+import json
+print(json.dumps([m.strip() for m in "$models".split(",") if m.strip()]))
+PY
+)"
+
+  curl -fsS --max-time 30 \
+    -H "Authorization: Bearer ${master_key}" \
+    -H "Content-Type: application/json" \
+    -d "{\"key\":\"${project_key}\",\"models\":${models_json}}" \
+    "http://127.0.0.1:4000/key/update" >/dev/null
+
+  python3 - "$id" "$models" <<'PY'
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML is required", file=sys.stderr)
+    raise SystemExit(1)
+
+project_id, models_csv = sys.argv[1], sys.argv[2]
+wanted = [m.strip() for m in models_csv.split(",") if m.strip()]
+root = Path("/opt/ai-station")
+registry_path = root / "config/registry/projects.yaml"
+data = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
+projects = list(data.get("projects") or [])
+found = False
+for project in projects:
+    if project.get("id") == project_id:
+        project["models"] = wanted
+        project["status"] = "active"
+        found = True
+        break
+if not found:
+    print(f"ERROR: project {project_id} missing from {registry_path}", file=sys.stderr)
+    raise SystemExit(1)
+data["projects"] = projects
+registry_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+env_path = root / "projects" / f"{project_id}.env"
+if env_path.is_file():
+    lines = env_path.read_text(encoding="utf-8").splitlines()
+    rewritten = []
+    seen_model = False
+    default = wanted[0] if wanted else "Qwen3.8-27B-UD-Q4_K_M"
+    for line in lines:
+        if line.startswith("LLM_MODEL="):
+            rewritten.append(f"LLM_MODEL={default}")
+            seen_model = True
+        else:
+            rewritten.append(line)
+    if not seen_model:
+        rewritten.append(f"LLM_MODEL={default}")
+    try:
+        env_path.write_text("\n".join(rewritten) + "\n", encoding="utf-8")
+        env_path.chmod(0o600)
+    except OSError as exc:
+        print(f"WARNING: LiteLLM allowlist updated but could not rewrite {env_path}: {exc}")
+print(f"Updated project allowlist: {project_id} -> {', '.join(wanted)}")
 PY
 }
 
@@ -899,6 +1186,7 @@ cmd_logs() {
     longwriter) ai_compose --profile longwriter logs -f --tail=200 llm-longwriter ;;
     embedder) ai_compose logs -f --tail=200 embedder ;;
     webui) ai_compose logs -f --tail=200 open-webui ;;
+    n8n) ai_compose --profile n8n logs -f --tail=200 n8n ;;
     *) echo "Unknown log target: $target" >&2; exit 2 ;;
   esac
 }
@@ -917,7 +1205,16 @@ source "$ROOT/scripts/lib/ai-opencode.sh"
 source "$ROOT/scripts/lib/ai-graphify.sh"
 
 # shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-n8n.sh"
+
+# shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-output.sh"
+
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-tools.sh"
+
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-ops.sh"
 
 cmd_verify() {
   ai_ensure_docker || true
@@ -932,6 +1229,7 @@ cmd_verify() {
   echo
   curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null | python3 -m json.tool || true
   curl -fsS --max-time 5 http://127.0.0.1:8890/health 2>/dev/null | python3 -m json.tool || true
+  curl -fsS --max-time 5 http://127.0.0.1:8892/healthz 2>/dev/null | python3 -m json.tool || true
 }
 
 cmd_test() {
@@ -949,14 +1247,22 @@ main() {
     stop-heavy-models) cmd="models"; set -- stop ;;
     projects-list) cmd="projects"; set -- list ;;
     projects-create)
-      local pid="${1:-}" models="${2:-Qwen3.6-35B-A3B-UD-Q4_K_M,Qwen3-Embedding-0.6B-Q8_0}"
+      local pid="${1:-}" models="${2:-Qwen3.8-27B-UD-Q4_K_M,Qwen3-Embedding-8B-Q4_K_M}"
       shift || true
       shift || true
       cmd="projects"
       set -- create "$pid" --models "$models" "$@"
       ;;
+    projects-update)
+      local pid="${1:-}" models="${2:-}"
+      shift || true
+      shift || true
+      cmd="projects"
+      set -- update "$pid" --models "$models" "$@"
+      ;;
     projects-show) cmd="projects"; set -- show-paths "$@" ;;
     projects-revoke) cmd="projects"; set -- revoke "$@" ;;
+    projects-unlimit) cmd="projects"; set -- unlimit "$@" ;;
     reset-webui-password) cmd="reset-webui-password" ;;
     litellm-ui-credentials) cmd="litellm-ui-credentials" ;;
     api-info) cmd="api-info" ;;
@@ -996,20 +1302,34 @@ main() {
       case "$sub" in
         list) cmd_projects_list ;;
         create) cmd_projects_create "$@" ;;
+        update) cmd_projects_update "$@" ;;
         revoke) cmd_projects_revoke "$@" ;;
         show) cmd_projects_show "$@" ;;
         show-paths) cmd_projects_show_with_paths "$@" ;;
+        unlimit) cmd_projects_unlimit "$@" ;;
         *) echo "Unknown projects command: $sub" >&2; usage; exit 2 ;;
       esac
       ;;
     opencode) cmd_opencode "$@" ;;
     graphify) cmd_graphify "$@" ;;
+    n8n) cmd_n8n "$@" ;;
     output) cmd_output "$@" ;;
+    tools) cmd_tools "$@" ;;
     test) cmd_test "$@" ;;
     logs) cmd_logs "$@" ;;
     gateway) cmd_gateway_url ;;
     verify) cmd_verify "$@" ;;
     backup) cmd_backup "$@" ;;
+    restore) cmd_restore "$@" ;;
+    retention) cmd_retention "$@" ;;
+    alerts) cmd_alerts "$@" ;;
+    sso) cmd_sso "$@" ;;
+    hardware) cmd_hardware "$@" ;;
+    media) cmd_media "$@" ;;
+    roi) cmd_roi "$@" ;;
+    lora) cmd_lora "$@" ;;
+    tenants) cmd_tenants "$@" ;;
+    voice) cmd_voice "$@" ;;
     disk) cmd_disk "$@" ;;
     git) cmd_git "$@" ;;
     vscode) cmd_vscode "$@" ;;

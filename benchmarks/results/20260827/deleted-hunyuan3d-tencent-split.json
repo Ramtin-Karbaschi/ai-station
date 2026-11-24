@@ -1,0 +1,33 @@
+{
+  "deleted_at": "2026-08-27T13:51:31Z",
+  "files": [
+    {
+      "path": "/srv/ai-station/models/hunyuan3d/hunyuan3d-dit-v2-1/model.fp16.ckpt",
+      "size_bytes": 7366389768,
+      "sha256": "6b519fc7242f78e9b5f47ea4d55668fe3d944a2d27332f4ca68d29a6ff603f5e",
+      "replacement": "studio-hunyuan3d-2_1-comfy-checkpoint",
+      "reason": "Comfy-Org hunyuan_3d_v2.1.safetensors size-match and SHA verified; split Tencent files are not in the production manifest"
+    },
+    {
+      "path": "/srv/ai-station/models/hunyuan3d/hunyuan3d-vae-v2-1/model.fp16.ckpt",
+      "size_bytes": 655648152,
+      "sha256": "5cbe97f25e6e7abd4bccc80ab07524ec0c86d24118486a9ba49bb5dfb070288a",
+      "replacement": "studio-hunyuan3d-2_1-comfy-checkpoint",
+      "reason": "Comfy-Org hunyuan_3d_v2.1.safetensors size-match and SHA verified; split Tencent files are not in the production manifest"
+    },
+    {
+      "path": "/srv/ai-station/models/hunyuan3d/hunyuan3d-paintpbr-v2-1/unet/diffusion_pytorch_model.bin",
+      "size_bytes": 3925293863,
+      "sha256": "675a1b5cd0098b2002637c443946529c03c5cd54427f40245263350feb3dd5b8",
+      "replacement": "studio-hunyuan3d-2_1-comfy-checkpoint",
+      "reason": "Comfy-Org hunyuan_3d_v2.1.safetensors size-match and SHA verified; split Tencent files are not in the production manifest"
+    },
+    {
+      "path": "/srv/ai-station/models/hunyuan3d/hunyuan3d-paintpbr-v2-1/image_encoder/model.safetensors",
+      "size_bytes": 1264217240,
+      "sha256": "ae616c24393dd1854372b0639e5541666f7521cbe219669255e865cb7f89466a",
+      "replacement": "studio-hunyuan3d-2_1-comfy-checkpoint",
+      "reason": "Comfy-Org hunyuan_3d_v2.1.safetensors size-match and SHA verified; split Tencent files are not in the production manifest"
+    }
+  ]
+}

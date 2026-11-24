@@ -46,13 +46,13 @@ help:
 		'Platform CLI: ai --help'
 
 config:
-	docker compose config --quiet
+	./scripts/compose-ai-station.sh config --quiet
 
 pull:
-	docker compose pull --ignore-buildable
+	./scripts/compose-ai-station.sh pull --ignore-buildable
 
 build:
-	docker compose build
+	./scripts/compose-ai-station.sh build
 
 start:
 	./scripts/ai start
@@ -74,7 +74,8 @@ test:
 
 check:
 	./scripts/test.sh
-	docker compose config --quiet
+	"$$(./scripts/test.sh --print-python)" scripts/lib/model_provider_contract.py
+	./scripts/compose-ai-station.sh config --quiet
 	./scripts/verify-model-manifest.sh
 	./scripts/verify-image-lock.sh
 	./scripts/verify-build-lock.sh

@@ -6,7 +6,7 @@
 import { createHash } from "crypto";
 import { tool } from "@opencode-ai/plugin";
 
-const CODER_MODEL = "Qwen3-Coder-30B-A3B-Instruct-Q4";
+const CODER_MODEL = "Ornith-1.5-35B-Q4_K_M";
 const TIKA_URL = "http://127.0.0.1:9998/tika";
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
 const MAX_EXTRACTED_CHARS = 1_000_000;

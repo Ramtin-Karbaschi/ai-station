@@ -100,8 +100,8 @@ DATA_ROOT="$(realpath -m "$DATA_ROOT")"
 
 EXPECTED_COMPOSE_FILE="$(
     printf '%s' \
-        'compose.yml:compose.models.yml:compose.hardening.yaml:' \
-        'compose.local-builds.yaml:compose.images.lock.yaml'
+        'compose.yml:compose.models.yml:compose.comfyui.experimental.yaml:' \
+        'compose.hardening.yaml:compose.local-builds.yaml:compose.images.lock.yaml'
 )"
 
 echo "============================================================"
@@ -119,10 +119,13 @@ echo "  $DATA_ROOT"
 
 for REQUIRED_FILE in \
     compose.yml \
+    compose.models.yml \
+    compose.comfyui.experimental.yaml \
     compose.hardening.yaml \
     compose.local-builds.yaml \
     compose.images.lock.yaml \
     .env.example \
+    .env.models.example \
     scripts/preflight-install.sh \
     scripts/verify-build-lock.sh \
     scripts/verify-image-lock.sh \
@@ -260,6 +263,7 @@ if [[ "$SOURCE_DIR" != "$INSTALL_ROOT" ]]; then
         --delete \
         --exclude='.git/' \
         --exclude='.env' \
+        --exclude='.env.models' \
         --exclude='_archive/' \
         --exclude='backups/' \
         --exclude='data/' \
@@ -278,6 +282,9 @@ cd "$INSTALL_ROOT"
 if [[ ! -f .env ]]; then
     cp .env.example .env
 fi
+if [[ ! -f .env.models ]]; then
+    install -m 0600 .env.models.example .env.models
+fi
 
 python3 - ".env" "$EXPECTED_COMPOSE_FILE" <<'PY'
 from __future__ import annotations
@@ -295,7 +302,7 @@ output = []
 compose_written = False
 
 secret_pattern = re.compile(
-    r"(PASSWORD|SECRET)",
+    r"(PASSWORD|SECRET|ENCRYPTION_KEY)",
     re.IGNORECASE,
 )
 
@@ -478,9 +485,12 @@ fi
 
 if [[ "$START_SERVICES" == "true" ]]; then
     echo
-    echo "Starting AI Station..."
+    echo "Installing host gateway systemd units..."
+    ./scripts/install-systemd.sh
 
-    docker compose up -d --remove-orphans
+    echo
+    echo "Starting AI Station..."
+    ./scripts/ai start
 
     echo
     echo "Waiting for service health..."

@@ -1,0 +1,85 @@
+{
+  "id": "ai-station-z-image-turbo-text-to-image",
+  "revision": 0,
+  "last_node_id": 8,
+  "last_link_id": 8,
+  "nodes": [],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4,
+  "station_profile": "studio-2026",
+  "name": "Z-Image-Turbo NVFP4 text to image (AI Station)",
+  "models": [
+    "z_image_turbo_nvfp4.safetensors",
+    "qwen_3_4b_fp4_mixed.safetensors",
+    "ae.safetensors"
+  ],
+  "prompt": {
+    "1": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "z_image_turbo_nvfp4.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "2": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen_3_4b_fp4_mixed.safetensors",
+        "type": "lumina2",
+        "device": "cpu"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "ae.safetensors"
+      }
+    },
+    "4": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": ["2", 0],
+        "text": "A product photo of a matte black ceramic mug on a wooden desk, soft window light, sharp focus, no text."
+      }
+    },
+    "5": {
+      "class_type": "EmptySD3LatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "6": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": ["1", 0],
+        "positive": ["4", 0],
+        "negative": ["4", 0],
+        "latent_image": ["5", 0],
+        "seed": 42,
+        "steps": 8,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1
+      }
+    },
+    "7": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": ["6", 0],
+        "vae": ["3", 0]
+      }
+    },
+    "8": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": ["7", 0],
+        "filename_prefix": "ai-station-z-image"
+      }
+    }
+  }
+}

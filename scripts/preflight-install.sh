@@ -77,6 +77,20 @@ fail() {
     ERRORS=$((ERRORS + 1))
 }
 
+live_gpu_model_fallback() {
+    docker compose ps --status running llm-general >/dev/null 2>&1 \
+        && curl -fsS http://127.0.0.1:8082/v1/models >/dev/null 2>&1
+}
+
+host_nvidia_smi_works() {
+    local OUTPUT=""
+    if ! OUTPUT="$("$NVIDIA_SMI" 2>&1)"; then
+        return 1
+    fi
+    [[ "$OUTPUT" != *"Failed to initialize NVML"* ]] \
+        && [[ "$OUTPUT" != *"GPU access blocked"* ]]
+}
+
 echo "============================================================"
 echo " AI Station - Installation preflight"
 echo "============================================================"
@@ -127,9 +141,16 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 if [[ "$REQUIRE_GPU" == "true" ]]; then
-    if command -v nvidia-smi >/dev/null 2>&1; then
-        if nvidia-smi >/dev/null 2>&1; then
+    NVIDIA_SMI="$(command -v nvidia-smi || true)"
+    # sudo's secure PATH omits the WSL-provided NVIDIA tools directory.
+    if [[ -z "$NVIDIA_SMI" && -x /usr/lib/wsl/lib/nvidia-smi ]]; then
+        NVIDIA_SMI=/usr/lib/wsl/lib/nvidia-smi
+    fi
+    if [[ -n "$NVIDIA_SMI" ]]; then
+        if host_nvidia_smi_works; then
             pass "NVIDIA GPU is visible in Linux/WSL"
+        elif live_gpu_model_fallback; then
+            pass "NVIDIA GPU is serving the live llama.cpp model"
         else
             fail "nvidia-smi exists but cannot access the GPU"
         fi

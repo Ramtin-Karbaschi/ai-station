@@ -1,0 +1,8 @@
+{"instruction": "What is the only application API on AI Station?", "output": "LiteLLM at http://127.0.0.1:4000/v1. Do not call llama.cpp ports."}
+{"instruction": "How many heavy GPU profiles may run on the default one-GPU SKU?", "output": "One. Start the next profile only after stopping the active heavy provider."}
+{"instruction": "Where do humans sign in?", "output": "Open WebUI at http://127.0.0.1:3000 with organization SSO. Break-glass local login is for install and recovery only."}
+{"instruction": "How does an application authenticate?", "output": "Create a LiteLLM project virtual key with an explicit model allowlist. Keys are machine credentials, not people."}
+{"instruction": "What should an operator run before replacing a production GGUF?", "output": "ai models review --before-replace <manifest-id> and keep retained operator models."}
+{"instruction": "How is ComfyUI used?", "output": "Stop chat models, start the media studio on http://127.0.0.1:8188, and run ai media guard on custom graphs."}
+{"instruction": "What is the default chat completion budget?", "output": "4096 output tokens. The Qwen3.8 context window is 262144."}
+{"instruction": "How are chats retained?", "output": "Retention is off until enabled. Default TTL is 90 days once the operator enables it."}

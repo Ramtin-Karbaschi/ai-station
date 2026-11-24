@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "stale_days": 180,
+  "reviews": {
+    "ornith-1.5-35b-q4": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Production coder. Retained operator model."
+    },
+    "qwen38-27b-q4": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Production general/reasoning/vision GGUF. Retained."
+    },
+    "qwen38-27b-mmproj-f16": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Vision projector for Qwen3.8. Retained."
+    },
+    "longwriter-zero-32b-q4": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Retained long-form writing profile."
+    },
+    "embedding-qwen3-8b-q4_k_m": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "CPU embedder (ADR-022)."
+    },
+    "reranker-qwen3-4b-q6_k": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "CPU reranker (ADR-022)."
+    },
+    "asr-qwen3-1.7b-q8": {
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Primary speech-to-text."
+    },
+    "asr-qwen3-1.7b-mmproj-q8": {
+      "status": "active",
+      "last_evaluated": "2026-08-27"
+    }
+  },
+  "status_by_prefix": [
+    {
+      "prefix": "experimental-comfyui-",
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Retained media weights. Historical experimental id."
+    },
+    {
+      "prefix": "studio-",
+      "status": "experimental",
+      "last_evaluated": "2026-08-27",
+      "note": "Pending ComfyUI smoke; not a production chat replacement."
+    },
+    {
+      "prefix": "ocr-paddleocr-",
+      "status": "active",
+      "last_evaluated": "2026-08-27",
+      "note": "Document OCR path."
+    }
+  ]
+}

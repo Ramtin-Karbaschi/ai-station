@@ -1,0 +1,8 @@
+{
+  "engine": "llama.cpp",
+  "placement": "cpu",
+  "elapsed_s": 0.049,
+  "dim": 1024,
+  "http": 200,
+  "pass": true
+}

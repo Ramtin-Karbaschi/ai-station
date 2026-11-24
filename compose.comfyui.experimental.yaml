@@ -19,7 +19,16 @@ services:
       dockerfile: "Dockerfile"
     container_name: ai-station-comfyui-experimental
     restart: "no"
-    gpus: all
+    # Keep ComfyUI on one explicitly selected GPU by default. Set
+    # AI_STATION_GPU_DEVICE_ID to an NVIDIA index for opt-in multi-GPU
+    # placement; admission remains the exclusivity gate.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${AI_STATION_GPU_DEVICE_ID:-0}"]
+              capabilities: [gpu]
     ipc: host
     shm_size: "8gb"
     environment:

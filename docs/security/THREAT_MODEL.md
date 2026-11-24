@@ -1,7 +1,7 @@
 # AI Station Threat Model
 
 Date: 2026-07-23
-Updated: 2026-08-22
+Updated: 2026-08-22, 2026-08-23
 Status: implemented controls plus residual risks. Review after any new public
 surface, runtime engine, model capability, or agent tool adoption.
 
@@ -83,7 +83,8 @@ one deliberate TCP mirror on the exact private `docker0` address so containers
 can reach the loopback application; wildcard and LAN binds fail verification.
 LiteLLM virtual keys on `:4000` are the authenticated application surface;
 `:8888` remains an internal routing endpoint and must never be configured as a
-client API.
+client API. Virtual keys do not carry TPM/RPM unless the operator sets them
+(ADR-029); loopback binding is the volume control.
 
 ### T7 Arbitrary file access / path traversal
 
@@ -128,6 +129,17 @@ Gaps: interrupted-download and checksum-mismatch scenarios lack tests
 Controls: loopback bind, directory limited to the generated graph folder,
 `--stop` tears the listener down. Residual risk: any local process can
 read `graph.json` (already on disk). Do not bind `:4174` on `0.0.0.0`.
+
+### T12 n8n workflow SSRF and credential store
+
+n8n on `127.0.0.1:5678` can issue HTTP from the Compose network
+(LiteLLM, Tika, Postgres, Redis). Workflows are operator-authored.
+Controls: loopback publish; `N8N_BLOCK_ENV_ACCESS_IN_NODE=true`;
+community packages and Cloud templates off; no tunnel; LiteLLM virtual
+key with a model allowlist; SQLite under `/srv/ai-station/runtime/n8n`.
+Gaps: a local process can open `:5678` after the owner account exists;
+webhook paths remain loopback-only by policy. Do not bind `:5678` on
+`0.0.0.0` and do not enable n8n `--tunnel`.
 
 ## Non-goals
 

@@ -1,5 +1,5 @@
 # One Compose project. Operator entry: ai start
-# COMPOSE_FILE chain: .env.example (includes compose.models.yml).
+# COMPOSE_FILE chain: .env.example (includes compose.models.yml and the ComfyUI overlay).
 name: ai-station
 
 networks:
@@ -97,10 +97,11 @@ services:
   embedder:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
     restart: unless-stopped
-    gpus: all
+    # CPU-only so RAG survives the one heavy GPU chat profile (ADR-022).
+    gpus: []
     command:
       - -m
-      - /models/${EMBEDDING_MODEL_FILE:-embedding/qwen3-embedding-0.6b-q8_0.gguf}
+      - /models/${EMBEDDING_MODEL_FILE:-embedding/qwen3-embedding-8b-q4_k_m.gguf}
       - --alias
       - ai-station-embedding
       - --host
@@ -108,7 +109,7 @@ services:
       - --port
       - "8090"
       - -ngl
-      - "999"
+      - "0"
       - -c
       - "${EMBEDDING_CONTEXT:-8192}"
       - --embedding
@@ -127,6 +128,24 @@ services:
       timeout: 10s
       retries: 20
       start_period: 60s
+
+  station-voice:
+    profiles: ["voice"]
+    image: ai-station/voice-piper:1.8.0
+    pull_policy: build
+    build:
+      context: ./apps/voice
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ${AI_STATION_DATA:-/srv/ai-station}/models/voice/piper:/models:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json, urllib.request; assert json.load(urllib.request.urlopen('http://127.0.0.1:8095/health', timeout=3))['ready']"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   llm-gateway:
     image: ghcr.io/berriai/litellm-database:main-stable
@@ -173,7 +192,10 @@ services:
       start_period: 90s
 
   open-webui:
-    image: ghcr.io/open-webui/open-webui@sha256:a26effeb220e132482bf7e0560b3404843e7bc40d23051144e062960df8df6b0
+    image: ai-station/open-webui:0.10.2-voice
+    pull_policy: build
+    build:
+      context: ./apps/voice/webui
     restart: unless-stopped
     depends_on:
       postgres:
@@ -194,6 +216,13 @@ services:
 
       DATABASE_URL: "${OPENWEBUI_DATABASE_URL}"
       VECTOR_DB: "pgvector"
+      # Open WebUI v0.10.2: dim>2000 requires HALFVEC, then CREATE HNSW.
+      # pgvector 0.8 HNSW max is 4000-d for halfvec; 4096 exceeds that.
+      # scripts/reindex-openwebui-embeddings.py keeps idx_document_chunk_vector
+      # as HNSW on subvector(vector,1,4000) so startup skips CREATE INDEX.
+      # Retrieval stays exact cosine (ADR-024).
+      PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH: "4096"
+      PGVECTOR_USE_HALFVEC: "true"
       PGVECTOR_DB_URL: "${PGVECTOR_DB_URL}"
       REDIS_URL: "redis://redis:6379/0"
       WEBSOCKET_MANAGER: "redis"
@@ -203,14 +232,14 @@ services:
       ENABLE_OLLAMA_API: "False"
       OPENAI_API_BASE_URLS: "http://llm-gateway:4000/v1"
       OPENAI_API_KEYS: "${LITELLM_MASTER_KEY}"
-      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.6-35B-A3B-UD-Q4_K_M", "Qwen3-Coder-30B-A3B-Instruct-Q4", "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M", "Qwen3-VL-32B-Instruct-Q4_K_M", "Ornith-1.5-35B-Q4_K_M", "Qwen3.8-27B-UD-Q4_K_M", "LongWriter-Zero-32B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
+      OPENAI_API_CONFIGS: '{"0": {"enable": true, "prefix_id": "", "model_ids": ["Qwen3.8-27B-UD-Q4_K_M", "Ornith-1.5-35B-Q4_K_M", "Qwen3.8-27B-Reasoning-UD-Q4_K_M", "Qwen3.8-27B-Vision-UD-Q4_K_M", "LongWriter-Zero-32B-Q4_K_M"], "tags": [], "connection_type": "openai"}}'
 
       ENABLE_PERSISTENT_CONFIG: "False"
       ENABLE_EVALUATION_ARENA_MODELS: "False"
-      DEFAULT_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
-      DEFAULT_PINNED_MODELS: "Qwen3.6-35B-A3B-UD-Q4_K_M"
-      DEFAULT_MODEL_METADATA: '{"capabilities": {"vision": true, "file_upload": true, "file_context": true, "web_search": true, "image_generation": false, "code_interpreter": false}}'
-      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 8192, "max_tokens": 1024, "function_calling": "default"}'
+      DEFAULT_MODELS: "Qwen3.8-27B-UD-Q4_K_M"
+      DEFAULT_PINNED_MODELS: "Qwen3.8-27B-UD-Q4_K_M"
+      DEFAULT_MODEL_METADATA: '{"capabilities": {"vision": true, "file_upload": true, "file_context": true, "web_search": true, "image_generation": false, "code_interpreter": false}, "defaultFeatureIds": ["web_search"]}'
+      DEFAULT_MODEL_PARAMS: '{"temperature": 0.2, "num_ctx": 262144, "max_tokens": 4096, "function_calling": "default"}'
 
       CONTENT_EXTRACTION_ENGINE: "tika"
       TIKA_SERVER_URL: "http://tika:9998"
@@ -250,6 +279,23 @@ services:
       WHISPER_VAD_FILTER: "True"
       AUDIO_STT_ALLOWED_EXTENSIONS: "mp3,wav,m4a,webm,ogg,flac,mp4,mpga,mpeg"
       AUDIO_STT_SUPPORTED_CONTENT_TYPES: "audio/*,video/webm,video/mp4"
+      AUDIO_STT_ENGINE: "${AI_STATION_WEBUI_STT_ENGINE-openai}"
+      AUDIO_STT_OPENAI_API_BASE_URL: "http://llm-gateway:4000/v1"
+      AUDIO_STT_OPENAI_API_KEY: "${LITELLM_MASTER_KEY}"
+      AUDIO_STT_MODEL: "ai-station-asr"
+      AUDIO_TTS_ENGINE: "${AI_STATION_WEBUI_TTS_ENGINE-openai}"
+      AUDIO_TTS_OPENAI_API_BASE_URL: "http://llm-gateway:4000/v1"
+      AUDIO_TTS_OPENAI_API_KEY: "${LITELLM_MASTER_KEY}"
+      AUDIO_TTS_MODEL: "ai-station-speech"
+      AUDIO_TTS_VOICE: "auto"
+      AUDIO_TTS_SPLIT_ON: "punctuation"
+      VOICE_MODE_PROMPT_TEMPLATE: >-
+        You are AI Station in a live voice conversation. Speak naturally and
+        concisely in the language of the latest user turn, unless the user
+        requests another language. Give the final answer in plain speech.
+        Ask a short clarifying question when the transcript is unclear.
+        State uncertainty plainly and claim completed actions only when a
+        tool result confirms them.
 
       OFFLINE_MODE: "True"
       ENABLE_VERSION_UPDATE_CHECK: "False"
@@ -263,6 +309,145 @@ services:
     networks:
       - default
 
+  # n8n Instance AI sandbox (official n8n-sandbox). Internal Compose DNS only;
+  # never publish 8080/9090. The runner is privileged Docker-in-Docker.
+  sandbox-certs:
+    profiles: ["n8n"]
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:latest
+    container_name: ai-station-n8n-sandbox-certs
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        bootstrap-mtls.sh --out-dir /tls --api-san sandbox-api
+        --control-san-prefix sandbox-runner --world-readable &&
+        chown -R sandbox-api:sandbox-api /tls/api && chmod -R a+rX /tls
+    environment:
+      NUM_RUNNERS: "1"
+    volumes:
+      - n8n-sandbox-tls:/tls
+    networks:
+      - default
+
+  sandbox-api:
+    profiles: ["n8n"]
+    image: ghcr.io/n8n-io/n8n-sandbox-service-api:latest
+    container_name: ai-station-n8n-sandbox-api
+    restart: unless-stopped
+    depends_on:
+      sandbox-certs:
+        condition: service_completed_successfully
+    environment:
+      SANDBOX_API_KEYS: "${N8N_SANDBOX_SERVICE_API_KEY:-}"
+      SANDBOX_API_RUNNER_REGISTRATION_TOKEN: "${N8N_SANDBOX_RUNNER_REGISTRATION_TOKEN:-}"
+      SANDBOX_API_RUNNER_API_KEY: "${N8N_SANDBOX_RUNNER_API_KEY:-}"
+      SANDBOX_API_GRPC_TLS_CERT_FILE: /tls/api/grpc-server.crt
+      SANDBOX_API_GRPC_TLS_KEY_FILE: /tls/api/grpc-server.key
+      SANDBOX_API_GRPC_TLS_CLIENT_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CA_FILE: /tls/api/ca.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/api/control-grpc-api-client.crt
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/api/control-grpc-api-client.key
+      SANDBOX_API_RUNNER_CONTROL_GRPC_TLS_SERVER_NAME: sandbox-runner-1
+    volumes:
+      - n8n-sandbox-tls:/tls:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  sandbox-runner-1:
+    profiles: ["n8n"]
+    image: ghcr.io/n8n-io/n8n-sandbox-service-runner-dind:latest
+    container_name: ai-station-n8n-sandbox-runner-1
+    restart: unless-stopped
+    privileged: true
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    environment:
+      SANDBOX_RUNNER_API_KEYS: "${N8N_SANDBOX_RUNNER_API_KEY:-}"
+      SANDBOX_RUNNER_REGISTRATION_TOKEN: "${N8N_SANDBOX_RUNNER_REGISTRATION_TOKEN:-}"
+      SANDBOX_RUNNER_API_GRPC_ADDR: sandbox-api:9090
+      SANDBOX_RUNNER_HTTP_BASE_URL: http://sandbox-runner-1:8080
+      SANDBOX_RUNNER_CONTROL_GRPC_LISTEN_ADDR: ":9091"
+      SANDBOX_RUNNER_CONTROL_GRPC_ADVERTISE_ADDR: sandbox-runner-1:9091
+      SANDBOX_RUNNER_ID: runner-1
+      SANDBOX_RUNNER_DOCKER_SANDBOX_IMAGE: "ghcr.io/n8n-io/n8n-sandbox-service-sandbox@sha256:16f62fb90a4ce61ef74925f62ea76bb11eb2a5598888b7c0651100c7944ed2d8"
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CA_FILE: /tls/runner/ca.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_CERT_FILE: /tls/runner/grpc-client.crt
+      SANDBOX_RUNNER_REGISTRATION_GRPC_KEY_FILE: /tls/runner/grpc-client.key
+      SANDBOX_RUNNER_REGISTRATION_GRPC_SERVER_NAME: sandbox-api
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CERT_FILE: /tls/runner/control-grpc-server.crt
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_KEY_FILE: /tls/runner/control-grpc-server.key
+      SANDBOX_RUNNER_CONTROL_GRPC_TLS_CLIENT_CA_FILE: /tls/runner/ca.crt
+    volumes:
+      - n8n-sandbox-tls:/tls:ro
+    networks:
+      - default
+
+  n8n:
+    profiles: ["n8n"]
+    image: docker.n8n.io/n8nio/n8n:2.35.6
+    container_name: ai-station-n8n
+    restart: unless-stopped
+    depends_on:
+      sandbox-api:
+        condition: service_healthy
+    environment:
+      N8N_HOST: "127.0.0.1"
+      N8N_PORT: "${N8N_PORT:-5678}"
+      N8N_PROTOCOL: "http"
+      N8N_LISTEN_ADDRESS: "0.0.0.0"
+      WEBHOOK_URL: "http://127.0.0.1:${N8N_PORT:-5678}/"
+      N8N_EDITOR_BASE_URL: "http://127.0.0.1:${N8N_PORT:-5678}/"
+      N8N_SECURE_COOKIE: "false"
+      N8N_ENCRYPTION_KEY: "${N8N_ENCRYPTION_KEY:-}"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      N8N_COMMUNITY_PACKAGES_ENABLED: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_HIRING_BANNER_ENABLED: "false"
+      # Instance AI / OpenAI-compatible nodes talk to LiteLLM only (ADR-021).
+      N8N_INSTANCE_AI_MODEL: "${N8N_INSTANCE_AI_MODEL:-Qwen3.8-27B-UD-Q4_K_M}"
+      N8N_INSTANCE_AI_MODEL_URL: "${N8N_INSTANCE_AI_MODEL_URL:-http://llm-gateway:4000/v1}"
+      N8N_INSTANCE_AI_MODEL_API_KEY: "${N8N_LLM_API_KEY:-}"
+      N8N_INSTANCE_AI_SEARXNG_URL: "${N8N_INSTANCE_AI_SEARXNG_URL:-http://searxng:8080}"
+      N8N_INSTANCE_AI_THINKING_ENABLED: "false"
+      N8N_INSTANCE_AI_BROWSER_USE_ENABLED: "false"
+      N8N_INSTANCE_AI_OBSERVER_MESSAGE_TOKENS: "8192"
+      N8N_INSTANCE_AI_REFLECTOR_OBSERVATION_TOKENS: "8192"
+      N8N_INSTANCE_AI_SANDBOX_ENABLED: "true"
+      N8N_INSTANCE_AI_SANDBOX_PROVIDER: "n8n-sandbox"
+      N8N_SANDBOX_SERVICE_URL: "${N8N_SANDBOX_SERVICE_URL:-http://sandbox-api:8080}"
+      N8N_SANDBOX_SERVICE_API_KEY: "${N8N_SANDBOX_SERVICE_API_KEY:-}"
+      GENERIC_TIMEZONE: "${GENERIC_TIMEZONE:-UTC}"
+      TZ: "${TZ:-UTC}"
+    volumes:
+      - ${AI_STATION_DATA:-/srv/ai-station}/runtime/n8n:/home/node/.n8n
+      - ./config/clients/n8n/workflows:/opt/ai-station-n8n-workflows:ro
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:${N8N_PORT:-5678}"
+    networks:
+      - default
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:'+(process.env.N8N_PORT||'5678')+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
 volumes:
   pgdata:
     name: ai-station_pgdata
@@ -270,6 +455,8 @@ volumes:
     name: ai-station_redisdata
   openwebui-data:
     name: ai-station-openwebui-data
+  n8n-sandbox-tls:
+    name: ai-station-n8n-sandbox-tls
 
 secrets:
   postgres_password:

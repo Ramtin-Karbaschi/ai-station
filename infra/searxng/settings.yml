@@ -8,7 +8,7 @@ server:
   image_proxy: false
 
 search:
-  safe_search: 0
+  safe_search: 1
   autocomplete: ""
   formats:
     - html
