@@ -147,6 +147,29 @@ ai restart
 make config
 ~~~
 
+## SearXNG signing secret
+
+New installs receive a per-install value from the existing `.env` provisioning
+step. On an existing WSL installation, check and provision it explicitly:
+
+~~~bash
+./scripts/ai searxng secret status
+./scripts/ai searxng secret provision
+make config
+~~~
+
+Provisioning updates only `.env`, keeps it owner-only, and never prints the
+value or restarts a service. After active use is complete, recreate only
+SearXNG and wait for its health check:
+
+~~~bash
+./scripts/compose-ai-station.sh up -d --no-deps searxng
+curl --fail --silent --show-error http://127.0.0.1:8889/
+~~~
+
+The signing secret may invalidate SearXNG-signed cookies. Do not restart the
+service automatically as part of the provisioning command.
+
 ## Build local images
 
 ~~~bash

@@ -57,10 +57,12 @@ services:
     restart: unless-stopped
     environment:
       SEARXNG_BASE_URL: "http://127.0.0.1:${SEARXNG_PORT:-8889}/"
+      SEARXNG_SECRET: "${SEARXNG_SECRET:-}"
       UWSGI_WORKERS: "2"
       UWSGI_THREADS: "2"
     volumes:
       - ./infra/searxng:/etc/searxng:ro
+    entrypoint: ["/bin/sh", "/etc/searxng/secret-entrypoint.sh"]
     ports:
       - "127.0.0.1:${SEARXNG_PORT:-8889}:8080"
     networks:

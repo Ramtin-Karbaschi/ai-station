@@ -53,6 +53,7 @@ Usage:
   ai lora status|validate|plan|train|register|apply|disable
   ai tenants status|list|create|show|disable|doctor
   ai voice setup|status|smoke|turn --dry-run
+  ai searxng secret status|provision
   ai disk
   ai git
   ai vscode
@@ -1214,6 +1215,9 @@ source "$ROOT/scripts/lib/ai-output.sh"
 source "$ROOT/scripts/lib/ai-tools.sh"
 
 # shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ai-searxng.sh"
+
+# shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-ops.sh"
 
 cmd_verify() {
@@ -1330,6 +1334,7 @@ main() {
     lora) cmd_lora "$@" ;;
     tenants) cmd_tenants "$@" ;;
     voice) cmd_voice "$@" ;;
+    searxng) cmd_searxng "$@" ;;
     disk) cmd_disk "$@" ;;
     git) cmd_git "$@" ;;
     vscode) cmd_vscode "$@" ;;
