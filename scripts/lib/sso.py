@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +27,7 @@ LOGIN_FORBIDDEN = re.compile(
     r"id_token|refresh_token|client_secret)\b",
     re.IGNORECASE,
 )
-ISSUER_RE = re.compile(r"^https://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+$")
+CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._~:-]{1,256}$")
 LOOPBACK_HTTP_RE = re.compile(
     r"^http://(127\.0\.0\.1|localhost)(:[0-9]+)?(/.*)?$",
     re.IGNORECASE,
@@ -42,8 +43,10 @@ class SSOError(RuntimeError):
 
 
 CountUsersFn = Callable[[], int | None]
+CountGroupsFn = Callable[[tuple[str, ...]], int | None]
 FetchFn = Callable[[str], bytes]
 count_users_fn: CountUsersFn | None = None
+count_groups_fn: CountGroupsFn | None = None
 
 
 def data_root() -> Path:
@@ -62,7 +65,7 @@ def discovery_url(issuer: str) -> str:
     return trimmed + "/.well-known/openid-configuration"
 
 
-def _count_users_postgres() -> int | None:
+def _count_local_operator_postgres() -> int | None:
     script = project_root() / "scripts" / "compose-ai-station.sh"
     try:
         proc = subprocess.run(
@@ -77,7 +80,10 @@ def _count_users_postgres() -> int | None:
                 "-d",
                 "openwebui",
                 "-Atc",
-                "SELECT count(*) FROM auth;",
+                "SELECT count(*) FROM auth a "
+                "JOIN \"user\" u ON u.id = a.id "
+                "WHERE a.active IS TRUE AND a.password IS NOT NULL "
+                "AND a.password <> '' AND u.role = 'admin' AND u.oauth IS NULL;",
             ],
             capture_output=True,
             text=True,
@@ -99,8 +105,40 @@ def _count_users_postgres() -> int | None:
 
 
 def count_local_operators() -> int | None:
-    fn = count_users_fn or _count_users_postgres
+    fn = count_users_fn or _count_local_operator_postgres
     return fn()
+
+
+def _count_station_groups_postgres(names: tuple[str, ...]) -> int | None:
+    script = project_root() / "scripts" / "compose-ai-station.sh"
+    quoted = ",".join("'" + name.replace("'", "''") + "'" for name in names)
+    try:
+        proc = subprocess.run(
+            [
+                str(script), "exec", "-T", "postgres", "psql", "-U", "openwebui",
+                "-d", "openwebui", "-Atc",
+                f'SELECT count(DISTINCT name) FROM "group" WHERE name IN ({quoted});',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(project_root()),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
+    try:
+        return int(lines[-1]) if lines else None
+    except ValueError:
+        return None
+
+
+def count_station_groups(names: tuple[str, ...]) -> int | None:
+    fn = count_groups_fn or _count_station_groups_postgres
+    return fn(names)
 
 
 def require_local_operator() -> int:
@@ -115,6 +153,26 @@ def require_local_operator() -> int:
         raise SSOError(
             "Open WebUI has no local operator. Create the break-glass "
             "account before enabling OAuth signup"
+        )
+    return count
+
+
+def require_station_groups(policy: GroupPolicy) -> int:
+    names = tuple(
+        dict.fromkeys(
+            policy.admin_groups + policy.member_groups + policy.viewer_groups
+        )
+    )
+    count = count_station_groups(names)
+    if count is None:
+        raise SSOError(
+            "cannot verify the Station role groups in Open WebUI; "
+            "start the stack and create the local role groups before ai sso configure"
+        )
+    if count != len(names):
+        raise SSOError(
+            "Open WebUI is missing one or more Station role groups. "
+            "Create the configured Admin, Member, and Viewer groups before ai sso configure"
         )
     return count
 
@@ -136,16 +194,21 @@ def probe_issuer(issuer: str, fetch_fn: FetchFn | None = None) -> dict[str, Any]
     if not isinstance(payload, dict):
         raise SSOError("issuer discovery returned a non-object")
     issuer_claim = str(payload.get("issuer") or "").strip()
-    jwks = str(payload.get("jwks_uri") or "").strip()
-    if not issuer_claim or not jwks:
-        raise SSOError("discovery document missing issuer or jwks_uri")
+    expected_issuer = validated.removesuffix("/.well-known/openid-configuration").rstrip("/")
+    if issuer_claim != expected_issuer:
+        raise SSOError("discovery issuer does not match the configured issuer")
+    jwks = _validate_endpoint(payload.get("jwks_uri"), "jwks_uri")
+    authorization = _validate_endpoint(
+        payload.get("authorization_endpoint"), "authorization_endpoint"
+    )
+    token = _validate_endpoint(payload.get("token_endpoint"), "token_endpoint")
     return {
         "ok": True,
         "discovery_url": url,
         "issuer": issuer_claim,
         "jwks_uri": jwks,
-        "authorization_endpoint": bool(payload.get("authorization_endpoint")),
-        "token_endpoint": bool(payload.get("token_endpoint")),
+        "authorization_endpoint": authorization,
+        "token_endpoint": token,
     }
 
 
@@ -155,6 +218,17 @@ def _fetch_bytes(url: str) -> bytes:
             return resp.read(1_048_576)
     except Exception as exc:
         raise SSOError(f"issuer discovery HTTP failed: {exc}") from exc
+
+
+def _validate_endpoint(value: Any, name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise SSOError(f"discovery document missing {name}")
+    endpoint = value.strip()
+    parsed = urlparse(endpoint)
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise SSOError(f"discovery {name} is not a valid endpoint URL")
+    validate_issuer(endpoint)
+    return endpoint
 
 
 def env_path() -> Path:
@@ -197,21 +271,25 @@ def parse_groups(value: str | Iterable[str] | None) -> tuple[str, ...]:
 def map_station_role(
     groups: Iterable[str],
     policy: GroupPolicy | None = None,
-) -> str:
-    """Map IdP groups to Admin / Member / Viewer. Unmapped is Viewer, never Admin."""
+) -> str | None:
+    """Map an allowlisted IdP group set to a Station role; deny unmapped sets."""
     current = policy or GroupPolicy()
     claimed = {item.casefold() for item in parse_groups(list(groups))}
     if claimed & {item.casefold() for item in current.admin_groups}:
         return "admin"
     if claimed & {item.casefold() for item in current.member_groups}:
         return "member"
-    return "viewer"
+    if claimed & {item.casefold() for item in current.viewer_groups}:
+        return "viewer"
+    return None
 
 
 def openwebui_role(station_role: str) -> str:
     if station_role == "admin":
         return "admin"
-    return "user"
+    if station_role in {"member", "viewer"}:
+        return "user"
+    raise SSOError("unmapped identity group is not allowed")
 
 
 def validate_issuer(url: str) -> str:
@@ -221,13 +299,50 @@ def validate_issuer(url: str) -> str:
     if "ldap" in text.casefold():
         raise SSOError("LDAP URLs are not a supported identity path")
     parsed = urlparse(text)
+    if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise SSOError("issuer URL is not a valid URL")
     if parsed.scheme not in {"https", "http"}:
         raise SSOError("issuer must be an https URL (http only on loopback)")
     if parsed.scheme == "http" and not LOOPBACK_HTTP_RE.match(text):
         raise SSOError("http issuers are allowed only on 127.0.0.1 or localhost")
-    if parsed.scheme == "https" and not ISSUER_RE.match(text):
-        raise SSOError("issuer URL is not a valid https URL")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise SSOError("issuer URL has an invalid port") from exc
+    if port is not None and not (1 <= port <= 65535):
+        raise SSOError("issuer URL has an invalid port")
     return text
+
+
+def validate_client_id(client_id: str) -> str:
+    value = client_id.strip()
+    if not CLIENT_ID_RE.fullmatch(value):
+        raise SSOError("OIDC client ID is required and must be a safe identifier")
+    return value
+
+
+def validate_group_name(value: str, label: str) -> str:
+    name = value.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name):
+        raise SSOError(f"{label} must be a 1-64 character group name")
+    return name
+
+
+def validate_group_policy(policy: GroupPolicy) -> GroupPolicy:
+    names = policy.admin_groups + policy.member_groups + policy.viewer_groups
+    if any(not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name) for name in names):
+        raise SSOError("role group names must be 1-64 safe characters")
+    if len({name.casefold() for name in names}) != len(names):
+        raise SSOError("Admin, Member, and Viewer groups must be distinct")
+    return policy
+
+
+def validate_redirect_uri(value: str) -> str:
+    uri = value.strip()
+    validate_issuer(uri)
+    if urlparse(uri).path.rstrip("/") != "/oauth/oidc/callback":
+        raise SSOError("redirect URI must end with /oauth/oidc/callback")
+    return uri
 
 
 def oauth_env(
@@ -238,8 +353,9 @@ def oauth_env(
     client_secret: str = "",
     provider_name: str = "SSO",
     policy: GroupPolicy | None = None,
+    redirect_uri: str = "",
 ) -> dict[str, str]:
-    current = policy or GroupPolicy()
+    current = validate_group_policy(policy or GroupPolicy())
     allowed = ",".join(
         list(current.admin_groups)
         + list(current.member_groups)
@@ -254,6 +370,9 @@ def oauth_env(
         "ENABLE_OAUTH": flag,
         "ENABLE_OAUTH_SIGNUP": flag,
         "ENABLE_OAUTH_ROLE_MANAGEMENT": flag,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": flag,
+        "ENABLE_OAUTH_GROUP_CREATION": "False",
+        "AI_STATION_SSO_ENFORCE_ROLE_GROUPS": flag,
         "ENABLE_OAUTH_PERSISTENT_CONFIG": "False",
         "ENABLE_PROFILE_IMAGE_URL_FORWARDING": "False",
         "OPENID_PROVIDER_URL": issuer if enabled else issuer,
@@ -262,11 +381,17 @@ def oauth_env(
         "OAUTH_PROVIDER_NAME": provider_name or "SSO",
         "OAUTH_SCOPES": "openid email profile groups",
         "OAUTH_ROLES_CLAIM": "groups",
+        "OAUTH_GROUPS_CLAIM": "groups",
         "OAUTH_ALLOWED_ROLES": allowed,
         "OAUTH_ADMIN_ROLES": admin,
+        "OAUTH_MEMBER_GROUPS": ",".join(current.member_groups),
+        "OAUTH_VIEWER_GROUPS": ",".join(current.viewer_groups),
+        "AI_STATION_OIDC_ADMIN_GROUP": ",".join(current.admin_groups),
+        "AI_STATION_OIDC_MEMBER_GROUP": ",".join(current.member_groups),
+        "AI_STATION_OIDC_VIEWER_GROUP": ",".join(current.viewer_groups),
         "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": "False",
         "DEFAULT_USER_ROLE": "user",
-        "OPENID_REDIRECT_URI": "http://127.0.0.1:3000/oauth/oidc/callback",
+        "OPENID_REDIRECT_URI": redirect_uri,
     }
 
 
@@ -328,7 +453,29 @@ def upsert_env_file(
             lines.append(f"{key}={updates[key]}")
     target.parent.mkdir(parents=True, exist_ok=True)
     payload = "\n".join(lines) + "\n"
-    target.write_text(payload, encoding="utf-8")
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
+    )
+    temporary = Path(temporary_name)
+    try:
+        try:
+            os.fchmod(fd, 0o600)
+        except AttributeError:
+            os.chmod(temporary, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = -1
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, target)
+    except BaseException:
+        if fd >= 0:
+            os.close(fd)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+        raise
     return target
 
 
@@ -423,7 +570,7 @@ def status_payload(values: Mapping[str, str] | None = None) -> dict[str, Any]:
         "client_id": env.get("OAUTH_CLIENT_ID", ""),
         "client_secret": "set" if env.get("OAUTH_CLIENT_SECRET") else "unset",
         "provider_name": env.get("OAUTH_PROVIDER_NAME", "SSO"),
-        "break_glass": True,
+        "break_glass": count_local_operators() not in (None, 0),
         "local_signup": False,
         "ldap": False,
         "groups": policy.as_dict(),
@@ -460,6 +607,7 @@ def main(argv: list[str] | None = None) -> int:
     configure.add_argument("--issuer", required=True)
     configure.add_argument("--client-id", required=True)
     configure.add_argument("--secret-file", default=None)
+    configure.add_argument("--redirect-uri", default=None)
     configure.add_argument("--provider-name", default="SSO")
     configure.add_argument("--admin-group", default=DEFAULT_ADMIN_GROUP)
     configure.add_argument("--member-group", default=DEFAULT_MEMBER_GROUP)
@@ -478,6 +626,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if command == "configure":
             issuer = validate_issuer(args.issuer)
+            client_id = validate_client_id(args.client_id)
+            redirect_uri = (
+                validate_redirect_uri(args.redirect_uri)
+                if args.redirect_uri
+                else ""
+            )
             secret = _read_secret(args.secret_file)
             if not secret:
                 raise SSOError(
@@ -485,22 +639,25 @@ def main(argv: list[str] | None = None) -> int:
                     "AI_STATION_OIDC_CLIENT_SECRET"
                 )
             policy = GroupPolicy(
-                admin_groups=(args.admin_group,),
-                member_groups=(args.member_group,),
-                viewer_groups=(args.viewer_group,),
+                admin_groups=(validate_group_name(args.admin_group, "Admin group"),),
+                member_groups=(validate_group_name(args.member_group, "Member group"),),
+                viewer_groups=(validate_group_name(args.viewer_group, "Viewer group"),),
             )
+            validate_group_policy(policy)
             values = oauth_env(
                 enabled=True,
-                issuer=issuer,
-                client_id=args.client_id.strip(),
+                issuer=discovery_url(issuer),
+                client_id=client_id,
                 client_secret=secret,
                 provider_name=args.provider_name,
                 policy=policy,
+                redirect_uri=redirect_uri,
             )
             if args.dry_run:
                 print(json.dumps(redact_env(values), indent=2))
                 return 0
             require_local_operator()
+            require_station_groups(policy)
             path = upsert_env_file(values)
             print(f"OK: OIDC enabled ({path})")
             print("Recreate Open WebUI to apply: ai restart")
@@ -536,6 +693,7 @@ def main(argv: list[str] | None = None) -> int:
                     "ENABLE_OAUTH": "False",
                     "ENABLE_OAUTH_SIGNUP": "False",
                     "ENABLE_OAUTH_ROLE_MANAGEMENT": "False",
+                    "ENABLE_OAUTH_GROUP_MANAGEMENT": "False",
                 }
             )
             print(f"OK: OIDC disabled ({path}). Local operator login remains.")

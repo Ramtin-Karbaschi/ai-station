@@ -5,6 +5,38 @@ Application API keys are a different product surface. See
 [PLATFORM.md](../PLATFORM.md). Non-technical steps:
 [FAQ.md](FAQ.md).
 
+## Human sign-in with OIDC
+
+OIDC is off by default. The local password form remains available for the
+break-glass operator. Before enabling OIDC, create the Admin, Member, and
+Viewer groups in Open WebUI and ensure one active local password admin exists.
+The setup command refuses to write configuration if it cannot verify those
+preconditions.
+
+1. Check the provider metadata with `ai sso probe --issuer <issuer-url>`.
+2. Configure using a protected secret file:
+   `ai sso configure --issuer <issuer-url> --client-id <client-id> --secret-file <path>`.
+3. Recreate Open WebUI with `ai restart`, then review `ai sso status`.
+
+The callback requires at least one configured Admin, Member, or Viewer group
+claim; missing and unmapped claims are denied, including on first-user
+bootstrap. Admin maps
+to Open WebUI `admin`. Member and Viewer map to Open WebUI `user`, and their
+separate group memberships remain available for group permissions. Configure
+Viewer restrictions on its Open WebUI group; the built-in `user` role alone
+does not distinguish Viewer from Member. Group auto-creation and account
+merging by email are off.
+
+Successful logins append a content-free record to the private
+`/srv/ai-station/runtime/sso/login.jsonl` file. It contains an internal user
+identifier, a hashed email, mapped role, outcome, and provider name. It does
+not contain tokens, prompts, or chat messages. OAuth callback logs that could
+contain token responses, user claims, or exception details are sanitized.
+`ai sso disable` turns off OIDC while preserving local operator login.
+
+The checked-in configuration uses synthetic local fixtures only. A customer
+issuer and its group mapping still require a separate IdP acceptance drill.
+
 ## Voice calls
 
 Open a chat with one model selected and an empty composer. Click the voice

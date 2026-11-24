@@ -44,6 +44,11 @@ not for daily use.
 
 - Authorization roles come from trusted OIDC group claims.
 - Production issuer and group mappings require operator validation before use.
+- The setup command requires an active local password Admin and pre-created
+  Open WebUI groups for all three Station roles. OAuth group creation and
+  account merging by email stay disabled.
+- Open WebUI maps Admin to `admin`, while Member and Viewer map to `user`;
+  their separate group memberships support group-specific permissions.
 - LiteLLM virtual keys remain separate from human sign-in.
 
 ## Risks
@@ -66,6 +71,8 @@ and recycle the container. Existing LiteLLM keys are unchanged.
 ## Acceptance criteria
 
 - A user completes login against a configured OIDC issuer.
-- Unmapped users do not receive Admin.
+- Missing and unmapped role claims are denied, including during first-user
+  bootstrap.
+- Successful login audit records omit tokens, prompts, and chat content.
 - LDAP modules, images, and docs are absent from the supported path.
 - Prompt and response content are not written to the login log.

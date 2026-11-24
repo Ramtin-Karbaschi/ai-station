@@ -10,3 +10,8 @@ RUN python /tmp/patch_station_call.py \
 COPY patch_research_backend.py /tmp/patch_research_backend.py
 RUN python /tmp/patch_research_backend.py /app/backend/open_webui \
     && rm /tmp/patch_research_backend.py
+
+COPY patch_sso_backend.py /tmp/patch_sso_backend.py
+COPY station_sso_audit.py /app/backend/open_webui/utils/station_sso_audit.py
+RUN python /tmp/patch_sso_backend.py /app/backend/open_webui \
+    && rm /tmp/patch_sso_backend.py
