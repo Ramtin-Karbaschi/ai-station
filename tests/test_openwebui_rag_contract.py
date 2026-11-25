@@ -59,13 +59,13 @@ class OpenWebuiRagContractTests(unittest.TestCase):
     def test_start_and_verify_require_the_cpu_reranker(self) -> None:
         start = CLI.read_text(encoding="utf-8")
         verify = VERIFY.read_text(encoding="utf-8")
-        self.assertIn(
-            "ai_retry_compose --profile reranker up -d reranker", start
-        )
+        self.assertIn("ai_start_cpu_dependency", start)
+        self.assertIn("    reranker", start)
         self.assertIn("ai_wait_compose_service reranker healthy 180", start)
         self.assertIn("http://127.0.0.1:8091/v1/models|Reranker", start)
         self.assertIn("http://127.0.0.1:8091/v1/models", verify)
-        self.assertIn("ai_retry_compose --profile asr up -d asr-qwen3", start)
+        self.assertIn("ai_start_cpu_dependency", start)
+        self.assertIn("    asr-qwen3", start)
         self.assertIn("ai_wait_compose_service asr-qwen3 healthy 180", start)
         self.assertIn("http://127.0.0.1:8092/v1/models", verify)
         self.assertIn("http://127.0.0.1:8888/v1/audio/transcriptions", verify)
@@ -86,6 +86,16 @@ class OpenWebuiRagContractTests(unittest.TestCase):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
         by_id = {item["id"]: item for item in catalog["models"]}
         self.assertIn("ai start", by_id["reranker-qwen3-4b"]["note"])
+
+    def test_cpu_dependencies_have_no_inherited_nvidia_reservation(self) -> None:
+        services = yaml.safe_load(
+            (ROOT / "compose.models.yml").read_text(encoding="utf-8")
+        )["services"]
+        for service_name in ("reranker", "asr-qwen3"):
+            with self.subTest(service=service_name):
+                service = services[service_name]
+                self.assertEqual(service["deploy"], {})
+                self.assertEqual(service["command"][service["command"].index("-ngl") + 1], "0")
 
     def test_embedder_is_cpu_only_like_reranker(self) -> None:
         compose = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))

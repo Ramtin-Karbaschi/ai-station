@@ -71,6 +71,54 @@ ai_cpu_fallback_runtime_ready() {
   curl -fsS --max-time 5 http://127.0.0.1:8089/v1/models >/dev/null 2>&1
 }
 
+# Required retrieval/speech services are CPU-capable. Probe their loopback
+# APIs before Compose: an already healthy service is a valid dependency and
+# must not be recreated merely because the current WSL GPU is unavailable.
+# The Compose definitions for these services deliberately use the CPU anchor,
+# so a cold start has no implicit NVIDIA reservation.
+ai_start_cpu_dependency() {
+  local service="$1" url="$2" label="$3" model_id="$4" profile="$5"
+  if PYTHONPATH="$ROOT" python3 - "$url" "$model_id" <<'PY'
+import json
+import sys
+import urllib.request
+
+url, expected = sys.argv[1], sys.argv[2]
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+    models = payload.get("data") or []
+except (json.JSONDecodeError, TypeError, AttributeError, OSError, ValueError):
+    raise SystemExit(1)
+if not any(str(item.get("id")) == expected for item in models if isinstance(item, dict)):
+    raise SystemExit(1)
+PY
+  then
+    echo "OK: $label already ready; preserving existing container"
+    return 0
+  fi
+
+  ai_retry_compose --profile "$profile" up -d "$service"
+  ai_wait_compose_service "$service" healthy 180
+  if ! PYTHONPATH="$ROOT" python3 - "$url" "$model_id" <<'PY'
+import json
+import sys
+import urllib.request
+
+url, expected = sys.argv[1], sys.argv[2]
+with urllib.request.urlopen(url, timeout=5) as response:
+    payload = json.load(response)
+models = payload.get("data") or []
+if not any(str(item.get("id")) == expected for item in models if isinstance(item, dict)):
+    raise SystemExit(f"expected model {expected!r} was not advertised")
+PY
+  then
+    echo "ERROR: $label is reachable but did not advertise model $model_id" >&2
+    return 1
+  fi
+  echo "OK: $label ($model_id)"
+}
+
 # Start the bounded CPU chat provider after the caller has classified the
 # live WSL GPU as genuinely unavailable.  This path owns a lifecycle lock from
 # ai start; prove the backend directly so it never calls the public :4000

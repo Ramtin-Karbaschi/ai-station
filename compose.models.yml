@@ -349,7 +349,11 @@ services:
 
   # Small model; CPU-only by default so it can coexist with a heavy GPU model.
   reranker:
+    # Keep the pinned image/volumes/network from llama-common, but clear its
+    # device reservation. `-ngl 0` only controls llama.cpp offload; it does
+    # not stop Compose from requesting NVIDIA at container creation time.
     <<: *llama-common
+    deploy: {}
     profiles: ["reranker"]
     container_name: ai-station-reranker
     gpus: []
@@ -382,6 +386,7 @@ services:
   # CPU-only so ASR can coexist with one heavy GPU chat profile (ADR-027).
   asr-qwen3:
     <<: *llama-common
+    deploy: {}
     profiles: ["asr"]
     container_name: ai-station-asr-qwen3
     gpus: []

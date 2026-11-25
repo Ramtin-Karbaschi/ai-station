@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 from pathlib import Path
 import subprocess
 import tempfile
+import threading
 import unittest
 
 
@@ -12,6 +15,88 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(os.name == "posix", "Bash lifecycle helpers require POSIX")
 class LifecycleStateTests(unittest.TestCase):
+    def test_cpu_dependency_preserves_healthy_reranker(self) -> None:
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802 - stdlib handler API
+                payload = {"data": [{"id": "ai-station-reranker"}]}
+                body = json.dumps(payload).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            events = Path(tempfile.mkdtemp()) / "events"
+            script = r'''source "$1"; source "$2"
+ai_retry_compose(){ printf 'recreated\n' >> "$EVENTS"; return 99; }
+ai_wait_compose_service(){ printf 'waited\n' >> "$EVENTS"; }
+ai_start_cpu_dependency reranker "$URL" Reranker ai-station-reranker reranker
+'''
+            result = subprocess.run(
+                ["bash", "-c", script, "bash", str(ROOT / "scripts/lib/ai-common.sh"),
+                 str(ROOT / "scripts/lib/ai-models.sh")],
+                env={**os.environ, "URL": f"http://127.0.0.1:{server.server_port}/v1/models",
+                     "EVENTS": str(events), "ROOT": str(ROOT)},
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("preserving existing container", result.stdout)
+            self.assertFalse(events.exists())
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_cpu_dependency_cold_start_retries_without_recreating_healthy_path(self) -> None:
+        class Handler(BaseHTTPRequestHandler):
+            requests = 0
+
+            def do_GET(self):  # noqa: N802 - stdlib handler API
+                type(self).requests += 1
+                if type(self).requests == 1:
+                    self.send_error(503)
+                    return
+                payload = {"data": [{"id": "ai-station-reranker"}]}
+                body = json.dumps(payload).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            events = Path(tempfile.mkdtemp()) / "events"
+            script = r'''source "$1"; source "$2"
+ai_retry_compose(){ printf '%s\n' "$*" >> "$EVENTS"; }
+ai_wait_compose_service(){ printf 'waited %s\n' "$*" >> "$EVENTS"; }
+ai_start_cpu_dependency reranker "$URL" Reranker ai-station-reranker reranker
+'''
+            result = subprocess.run(
+                ["bash", "-c", script, "bash", str(ROOT / "scripts/lib/ai-common.sh"),
+                 str(ROOT / "scripts/lib/ai-models.sh")],
+                env={**os.environ, "URL": f"http://127.0.0.1:{server.server_port}/v1/models",
+                     "EVENTS": str(events), "ROOT": str(ROOT)},
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("--profile reranker up -d reranker", events.read_text())
+            self.assertIn("ai-station-reranker", result.stdout)
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_provider_dry_run_uses_observed_heavy_when_marker_is_missing(self) -> None:
         import json
         import sys
@@ -272,6 +357,10 @@ ai_ensure_docker(){ :; }
 ai_stop_experimental_gpu_overlays(){ :; }
 ai_ensure_network(){ :; }
 ai_retry_compose(){ :; }
+ai_runtime_gpu_status(){ printf available; }
+ai_cpu_fallback_enabled(){ printf true; }
+ai_start_cpu_dependency(){ :; }
+ai_start_cpu_fallback(){ touch "$AI_STATE_DIR/cpu-fallback-called"; return 99; }
 ai_wait_compose_service(){ :; }
 ai_ensure_host_gateway(){ :; }
 ai_tools_start(){ :; }
@@ -312,6 +401,7 @@ cmd_start --profile general
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(marker.read_text(encoding="utf-8"), "general\n")
+            self.assertFalse((marker.parent / "cpu-fallback-called").exists())
 
     def test_models_stop_checks_media_busy_before_stopping_llama(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

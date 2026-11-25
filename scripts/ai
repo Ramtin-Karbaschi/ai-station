@@ -326,13 +326,17 @@ cmd_start() {
   ai_ensure_network
 
   ai_retry_compose up -d postgres redis searxng tika embedder
-  ai_retry_compose --profile reranker up -d reranker
+  ai_start_cpu_dependency \
+    reranker "http://127.0.0.1:8091/v1/models" "Reranker" \
+    ai-station-reranker reranker
   ai_wait_compose_service postgres healthy 120
   ai_wait_compose_service redis healthy 60
   ai_wait_compose_service tika healthy 90
   ai_wait_compose_service embedder healthy 180
   ai_wait_compose_service reranker healthy 180
-  ai_retry_compose --profile asr up -d asr-qwen3
+  ai_start_cpu_dependency \
+    asr-qwen3 "http://127.0.0.1:8092/v1/models" "Qwen3-ASR" \
+    ai-station-asr asr
   ai_wait_compose_service asr-qwen3 healthy 180
 
   "$ROOT/scripts/sync-litellm-db-url.sh"
