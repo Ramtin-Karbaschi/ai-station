@@ -121,7 +121,8 @@ class ResponsesEndpointTests(unittest.IsolatedAsyncioTestCase):
     async def _post(self, body: dict) -> httpx.Response:
         real_async_client = httpx.AsyncClient
 
-        async def fake_start_runtime(model):
+        async def fake_start_runtime(model, request_body=None):
+            self.assertIsInstance(request_body, dict)
             return {"decision": "START"}
 
         class FakeResponse:
@@ -238,7 +239,8 @@ class ChatStreamingErrorTests(unittest.IsolatedAsyncioTestCase):
             def stream(self, *args, **kwargs):
                 return FakeResponse()
 
-        async def fake_start_runtime(model):
+        async def fake_start_runtime(model, request_body=None):
+            self.assertIsInstance(request_body, dict)
             return {"decision": "START"}
 
         telemetry = []

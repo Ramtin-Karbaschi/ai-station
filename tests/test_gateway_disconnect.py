@@ -67,7 +67,8 @@ class GatewayDisconnectTests(unittest.IsolatedAsyncioTestCase):
         self.requests: list[asyncio.Task] = []
         self.addAsyncCleanup(self.cancel_requests)
 
-        async def start_runtime(model):
+        async def start_runtime(model, request_body=None):
+            self.assertIsInstance(request_body, dict)
             if model["id"] == "next":
                 self.assertTrue(self.upstream_closed.is_set())
             self.started_models.append(model["id"])

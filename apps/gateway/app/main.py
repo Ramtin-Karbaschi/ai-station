@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -10,13 +11,14 @@ import uuid
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any, AsyncIterator
+from urllib.parse import urlsplit
 
 import httpx
 import anyio
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
-from apps.gateway.app.admission import admit
+from apps.gateway.app.admission import admit, probe_free_ram_mib
 from apps.gateway.app.catalog import (
     CATALOG_PATH,
     cached_catalog,
@@ -73,6 +75,7 @@ COMPOSE_BASE = (
 MODEL_LOCK = asyncio.Lock()
 QUEUE: list[dict[str, Any]] = []
 ACTIVE_MODEL_ID: str | None = None
+ACTIVE_RUNTIME_MODE: str | None = None
 GATEWAY_VERSION = "0.6.0"
 
 app = FastAPI(title="AI Station Gateway", version=GATEWAY_VERSION)
@@ -207,7 +210,7 @@ async def stop_other_heavy(
     active_provider_ids: list[str] | None = None,
     stop_provider_ids: list[str] | None = None,
 ) -> None:
-    global ACTIVE_MODEL_ID
+    global ACTIVE_MODEL_ID, ACTIVE_RUNTIME_MODE
     services = heavy_services()
     if active_provider_ids is not None:
         owners = preferred_provider_by_service((registry().get("providers") or {}).values())
@@ -239,6 +242,7 @@ async def stop_other_heavy(
             },
         )
     ACTIVE_MODEL_ID = None
+    ACTIVE_RUNTIME_MODE = None
 
 
 async def verify_active_gpu_placements(
@@ -247,7 +251,10 @@ async def verify_active_gpu_placements(
     excluded_provider_ids: list[str] | None = None,
 ) -> bool:
     """Fail closed when an existing container's GPU reservation is unknown."""
-    owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+    owners = preferred_provider_by_service(
+        provider for provider in (registry().get("providers") or {}).values()
+        if provider.get("heavy") is True
+    )
     excluded = set(excluded_provider_ids or [])
     for provider in owners.values():
         provider_id = str(provider.get("id"))
@@ -344,7 +351,10 @@ async def reconcile_active_profile() -> list[str] | None:
     catches a live ComfyUI runtime when the saved marker is stale.
     """
     saved = read_active_profile()
-    owners = preferred_provider_by_service((registry().get("providers") or {}).values())
+    owners = preferred_provider_by_service(
+        provider for provider in (registry().get("providers") or {}).values()
+        if provider.get("heavy") is True
+    )
     # Explicit profiles are required for Compose to include stopped/optional
     # profile definitions in `ps`; without this, a live ComfyUI service can be
     # mistaken for a missing workload.
@@ -425,8 +435,146 @@ def evaluate_admission(model: dict[str, Any], active_heavy: list[str] | None = N
     return payload
 
 
-async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
-    global ACTIVE_MODEL_ID
+def live_gpu_visibility() -> dict[str, Any]:
+    executable = shutil.which("nvidia-smi")
+    if not executable and Path("/usr/lib/wsl/lib/nvidia-smi").is_file():
+        executable = "/usr/lib/wsl/lib/nvidia-smi"
+    if not executable:
+        return {"available": False, "status": "tool_missing"}
+    try:
+        result = subprocess.run(
+            [executable, "--query-gpu=name", "--format=csv,noheader"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {"available": False, "status": "query_failed"}
+    if result.returncode != 0:
+        # WSL2 can expose the Windows GPU to the host while its guest-side
+        # NVML initialization fails.  Treat only the verified, specific
+        # WSL failure as adapter-unavailable; generic query failures remain
+        # unknown and do not authorize the CPU fallback.
+        try:
+            release = Path("/proc/sys/kernel/osrelease").read_text(encoding="utf-8").casefold()
+        except OSError:
+            release = ""
+        wsl = "microsoft" in release or bool(os.environ.get("WSL_INTEROP"))
+        diagnostic = (result.stdout + "\n" + result.stderr).casefold()
+        known_wsl_nvml_failure = (
+            "failed to initialize nvml" in diagnostic
+            and "generic operating system error" in diagnostic
+        )
+        if wsl and known_wsl_nvml_failure:
+            return {"available": False, "status": "wsl_gpu_unavailable"}
+        return {"available": False, "status": "query_failed"}
+    adapters = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not adapters:
+        return {"available": False, "status": "no_adapters"}
+    return {"available": True, "status": "available", "adapter_count": len(adapters)}
+
+
+def cpu_fallback_policy() -> dict[str, Any]:
+    return dict((registry().get("runtime_policy") or {}).get("cpu_chat_fallback") or {})
+
+
+def cpu_chat_unsupported_reason(body: dict[str, Any] | None, policy: dict[str, Any]) -> str | None:
+    """Fail explicitly when the bounded CPU profile cannot preserve request intent."""
+    if not isinstance(body, dict):
+        return "CPU fallback requires a text chat request."
+    if body.get("tools") or body.get("tool_choice") not in (None, "none"):
+        return "CPU fallback supports plain text chat without tools."
+    if body.get("response_format") is not None:
+        return "CPU fallback does not support structured output."
+    try:
+        if int(body.get("n", 1)) != 1:
+            return "CPU fallback supports one completion per request."
+    except (TypeError, ValueError):
+        return "CPU fallback supports one completion per request."
+    max_output = int(policy.get("max_output_tokens") or 512)
+    for key in ("max_tokens", "max_completion_tokens"):
+        if key in body:
+            try:
+                if int(body[key]) > max_output:
+                    return f"CPU fallback caps output at {max_output} tokens; reduce the request limit."
+            except (TypeError, ValueError):
+                return "CPU fallback requires an integer output-token limit."
+    messages = body.get("messages")
+    if not isinstance(messages, list) or not messages:
+        return "CPU fallback requires text messages."
+    for message in messages:
+        if not isinstance(message, dict) or message.get("role") not in {"system", "user", "assistant"}:
+            return "CPU fallback supports system, user, and assistant text messages only."
+        if not isinstance(message.get("content"), str):
+            return "CPU fallback supports text-only message content; image and multipart inputs are unavailable."
+    return None
+
+
+def cpu_runtime_model(model: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+    runtime_model = dict(model)
+    provider_id = str(policy.get("provider_id") or "llama-cpp-general-cpu")
+    provider = (registry().get("providers") or {}).get(provider_id) or {}
+    endpoint = str(provider.get("endpoint") or "http://127.0.0.1:8089/v1")
+    parsed_endpoint = urlsplit(endpoint)
+    local_hosts = {"127.0.0.1", "localhost", "::1"}
+    try:
+        endpoint_port = parsed_endpoint.port
+    except ValueError:
+        endpoint_port = None
+    if policy.get("local_only") is not True or (
+        parsed_endpoint.scheme != "http"
+        or parsed_endpoint.hostname not in local_hosts
+        or parsed_endpoint.username is not None
+        or parsed_endpoint.password is not None
+        or endpoint_port != int(provider.get("port") or 8089)
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail={"stage": "cpu_fallback_config", "message": "CPU fallback must use the configured loopback-only local endpoint."},
+        )
+    runtime_model.update(
+        {
+            "_provider_id": provider_id,
+            "_cpu_fallback": True,
+            "service": str(provider.get("service") or "llm-general-cpu"),
+            "profile": str(provider.get("profile") or "cpu-chat"),
+            "port": int(provider.get("port") or 8089),
+            "base_url": endpoint,
+            "backend_model": "ai-station-general-cpu",
+            "heavy": False,
+            "supports_vision": False,
+            "supports_tools": False,
+            "supports_json_schema": False,
+        }
+    )
+    return runtime_model
+
+
+async def runtime_endpoint_ready(model: dict[str, Any]) -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=2) as client:
+            response = await client.get(f"{model['base_url']}/models")
+        if response.status_code != 200:
+            return False
+        if not model.get("_cpu_fallback"):
+            return True
+        payload = response.json()
+        expected = str(model.get("backend_model") or "")
+        listed = {
+            str(item.get("id"))
+            for item in (payload.get("data") or [])
+            if isinstance(item, dict)
+        }
+        return bool(expected and expected in listed)
+    except Exception:
+        return False
+
+
+async def start_runtime(
+    model: dict[str, Any], request_body: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    global ACTIVE_MODEL_ID, ACTIVE_RUNTIME_MODE
 
     service = model.get("service")
     if not service:
@@ -447,7 +595,68 @@ async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
                         "message": "Unable to observe Docker runtime safely; retry without stopping workloads.",
                     },
                 )
-            admission = evaluate_admission(model, observed_active)
+            cpu_reused = False
+            policy = cpu_fallback_policy()
+            if model.get("id") == str(policy.get("model_id") or "general-qwen38-27b"):
+                gpu_visibility = live_gpu_visibility()
+                if gpu_visibility.get("status") in {"no_adapters", "wsl_gpu_unavailable"} and policy.get("enabled") is True:
+                    if observed_active is None:
+                        raise HTTPException(
+                            status_code=503,
+                            detail={
+                                "stage": "cpu_fallback_observation",
+                                "message": "Cannot verify active workloads safely; CPU fallback was not started.",
+                            },
+                        )
+                    # Keep a still-serving general runtime; a failed NVIDIA
+                    # utility probe alone is not reason to replace it.
+                    if await runtime_endpoint_ready(model):
+                        admission = {
+                            "decision": "REUSE_HEALTHY_RUNTIME",
+                            "runtime_mode": "existing_runtime",
+                            "gpu_visibility": gpu_visibility["status"],
+                        }
+                        ACTIVE_MODEL_ID = public_model_id(model)
+                        ACTIVE_RUNTIME_MODE = "existing_runtime"
+                        return admission
+
+                    unsupported = cpu_chat_unsupported_reason(request_body, policy)
+                    if unsupported:
+                        raise HTTPException(
+                            status_code=400,
+                            detail={"stage": "cpu_fallback_request", "message": unsupported},
+                        )
+                    model.update(cpu_runtime_model(model, policy))
+                    service = str(model.get("service") or service)
+                    if isinstance(request_body, dict):
+                        request_body["model"] = model["backend_model"]
+                    cpu_reused = await runtime_endpoint_ready(model)
+                    if cpu_reused:
+                        admission = {
+                            "decision": "REUSE_READY_CPU_RUNTIME",
+                            "provider_id": model["_provider_id"],
+                            "runtime_mode": "cpu_fallback",
+                            "degraded": True,
+                            "gpu_visibility": gpu_visibility["status"],
+                            "max_context_tokens": int(policy.get("max_context_tokens") or 2048),
+                        }
+                        ACTIVE_MODEL_ID = public_model_id(model)
+                        ACTIVE_RUNTIME_MODE = "cpu_fallback"
+                        return admission
+                    admission = evaluate_admission(model, observed_active)
+                    admission.update(
+                        {
+                            "runtime_mode": "cpu_fallback",
+                            "degraded": True,
+                            "gpu_visibility": gpu_visibility["status"],
+                            "max_context_tokens": int(policy.get("max_context_tokens") or 2048),
+                        }
+                    )
+                else:
+                    admission = evaluate_admission(model, observed_active)
+                    admission["runtime_mode"] = "gpu"
+            else:
+                admission = evaluate_admission(model, observed_active)
 
             if any("tensor-parallel" in str(reason).casefold() for reason in admission.get("reasons", [])):
                 raise HTTPException(
@@ -455,6 +664,7 @@ async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
                     detail={"stage": "admission", "message": "Tensor-parallel placement is unsupported and cannot launch on one GPU."},
                 )
 
+            target_was_running = cpu_reused
             if model.get("heavy"):
                 await assert_media_idle(admission, registry().get("providers", {}))
                 if (
@@ -512,7 +722,7 @@ async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
                 if gpu_index < 0:
                     raise HTTPException(status_code=503, detail={"stage": "admission", "message": "Negative GPU placement is invalid."})
                 compose_kwargs: dict[str, Any] = {"timeout": 300}
-                if "gpu_index" in admission:
+                if "gpu_index" in admission and model.get("heavy"):
                     compose_kwargs["env_overrides"] = {"AI_STATION_GPU_DEVICE_ID": str(gpu_index)}
                 result = await compose(
                     [*profile_args_for_services([service]), "up", "-d", service],
@@ -534,18 +744,22 @@ async def start_runtime(model: dict[str, Any]) -> dict[str, Any]:
                 emit_contract_telemetry("lifecycle_transition", state="probing", service=service)
                 await wait_ready(model)
             except BaseException:
-                if model.get("heavy") and not target_was_running:
+                if (model.get("heavy") or model.get("_cpu_fallback")) and not target_was_running:
                     await rollback_started_target(service)
                 raise
 
             if model.get("heavy"):
                 ACTIVE_MODEL_ID = public_model_id(model)
+                ACTIVE_RUNTIME_MODE = "gpu"
                 profile = str(model.get("profile") or "")
                 if profile:
                     # Publication is the final transition: the runtime is
                     # reachable and all preceding lifecycle work succeeded.
                     publish_active_profile(profile)
                     emit_contract_telemetry("lifecycle_transition", state="ready", profile=profile)
+            elif model.get("_cpu_fallback"):
+                ACTIVE_MODEL_ID = public_model_id(model)
+                ACTIVE_RUNTIME_MODE = "cpu_fallback"
 
             return admission
     except HTTPException:
@@ -576,10 +790,31 @@ iter_flattened_sse = openai_translation.iter_flattened_sse
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
+    active_model_id = ACTIVE_MODEL_ID
+    active_runtime_mode = ACTIVE_RUNTIME_MODE
+    if active_runtime_mode == "cpu_fallback":
+        # CPU fallback is non-heavy and is intentionally not published as a
+        # GPU profile marker.  Recheck its bounded loopback model endpoint so
+        # health never advertises a stale CPU model after the service stops.
+        try:
+            policy = cpu_fallback_policy()
+            if policy.get("enabled") is not True:
+                raise HTTPException(status_code=503, detail="CPU fallback is disabled")
+            model = get_model(str(policy.get("model_id") or "general-qwen38-27b"))
+            if active_model_id != public_model_id(model):
+                raise HTTPException(status_code=503, detail="CPU fallback model does not match active state")
+            runtime_model = cpu_runtime_model(model, policy)
+            if not await runtime_endpoint_ready(runtime_model):
+                raise HTTPException(status_code=503, detail="CPU fallback model endpoint is not ready")
+            active_model_id = public_model_id(model)
+        except (HTTPException, KeyError, ValueError):
+            active_model_id = None
+            active_runtime_mode = None
     return {
         "ok": True,
         "version": GATEWAY_VERSION,
-        "active_model_id": ACTIVE_MODEL_ID,
+        "active_model_id": active_model_id,
+        "active_runtime_mode": active_runtime_mode,
         "queue_length": len(QUEUE),
         "catalog_path": str(CATALOG_PATH),
         "providers": list((registry().get("providers") or {}).keys()),
@@ -721,7 +956,7 @@ async def chat(request: Request):
     if not requested:
         raise HTTPException(status_code=400, detail="Missing model")
 
-    model = get_model(requested)
+    model = dict(get_model(requested))
     body = rewrite_messages(model, raw_body)
 
     request_id = str(uuid.uuid4())
@@ -742,7 +977,7 @@ async def chat(request: Request):
     async def complete() -> JSONResponse:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
-            admission = await start_runtime(model)
+            admission = await start_runtime(model, body)
             item["state"] = "running"
             item["admission"] = admission
 
@@ -791,7 +1026,7 @@ async def stream_proxy(
         async with MODEL_LOCK:
             item["state"] = "starting_model"
             yield b": AI Station is preparing the selected local model\n\n"
-            admission = await start_runtime(model)
+            admission = await start_runtime(model, body)
             item["state"] = "running"
             item["admission"] = admission
 
@@ -910,7 +1145,7 @@ async def responses_stream_proxy(
     try:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
-            admission = await start_runtime(model)
+            admission = await start_runtime(model, chat_body)
             item["state"] = "running"
             item["admission"] = admission
             async with httpx.AsyncClient(timeout=None) as client:
@@ -1060,7 +1295,7 @@ async def responses(request: Request):
     if not requested:
         raise HTTPException(status_code=400, detail="Missing model")
 
-    model = get_model(str(requested))
+    model = dict(get_model(str(requested)))
     chat_body = rewrite_messages(model, responses_to_chat_body(raw_body))
     item = {
         "id": str(uuid.uuid4()),
@@ -1080,7 +1315,7 @@ async def responses(request: Request):
     async def complete() -> JSONResponse:
         async with MODEL_LOCK:
             item["state"] = "starting_model"
-            admission = await start_runtime(model)
+            admission = await start_runtime(model, chat_body)
             item["state"] = "running"
             item["admission"] = admission
             async with httpx.AsyncClient(timeout=None) as client:

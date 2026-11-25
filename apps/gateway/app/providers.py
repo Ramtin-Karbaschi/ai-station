@@ -45,6 +45,7 @@ def service_profiles() -> dict[str, str]:
 
 def provider_for_catalog_model(model: dict[str, Any]) -> dict[str, Any]:
     candidates = [
+        model.get("_provider_id"),
         model.get("id"),
         model.get("alias"),
         model.get("service"),

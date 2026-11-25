@@ -6,6 +6,14 @@ admission:
   max_active_heavy: 1
   allow_auto_stop_production: true
   default_fallback_provider: llama-cpp-general
+runtime_policy:
+  cpu_chat_fallback:
+    enabled: false
+    local_only: true
+    provider_id: llama-cpp-general-cpu
+    model_id: general-qwen38-27b
+    max_context_tokens: 2048
+    max_output_tokens: 512
 providers:
   llama-cpp-general:
     id: llama-cpp-general
@@ -41,6 +49,37 @@ providers:
     - nvidia_cuda
     fallback_provider: null
     lifecycle_command: ai models use general
+  llama-cpp-general-cpu:
+    id: llama-cpp-general-cpu
+    engine: llama.cpp
+    deployment_type: compose
+    classification: optional_profile
+    experimental: false
+    heavy: false
+    resource_group: cpu
+    service: llm-general-cpu
+    profile: cpu-chat
+    port: 8089
+    endpoint: http://127.0.0.1:8089/v1
+    health_endpoint: http://127.0.0.1:8089/v1/models
+    metrics_endpoint: null
+    catalog_ids: []
+    model_aliases: []
+    capabilities:
+    - chat
+    latency_class: best_effort
+    stability_class: bounded_fallback
+    minimum_vram_mib: 0
+    minimum_ram_mib: 24576
+    minimum_storage_mib: 0
+    kv_cache_mib_per_1k_context: 0
+    default_context: 2048
+    max_context: 2048
+    readiness_attempts: 90
+    required_features:
+    - cpu_avx2
+    fallback_provider: null
+    lifecycle_command: ai provider start llama-cpp-general-cpu
   llama-cpp-coder:
     id: llama-cpp-coder
     engine: llama.cpp

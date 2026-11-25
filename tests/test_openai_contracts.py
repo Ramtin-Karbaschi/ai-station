@@ -610,7 +610,8 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
         start_order: list[str] = []
         real_async_client = httpx.AsyncClient
 
-        async def fake_start_runtime(model):
+        async def fake_start_runtime(model, request_body=None):
+            self.assertIsInstance(request_body, dict)
             start_order.append(gateway_main.public_model_id(model))
             return {"decision": "START"}
 
@@ -687,7 +688,8 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
     async def test_empty_content_copies_reasoning_content(self) -> None:
         real_async_client = httpx.AsyncClient
 
-        async def fake_start_runtime(model):
+        async def fake_start_runtime(model, request_body=None):
+            self.assertIsInstance(request_body, dict)
             return {"decision": "START"}
 
         class FakeResponse:

@@ -27,7 +27,53 @@ x-llama-common: &llama-common
     - default
     - ai-platform
 
+x-llama-cpu-common: &llama-cpu-common
+  image: ghcr.io/ggml-org/llama.cpp:server-cuda
+  restart: unless-stopped
+  env_file:
+    - .env.models
+  environment:
+    CUDA_VISIBLE_DEVICES: ""
+  volumes:
+    - ${MODELS_DIR:-/srv/ai-station/models}:/models:ro
+  networks:
+    - default
+    - ai-platform
+  cpus: 6
+  mem_limit: 24g
+  memswap_limit: 24g
+
 services:
+  llm-general-cpu:
+    <<: *llama-cpu-common
+    profiles: ["cpu-chat"]
+    container_name: ai-station-llm-general-cpu
+    command:
+      - -m
+      - /models/${LLM_GENERAL_MODEL_FILE:-qwen38/qwen3.8-27b-ud-q4_k_m.gguf}
+      - --alias
+      - ai-station-general-cpu
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8089"
+      - -ngl
+      - "0"
+      - -c
+      - "2048"
+      - -n
+      - "512"
+      - --parallel
+      - "1"
+    ports:
+      - "127.0.0.1:8089:8089"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8089/v1/models >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
   llm-general:
     <<: *llama-common
     profiles: ["general"]

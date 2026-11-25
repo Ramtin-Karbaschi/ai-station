@@ -29,6 +29,15 @@
       "locked_image": "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
       "source_type": "registry"
     },
+    "llm-general-cpu": {
+      "build": null,
+      "configured_image": "ghcr.io/ggml-org/llama.cpp:server-cuda",
+      "container_id": null,
+      "current_image_id": "sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "lock_policy": "digest",
+      "locked_image": "ghcr.io/ggml-org/llama.cpp@sha256:13f61752307fc4b96c8607a1bc03f977a2a27a4372d194f2aead83d60b964289",
+      "source_type": "registry"
+    },
     "n8n": {
       "build": null,
       "configured_image": "docker.n8n.io/n8nio/n8n:2.35.6",
