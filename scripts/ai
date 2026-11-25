@@ -106,7 +106,10 @@ ai_print_service_directory() {
   local profile="${1:-}"
   local public=""
   local port=""
-  if [[ -n "$profile" ]] && ai_is_heavy_profile "$profile"; then
+  if [[ "${AI_CPU_FALLBACK_ACTIVE:-0}" == 1 ]]; then
+    public="Qwen3.8-27B-UD-Q4_K_M (bounded CPU fallback)"
+    port="8089"
+  elif [[ -n "$profile" ]] && ai_is_heavy_profile "$profile"; then
     public="$(public_name_for_profile "$profile")"
     port="$(ai_profile_port "$profile")"
   fi
@@ -297,6 +300,22 @@ cmd_start() {
     exit 2
   fi
 
+  # GPU first is unconditional when an adapter is visible.  The CPU path is
+  # available only for the exact general/default profile, when explicitly
+  # enabled in the local provider policy, and when WSL reports the known
+  # no-adapter classes.  VRAM pressure, a missing probe tool, and unknown
+  # driver failures remain GPU-path failures; they never silently downgrade.
+  local cpu_runtime=0 gpu_status
+  gpu_status="$(ai_runtime_gpu_status 2>/dev/null || printf 'unknown')"
+  if [[ "$profile" == general ]] \
+    && [[ "$(ai_cpu_fallback_enabled)" == true ]] \
+    && [[ "$gpu_status" == no_adapters || "$gpu_status" == wsl_gpu_unavailable ]]; then
+    cpu_runtime=1
+    echo "GPU unavailable in WSL (${gpu_status}); using explicitly enabled bounded CPU fallback."
+  elif [[ "$profile" == general && "$gpu_status" == available ]]; then
+    echo "GPU visible; starting the normal GPU runtime."
+  fi
+
   ai_lifecycle_lock "start"
   ai_ensure_docker
   ai_stop_experimental_gpu_overlays
@@ -329,11 +348,19 @@ cmd_start() {
   ai_ensure_host_gateway ai-station-ui-gateway "http://127.0.0.1:8890/health" "UI Gateway"
   ai_tools_start
 
-  # Start the model before Open WebUI so the UI does not open onto a cold backend.
-  ai_retry_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
-  if ! ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300; then
-    ai_set_active_heavy_profile ""
-    return 1
+  # Start the model before Open WebUI so the UI does not open onto a cold
+  # backend. The CPU fallback performs bounded admission and a direct chat
+  # proof inside ai_start_cpu_fallback; it never publishes the GPU marker.
+  if (( cpu_runtime )); then
+    if ! ai_start_cpu_fallback; then
+      return 1
+    fi
+  else
+    ai_retry_compose --profile "$profile" up -d "$(ai_profile_service "$profile")"
+    if ! ai_wait_url "http://127.0.0.1:$(ai_profile_port "$profile")/v1/models" "Model $profile" 300; then
+      ai_set_active_heavy_profile ""
+      return 1
+    fi
   fi
 
   ai_retry_compose up -d open-webui
@@ -341,24 +368,34 @@ cmd_start() {
   if ! ai_wait_url "http://127.0.0.1:8090/v1/models" "Embedding" 180 \
     || ! ai_wait_url "http://127.0.0.1:8092/v1/models" "Qwen3-ASR" 180 \
     || ! ai_wait_url "http://127.0.0.1:3000" "Open WebUI" 180; then
-    ai_set_active_heavy_profile ""
+    if (( ! cpu_runtime )); then
+      ai_set_active_heavy_profile ""
+    fi
     return 1
   fi
 
   # Warm up the selected runtime until chat-ready (direct under the CLI lock).
-  if ! ai_litellm_warmup_chat "$profile"; then
-    ai_set_active_heavy_profile ""
-    return 1
+  if (( ! cpu_runtime )); then
+    if ! ai_litellm_warmup_chat "$profile"; then
+      ai_set_active_heavy_profile ""
+      return 1
+    fi
   fi
 
   # Publish only after the selected model, required auxiliary services, and
   # the actual LiteLLM warm-up are all ready. The marker is an observed state,
   # not a startup intent signal.
-  ai_set_active_heavy_profile "$profile"
+  if (( ! cpu_runtime )); then
+    ai_set_active_heavy_profile "$profile"
+  fi
 
   echo
   echo "AI Station ready."
-  ai_print_service_directory "$profile"
+  if (( cpu_runtime )); then
+    AI_CPU_FALLBACK_ACTIVE=1 ai_print_service_directory "$profile"
+  else
+    ai_print_service_directory "$profile"
+  fi
 }
 
 cmd_stop() {

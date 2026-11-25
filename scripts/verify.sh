@@ -48,9 +48,27 @@ check_post_route_not_404() {
 
 active_profile="$(ai_active_heavy_profile || true)"
 chat_max_tokens=128
+runtime_mode=""
+runtime_health_json="$(curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null || true)"
+if [[ -n "$runtime_health_json" ]]; then
+  runtime_mode="$(printf '%s' "$runtime_health_json" | python3 -c '
+import json, sys
+try:
+    payload = json.load(sys.stdin)
+except (json.JSONDecodeError, UnicodeDecodeError):
+    payload = {}
+print(payload.get("active_runtime_mode") or "")
+' 2>/dev/null || true)"
+fi
+# Host /health is authoritative for the non-heavy CPU fallback.  A stale GPU
+# marker must not send verification back to :8082 or trigger a new launch.
+if [[ "$runtime_mode" == "cpu_fallback" ]]; then
+  active_profile=""
+fi
+runtime_ready=0
 
 case "$active_profile" in
-  general|"") chat_model="Qwen3.8-27B-UD-Q4_K_M" ;;
+  general) chat_model="Qwen3.8-27B-UD-Q4_K_M" ;;
   coder|ornith) chat_model="Ornith-1.5-35B-Q4_K_M" ;;
   reasoning)
     chat_model="Qwen3.8-27B-Reasoning-UD-Q4_K_M"
@@ -62,6 +80,15 @@ case "$active_profile" in
   comfyui-experimental)
     echo "FAIL: no active chat model; ComfyUI is a media runtime"
     fail=1
+    ;;
+  "")
+    if [[ "$runtime_mode" == "cpu_fallback" ]]; then
+      chat_model="Qwen3.8-27B-UD-Q4_K_M"
+      echo "Detected active bounded CPU chat runtime via host /health."
+    else
+      echo "FAIL: no active GPU or CPU chat runtime; verify will not launch one"
+      fail=1
+    fi
     ;;
   *)
     echo "FAIL: no chat canary mapping for active profile '$active_profile'"
@@ -116,13 +143,23 @@ assert_loopback_listener 8888 "Host Gateway" "$docker_bridge_host"
 assert_loopback_listener 8890 "UI Gateway"
 
 case "$active_profile" in
-  general|"") check_url http://127.0.0.1:8082/v1/models "General Model Server" ;;
-  coder) check_url http://127.0.0.1:8083/v1/models "Coder Model Server" ;;
-  reasoning) check_url http://127.0.0.1:8084/v1/models "Reasoning Model Server" ;;
-  vision) check_url http://127.0.0.1:8085/v1/models "Vision Model Server" ;;
-  ornith) check_url http://127.0.0.1:8086/v1/models "Ornith Model Server" ;;
-  qwen38) check_url http://127.0.0.1:8087/v1/models "Qwen3.8 Model Server" ;;
-  longwriter) check_url http://127.0.0.1:8088/v1/models "LongWriter Model Server" ;;
+  general)
+    check_url http://127.0.0.1:8082/v1/models "General Model Server" && runtime_ready=1
+    ;;
+  coder) check_url http://127.0.0.1:8083/v1/models "Coder Model Server" && runtime_ready=1 ;;
+  reasoning) check_url http://127.0.0.1:8084/v1/models "Reasoning Model Server" && runtime_ready=1 ;;
+  vision) check_url http://127.0.0.1:8085/v1/models "Vision Model Server" && runtime_ready=1 ;;
+  ornith) check_url http://127.0.0.1:8086/v1/models "Ornith Model Server" && runtime_ready=1 ;;
+  qwen38) check_url http://127.0.0.1:8087/v1/models "Qwen3.8 Model Server" && runtime_ready=1 ;;
+  longwriter) check_url http://127.0.0.1:8088/v1/models "LongWriter Model Server" && runtime_ready=1 ;;
+  "")
+    if [[ "$runtime_mode" == "cpu_fallback" ]] \
+      && check_url http://127.0.0.1:8089/v1/models "Bounded CPU Chat Model Server"; then
+      runtime_ready=1
+    elif [[ "$runtime_mode" == "cpu_fallback" ]]; then
+      echo "FAIL: active CPU runtime is not management-ready; no public generation attempted"
+    fi
+    ;;
   comfyui-experimental) check_url http://127.0.0.1:8188/system_stats "ComfyUI Media Server" ;;
   *)
     echo "FAIL: unknown active profile '$active_profile'"
@@ -130,7 +167,7 @@ case "$active_profile" in
     ;;
 esac
 
-if [[ -n "${chat_model:-}" ]]; then
+if [[ -n "${chat_model:-}" && "$runtime_ready" == 1 ]]; then
   master_key="$(ai_master_key)"
   if ! ai_chat_generation_canary \
     "http://127.0.0.1:4000/v1/chat/completions" \
@@ -141,6 +178,9 @@ if [[ -n "${chat_model:-}" ]]; then
       || true
   fi
   unset master_key
+elif [[ -n "${chat_model:-}" ]]; then
+  echo "FAIL: no already-ready model runtime; verify will not launch an extra GPU or CPU service"
+  fail=1
 fi
 
 docker exec -i ai-station-tika sh -lc 'tesseract --list-langs | grep -q fas' \

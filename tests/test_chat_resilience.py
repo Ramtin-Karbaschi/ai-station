@@ -9,7 +9,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -175,6 +175,24 @@ class ChatResilienceTests(unittest.TestCase):
         self.assertEqual(failed["status"], "query_failed")
         self.assertIn("/dev/dxg", failed["message"])
         self.assertNotIn("driver error", json.dumps(failed))
+
+        with patch.dict(os.environ, {"WSL_INTEROP": "1"}, clear=False), patch(
+            "scripts.lib.hardware_detect.Path.read_text",
+            return_value="6.18.33.2-microsoft-standard-WSL2",
+        ):
+            known_wsl = hardware_detect.probe_runtime_gpu(
+                executable="nvidia-smi",
+                runner=Mock(
+                    return_value=subprocess.CompletedProcess(
+                        ["nvidia-smi"],
+                        1,
+                        stdout="",
+                        stderr="Failed to initialize NVML: Generic operating system error",
+                    )
+                ),
+            )
+        self.assertEqual(known_wsl["status"], "wsl_gpu_unavailable")
+        self.assertNotIn("Generic operating system error", json.dumps(known_wsl))
 
     def test_runtime_gpu_probe_parses_live_adapter_inventory(self) -> None:
         result = hardware_detect.probe_runtime_gpu(

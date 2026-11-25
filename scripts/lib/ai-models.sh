@@ -67,6 +67,63 @@ for provider_id, provider in (load_providers().get("providers") or {}).items():
 PY
 }
 
+ai_cpu_fallback_runtime_ready() {
+  curl -fsS --max-time 5 http://127.0.0.1:8089/v1/models >/dev/null 2>&1
+}
+
+# Start the bounded CPU chat provider after the caller has classified the
+# live WSL GPU as genuinely unavailable.  This path owns a lifecycle lock from
+# ai start; prove the backend directly so it never calls the public :4000
+# route while LiteLLM/host-gateway startup would wait on that same lock.
+ai_start_cpu_fallback() {
+  local provider_id="llama-cpp-general-cpu"
+  local decision admission_status=0 service="llm-general-cpu"
+
+  decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission \
+    "$provider_id" --context 2048 --json)" || admission_status=$?
+  if (( admission_status != 0 )); then
+    echo "$decision" >&2
+    echo "ERROR: bounded CPU fallback admission rejected; no CPU runtime was started." >&2
+    return "$admission_status"
+  fi
+  if ! printf '%s\n' "$decision" | PYTHONPATH="$ROOT" python3 -c '
+import json, sys
+decision = json.load(sys.stdin)
+if decision.get("decision") != "START":
+    raise SystemExit(
+        "ERROR: bounded CPU fallback requires START admission; got "
+        + str(decision.get("decision"))
+    )
+if decision.get("stop_providers"):
+    raise SystemExit("ERROR: CPU fallback admission requested a provider stop")
+'; then
+    return 2
+  fi
+
+  local started_here=0
+  if ! ai_cpu_fallback_runtime_ready; then
+    ai_retry_compose --profile cpu-chat up -d "$service"
+    started_here=1
+    if ! ai_wait_url "http://127.0.0.1:8089/v1/models" "CPU chat runtime" 180; then
+      ai_compose --profile cpu-chat stop "$service" >/dev/null 2>&1 || true
+      return 1
+    fi
+  else
+    echo "OK: CPU chat runtime already ready"
+  fi
+
+  if ! ai_chat_generation_canary \
+    "http://127.0.0.1:8089/v1/chat/completions" \
+    "ai-station-general-cpu" "" "direct CPU runtime warm-up" \
+    2 90 false 8 false; then
+    if (( started_here )); then
+      ai_compose --profile cpu-chat stop "$service" >/dev/null 2>&1 || true
+    fi
+    return 1
+  fi
+  echo "CPU chat fallback ready (general/default only; GPU path remains preferred)."
+}
+
 cmd_models_review() {
   python3 "$ROOT/scripts/lib/catalog_review.py" "$@"
 }

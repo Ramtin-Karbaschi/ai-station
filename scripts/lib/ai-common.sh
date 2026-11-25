@@ -498,6 +498,36 @@ ai_vram_free_mib() {
   "$executable" --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ' || echo "0"
 }
 
+# Return only the normalized live GPU visibility class used by lifecycle
+# decisions.  Cached hardware-profile.json and VRAM pressure are deliberately
+# not substitutes for this probe: a visible adapter always keeps the normal
+# GPU path, even when admission later rejects it as busy.
+ai_runtime_gpu_status() {
+  PYTHONPATH="$AI_STATION_ROOT" python3 - <<'PY'
+from scripts.lib.hardware_detect import probe_runtime_gpu
+
+print(str(probe_runtime_gpu().get("status") or "unknown"))
+PY
+}
+
+# CPU chat is a local, explicit opt-in.  Keep the authorization narrow: only
+# the exact general/default model may use the bounded CPU provider, and only
+# the loopback-only provider declared by the registry is accepted.
+ai_cpu_fallback_enabled() {
+  PYTHONPATH="$AI_STATION_ROOT" python3 - <<'PY'
+from apps.gateway.app.admission import load_providers
+
+policy = (load_providers().get("runtime_policy") or {}).get("cpu_chat_fallback") or {}
+enabled = (
+    policy.get("enabled") is True
+    and policy.get("local_only") is True
+    and policy.get("provider_id") == "llama-cpp-general-cpu"
+    and policy.get("model_id") == "general-qwen38-27b"
+)
+print("true" if enabled else "false")
+PY
+}
+
 ai_assert_admission_startable() {
   python3 -c 'import json,sys
 decision=json.load(sys.stdin)["decision"]

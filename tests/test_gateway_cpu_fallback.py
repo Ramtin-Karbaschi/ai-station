@@ -253,6 +253,36 @@ class GatewayCpuFallbackTests(unittest.IsolatedAsyncioTestCase):
         compose.assert_not_called()
         self.assertEqual(model["service"], "llm-general")
 
+    async def test_visible_gpu_wins_over_running_cpu_fallback_without_stopping_cpu(self) -> None:
+        model = _general_model()
+        compose_calls: list[list[str]] = []
+
+        async def fake_compose(args, **_kwargs):
+            compose_calls.append(args)
+            return subprocess.CompletedProcess(args, 0, "", "")
+
+        with (
+            patch.object(main, "LifecycleLock", _fake_lifecycle_lock),
+            # The CPU provider is deliberately non-heavy, so reconciliation
+            # does not turn it into a GPU owner or a stop target.
+            patch.object(main, "reconcile_active_profile", new=AsyncMock(return_value=[])),
+            patch.object(main, "live_gpu_visibility", return_value={"available": True, "status": "available", "adapter_count": 1}),
+            patch.object(main, "cpu_fallback_policy", return_value=_enabled_policy()),
+            patch.object(main, "evaluate_admission", return_value={"decision": "START", "stop_providers": [], "gpu_index": 0}),
+            patch.object(main, "stop_other_heavy", new=AsyncMock()) as stop_heavy,
+            patch.object(main, "compose", fake_compose),
+            patch.object(main, "wait_ready", new=AsyncMock(return_value=None)),
+            patch.object(main, "publish_active_profile") as publish,
+        ):
+            admission = await main.start_runtime(model, _chat_body())
+
+        self.assertEqual(admission["runtime_mode"], "gpu")
+        self.assertEqual(model["service"], "llm-general")
+        self.assertNotIn("_cpu_fallback", model)
+        self.assertEqual(compose_calls[0][-3:], ["up", "-d", "llm-general"])
+        stop_heavy.assert_awaited_once()
+        publish.assert_called_once_with("general")
+
     async def test_ready_general_runtime_is_kept_when_gpu_probe_reports_no_adapters(self) -> None:
         model = _general_model()
         with (

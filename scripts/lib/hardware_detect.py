@@ -96,6 +96,30 @@ def probe_runtime_gpu(
         }
 
     if result.returncode != 0:
+        # WSL can expose the Windows GPU while guest-side NVML initialization
+        # fails with this specific, known no-adapter condition.  Keep generic
+        # probe failures unknown: they must not authorize a CPU fallback.
+        try:
+            release = Path("/proc/sys/kernel/osrelease").read_text(
+                encoding="utf-8"
+            ).casefold()
+        except OSError:
+            release = ""
+        wsl = "microsoft" in release or bool(os.environ.get("WSL_INTEROP"))
+        diagnostic = ((result.stdout or "") + "\n" + (result.stderr or "")).casefold()
+        if (
+            wsl
+            and "failed to initialize nvml" in diagnostic
+            and "generic operating system error" in diagnostic
+        ):
+            return {
+                "status": "wsl_gpu_unavailable",
+                "adapter_count": 0,
+                "message": (
+                    "nvidia-smi could not initialize WSL NVML; no GPU adapter is "
+                    "usable in this WSL session."
+                ),
+            }
         return {
             "status": "query_failed",
             "adapter_count": 0,
