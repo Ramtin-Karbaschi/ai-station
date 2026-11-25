@@ -1234,13 +1234,19 @@ cmd_verify() {
     "$ROOT/scripts/verify-startup-stability.sh" "${1:-45}"
     return
   fi
-  "$ROOT/scripts/verify.sh"
+  local verify_status=0
+  if "$ROOT/scripts/verify.sh"; then
+    verify_status=0
+  else
+    verify_status=$?
+  fi
   echo
   curl -fsS --max-time 5 http://127.0.0.1:4000/health/liveliness || true
   echo
   curl -fsS --max-time 5 http://127.0.0.1:8888/health 2>/dev/null | python3 -m json.tool || true
   curl -fsS --max-time 5 http://127.0.0.1:8890/health 2>/dev/null | python3 -m json.tool || true
   curl -fsS --max-time 5 http://127.0.0.1:8892/healthz 2>/dev/null | python3 -m json.tool || true
+  return "$verify_status"
 }
 
 cmd_test() {

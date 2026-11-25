@@ -16,6 +16,43 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(os.name == "posix", "Bash lifecycle helpers require POSIX")
 class LifecycleStateTests(unittest.TestCase):
+    def test_verify_propagates_child_status_after_nonfatal_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            scripts = directory / "scripts"
+            scripts.mkdir()
+            (scripts / "lib").symlink_to(ROOT / "scripts/lib", target_is_directory=True)
+            source = (ROOT / "scripts/ai").read_text(encoding="utf-8").rsplit(
+                'main "$@"', 1
+            )[0]
+            source_file = scripts / "ai"
+            source_file.write_text(source, encoding="utf-8")
+            source_file.chmod(0o755)
+            verify = scripts / "verify.sh"
+            verify.write_text(
+                "#!/usr/bin/env bash\nexit \"${VERIFY_CHILD_STATUS:-0}\"\n",
+                encoding="utf-8",
+            )
+            verify.chmod(0o755)
+            fake_bin = directory / "bin"
+            fake_bin.mkdir()
+            curl = fake_bin / "curl"
+            curl.write_text("#!/usr/bin/env bash\nexit 7\n", encoding="utf-8")
+            curl.chmod(0o755)
+            command = r'''source "$1"
+ai_ensure_docker(){ :; }
+if cmd_verify; then exit 0; else exit $?; fi
+'''
+            for child_status in (0, 7):
+                with self.subTest(child_status=child_status):
+                    result = subprocess.run(
+                        ["bash", "-c", command, "bash", str(source_file)],
+                        env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}",
+                             "VERIFY_CHILD_STATUS": str(child_status)},
+                        capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, child_status, result.stderr)
+
     def test_ready_cpu_chat_skips_low_ram_admission_but_runs_visible_canary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
