@@ -9,6 +9,7 @@ from email.policy import default
 from apps.gateway.app.document_router import describe_pipeline, extract_document, classify_document
 from apps.gateway.app.stt import (
     ASR_MULTIPART_BOUNDARY,
+    CALL_ASR_UPSTREAM_MODEL,
     Transcript,
     _asr_multipart_body,
     clean_qwen_text,
@@ -59,19 +60,38 @@ class DocumentRouterTests(unittest.TestCase):
     def test_stt_extracts_openai_multipart_file_and_language(self):
         boundary = "client-boundary"
         body = _asr_multipart_body(b"RIFF\x00\xffWAVE", "fa-IR", boundary=boundary)
-        audio, language = extract_audio_request(
+        audio, language, model = extract_audio_request(
             body,
             content_type=f"multipart/form-data; boundary={boundary}",
         )
         self.assertEqual(audio, b"RIFF\x00\xffWAVE")
         self.assertEqual(language, "fa")
+        self.assertIsNone(model)
 
     def test_stt_raw_body_preserves_explicit_language_precedence(self):
-        audio, language = extract_audio_request(
+        audio, language, model = extract_audio_request(
             b"audio", content_type="audio/wav", language="en-US"
         )
         self.assertEqual(audio, b"audio")
         self.assertEqual(language, "en")
+        self.assertIsNone(model)
+
+    def test_stt_extracts_internal_upstream_model_marker(self):
+        boundary = "call-route-boundary"
+        body = _asr_multipart_body(b"AUDIO", None, boundary=boundary).replace(
+            f"--{boundary}--\r\n".encode(),
+            (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n'
+                f"{CALL_ASR_UPSTREAM_MODEL}\r\n"
+                f"--{boundary}--\r\n"
+            ).encode(),
+        )
+        audio, language, model = extract_audio_request(
+            body, content_type=f"multipart/form-data; boundary={boundary}"
+        )
+        self.assertEqual(audio, b"AUDIO")
+        self.assertIsNone(language)
+        self.assertEqual(model, CALL_ASR_UPSTREAM_MODEL)
 
     def test_english_pdf_stays_on_tika(self):
         r = extract_document(b"%PDF", "en.pdf", "application/pdf", tika_fn=_tika_good, paddle_fn=_paddle, tesseract_fn=_tess, document_class="digital", paddle_available=True)
@@ -153,6 +173,51 @@ class SttRouterTests(unittest.TestCase):
         self.assertEqual(r.engine, "faster-whisper-large-v3")
         self.assertFalse(r.fallback_used)
 
+    def test_call_route_uses_whisper_first(self):
+        calls = []
+        def qwen(_b, lang):
+            calls.append("qwen")
+            return Transcript("qwen", "qwen3-asr-1.7b", lang, None, False, "ok")
+        def whisper(_b, lang):
+            calls.append("whisper")
+            return Transcript("whisper", "faster-whisper-large-v3", lang, [], False, "ok")
+        r = transcribe(
+            b"audio", language="fa", whisper_primary=True, qwen_available=True,
+            qwen_fn=qwen, whisper_fn=whisper,
+        )
+        self.assertEqual(calls, ["whisper"])
+        self.assertEqual(r.engine, "faster-whisper-large-v3")
+        self.assertEqual(r.text, "whisper")
+        self.assertFalse(r.fallback_used)
+
+    def test_call_route_falls_back_to_qwen_if_whisper_fails(self):
+        calls = []
+        def qwen(_b, lang):
+            calls.append("qwen")
+            return Transcript("qwen", "qwen3-asr-1.7b", lang, None, False, "ok")
+        def whisper(_b, _lang):
+            calls.append("whisper")
+            raise RuntimeError("whisper unavailable")
+        r = transcribe(
+            b"audio", language="fa", whisper_primary=True, qwen_available=True,
+            qwen_fn=qwen, whisper_fn=whisper,
+        )
+        self.assertEqual(calls, ["whisper", "qwen"])
+        self.assertEqual(r.engine, "qwen3-asr-1.7b")
+        self.assertTrue(r.fallback_used)
+        self.assertEqual(r.reason, "Whisper failed: RuntimeError")
+
+    def test_generic_timestamp_whisper_does_not_change_fallback_policy(self):
+        def qwen(_b, lang):
+            raise AssertionError("generic timestamp mode must not call Qwen")
+        def whisper(_b, _lang):
+            raise RuntimeError("whisper unavailable")
+        with self.assertRaisesRegex(RuntimeError, "whisper unavailable"):
+            transcribe(
+                b"audio", want_timestamps=True, qwen_available=True,
+                qwen_fn=qwen, whisper_fn=whisper,
+            )
+
     def test_whisper_primary_when_qwen_unavailable(self):
         def qwen(_b, lang):
             raise AssertionError("Qwen must not run when unavailable")
@@ -223,6 +288,54 @@ class SttRouterTests(unittest.TestCase):
 
 
 class GatewaySttRouteTests(unittest.IsolatedAsyncioTestCase):
+    async def test_call_alias_upstream_model_selects_whisper_primary(self) -> None:
+        import httpx
+
+        from apps.gateway.app import main as gateway_main
+
+        seen = {}
+
+        def fake_transcribe(audio, **kwargs):
+            seen["audio"] = audio
+            seen.update(kwargs)
+            return Transcript(
+                "synthetic transcript",
+                "faster-whisper-large-v3",
+                "fa",
+                [],
+                False,
+                "call transcription",
+            )
+
+        original = gateway_main.transcribe_station_audio
+        gateway_main.transcribe_station_audio = fake_transcribe
+        try:
+            transport = httpx.ASGITransport(app=gateway_main.app)
+            boundary = "route-selection-boundary"
+            body = _asr_multipart_body(b"SYNTHETIC", "fa", boundary=boundary).replace(
+                f"--{boundary}--\r\n".encode(),
+                (
+                    f'--{boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n'
+                    f"{CALL_ASR_UPSTREAM_MODEL}\r\n"
+                    f"--{boundary}--\r\n"
+                ).encode(),
+            )
+            async with httpx.AsyncClient(
+                transport=transport, base_url="http://testserver"
+            ) as client:
+                response = await client.post(
+                    "/v1/audio/transcriptions",
+                    content=body,
+                    headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+                )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(seen["audio"], b"SYNTHETIC")
+            self.assertEqual(seen["language"], "fa")
+            self.assertFalse(seen["want_timestamps"])
+            self.assertTrue(seen["whisper_primary"])
+        finally:
+            gateway_main.transcribe_station_audio = original
+
     async def test_host_gateway_exposes_transcriptions(self) -> None:
         import httpx
 

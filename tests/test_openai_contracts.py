@@ -31,7 +31,11 @@ CANONICAL_UTILITY_MODELS = [
     "Qwen3-Embedding-8B-Q4_K_M",
     "Qwen3-Reranker-4B-Q6_K",
 ]
-CANONICAL_AUDIO_MODELS = ["ai-station-asr", "ai-station-speech"]
+CANONICAL_AUDIO_MODELS = [
+    "ai-station-asr",
+    "ai-station-call-asr",
+    "ai-station-speech",
+]
 INVALID_PUBLIC_NAMES = {
     "general-qwen3.6",
     "local-general",
@@ -319,10 +323,21 @@ class CatalogContractTests(unittest.TestCase):
         self.assertIs(litellm["general_settings"]["cancel_on_disconnect"], True)
         routes = {entry["model_name"]: entry for entry in litellm["model_list"]}
         self.assertEqual(routes["ai-station-asr"]["model_info"]["mode"], "audio_transcription")
+        call_asr = routes["ai-station-call-asr"]
+        self.assertEqual(call_asr["model_info"]["mode"], "audio_transcription")
+        self.assertEqual(call_asr["litellm_params"]["model"], "openai/whisper-call-1")
+        self.assertEqual(
+            call_asr["litellm_params"]["api_base"],
+            "http://host.docker.internal:8888/v1",
+        )
+        self.assertEqual(call_asr["litellm_params"]["timeout"], 270)
         self.assertEqual(routes["ai-station-speech"]["model_info"]["mode"], "audio_speech")
         self.assertNotIn("ports", compose["services"]["station-voice"])
         audio_env = compose["services"]["open-webui"]["environment"]
-        for kind, model in zip(("STT", "TTS"), CANONICAL_AUDIO_MODELS):
+        for kind, model in (
+            ("STT", "ai-station-call-asr"),
+            ("TTS", "ai-station-speech"),
+        ):
             self.assertEqual(audio_env[f"AUDIO_{kind}_OPENAI_API_BASE_URL"], "http://llm-gateway:4000/v1")
             self.assertEqual(audio_env[f"AUDIO_{kind}_MODEL"], model)
 

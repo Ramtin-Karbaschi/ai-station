@@ -29,6 +29,7 @@ TranscribeFn = Callable[[bytes, str | None], Transcript]
 
 _LANGUAGE_RE = re.compile(r"^[a-z]{2,3}(?:-[a-z]{2,4})?$", re.IGNORECASE)
 _QWEN_TEXT_PREFIX_RE = re.compile(r"^\s*language\s+[^<]+<asr_text>\s*", re.IGNORECASE)
+CALL_ASR_UPSTREAM_MODEL = "whisper-call-1"
 
 
 def normalize_language(language: str | None) -> str | None:
@@ -59,21 +60,24 @@ def extract_audio_request(
     *,
     content_type: str | None = None,
     language: str | None = None,
-) -> tuple[bytes, str | None]:
-    """Extract audio and an optional language from raw or OpenAI multipart data.
+) -> tuple[bytes, str | None, str | None]:
+    """Extract audio, language and model from raw or OpenAI multipart data.
 
     The host gateway historically accepted raw audio bytes.  OpenAI-compatible
     clients send ``multipart/form-data`` with a ``file`` field, so keep raw
-    compatibility while accepting either ``file`` or ``audio`` and a form
-    language field.  The parser is deliberately byte-preserving for audio.
+    compatibility while accepting either ``file`` or ``audio`` and optional
+    language/model fields. The model is the upstream provider model selected
+    by LiteLLM; only the dedicated ``whisper-call-1`` marker changes this
+    router's strategy. Audio extraction remains byte-preserving.
     """
 
     if not body:
         raise ValueError("audio body is empty")
     resolved_language = normalize_language(language)
+    resolved_model: str | None = None
     content_type = (content_type or "").strip()
     if not content_type.lower().startswith("multipart/"):
-        return body, resolved_language
+        return body, resolved_language, resolved_model
 
     envelope = f"Content-Type: {content_type}\r\n\r\n".encode("utf-8") + body
     message = BytesParser(policy=email_default).parsebytes(envelope)
@@ -86,11 +90,14 @@ def extract_audio_request(
         elif name == "language" and form_language is None:
             raw = part.get_payload(decode=True) or b""
             form_language = raw.decode("utf-8", errors="replace").strip()
+        elif name == "model" and resolved_model is None:
+            raw = part.get_payload(decode=True) or b""
+            resolved_model = raw.decode("utf-8", errors="replace").strip() or None
     if audio is None or not audio:
         raise ValueError("multipart request must include a non-empty file field")
     if resolved_language is None and form_language:
         resolved_language = normalize_language(form_language)
-    return audio, resolved_language
+    return audio, resolved_language, resolved_model
 
 
 def transcribe(
@@ -98,6 +105,7 @@ def transcribe(
     *,
     language: str | None = None,
     want_timestamps: bool = False,
+    whisper_primary: bool = False,
     qwen_available: bool = False,
     qwen_fn: TranscribeFn | None = None,
     whisper_fn: TranscribeFn | None = None,
@@ -105,6 +113,34 @@ def transcribe(
     language = normalize_language(language)
     if not audio_bytes:
         raise ValueError("audio body is empty")
+    if whisper_primary:
+        if whisper_fn is None:
+            raise RuntimeError(
+                "Whisper-primary transcription selected but no engine function was provided"
+            )
+        try:
+            whisper = whisper_fn(audio_bytes, language)
+        except Exception as exc:
+            if not qwen_available or qwen_fn is None:
+                raise
+            fallback = qwen_fn(audio_bytes, language)
+            return Transcript(
+                text=fallback.text,
+                engine="qwen3-asr-1.7b",
+                language=fallback.language or language,
+                timestamps=None,
+                fallback_used=True,
+                reason=f"Whisper failed: {type(exc).__name__}",
+            )
+        return Transcript(
+            text=whisper.text,
+            engine="faster-whisper-large-v3",
+            language=whisper.language or language,
+            timestamps=whisper.timestamps,
+            fallback_used=False,
+            reason="call transcription",
+        )
+
     use_whisper = want_timestamps or not qwen_available
     if not use_whisper and qwen_fn is not None:
         try:
@@ -259,6 +295,7 @@ def transcribe_station_audio(
     *,
     language: str | None = None,
     want_timestamps: bool = False,
+    whisper_primary: bool = False,
 ) -> Transcript:
     language = normalize_language(language)
     if not audio_bytes:
@@ -267,6 +304,7 @@ def transcribe_station_audio(
         audio_bytes,
         language=language,
         want_timestamps=want_timestamps,
+        whisper_primary=whisper_primary,
         qwen_available=qwen_asr_available(),
         qwen_fn=_qwen_transcribe,
         whisper_fn=_whisper_transcribe,

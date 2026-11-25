@@ -37,7 +37,11 @@ from apps.gateway.app.lifecycle import (
     read_active_profile,
 )
 from apps.gateway.app.paths import PROJECT_DIR
-from apps.gateway.app.stt import extract_audio_request, transcribe_station_audio
+from apps.gateway.app.stt import (
+    CALL_ASR_UPSTREAM_MODEL,
+    extract_audio_request,
+    transcribe_station_audio,
+)
 from apps.gateway.app.providers import (
     heavy_services,
     provider_for_catalog_model,
@@ -640,7 +644,7 @@ async def audio_transcriptions(request: Request) -> dict[str, Any]:
             raise HTTPException(status_code=413, detail="Audio request exceeds 25 MiB")
         body.extend(chunk)
     try:
-        audio, language = extract_audio_request(
+        audio, language, upstream_model = extract_audio_request(
             bytes(body),
             content_type=request.headers.get("content-type"),
             language=request.query_params.get("language"),
@@ -653,6 +657,7 @@ async def audio_transcriptions(request: Request) -> dict[str, Any]:
         audio,
         language=language,
         want_timestamps=want_timestamps,
+        whisper_primary=upstream_model == CALL_ASR_UPSTREAM_MODEL,
     )
     payload: dict[str, Any] = {
         "text": result.text,

@@ -76,6 +76,16 @@ model_list:
   model_info:
     id: ai-station-asr
     mode: audio_transcription
+- model_name: ai-station-call-asr
+  litellm_params:
+    model: openai/whisper-call-1
+    api_base: http://host.docker.internal:8888/v1
+    api_key: not-needed
+    timeout: 270
+    num_retries: 0
+  model_info:
+    id: ai-station-call-asr
+    mode: audio_transcription
 - model_name: ai-station-speech
   litellm_params:
     model: openai/piper

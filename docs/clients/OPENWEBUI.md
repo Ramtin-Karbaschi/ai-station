@@ -56,6 +56,16 @@ The CPU Piper service selects the voice from the reply text. It has no
 published port and requires no second GPU. On a new installation, run
 `ai voice setup` to provision the pinned voices and start their service.
 
+Voice Mode uses the dedicated `ai-station-call-asr` transcription model, which
+tries CPU faster-whisper first and falls back to Qwen3-ASR if Whisper fails.
+Other applications can keep using `ai-station-asr`, whose normal strategy is
+Qwen3-ASR first. The standard installation disables Open WebUI persistent
+configuration, so recreating Open WebUI after rollout applies the
+`AUDIO_STT_MODEL` environment default. If an operator has explicitly enabled
+persistent configuration, its saved `audio.stt.model` value takes precedence;
+in that case, update only that audio STT setting to `ai-station-call-asr` in
+Open WebUI. No global configuration reset is needed.
+
 ## Two different "projects"
 
 | What you mean | Where it lives | What it does |

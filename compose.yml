@@ -311,7 +311,7 @@ services:
       AUDIO_STT_ENGINE: "${AI_STATION_WEBUI_STT_ENGINE-openai}"
       AUDIO_STT_OPENAI_API_BASE_URL: "http://llm-gateway:4000/v1"
       AUDIO_STT_OPENAI_API_KEY: "${LITELLM_MASTER_KEY}"
-      AUDIO_STT_MODEL: "ai-station-asr"
+      AUDIO_STT_MODEL: "ai-station-call-asr"
       AUDIO_TTS_ENGINE: "${AI_STATION_WEBUI_TTS_ENGINE-openai}"
       AUDIO_TTS_OPENAI_API_BASE_URL: "http://llm-gateway:4000/v1"
       AUDIO_TTS_OPENAI_API_KEY: "${LITELLM_MASTER_KEY}"
