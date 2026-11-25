@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -15,6 +16,76 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(os.name == "posix", "Bash lifecycle helpers require POSIX")
 class LifecycleStateTests(unittest.TestCase):
+    def test_ready_cpu_chat_skips_low_ram_admission_but_runs_visible_canary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            events = directory / "events"
+            python = directory / "python3"
+            python.write_text(
+                "#!/bin/bash\n"
+                "printf '%s\\n' \"$*\" >> \"$PYLOG\"\n"
+                "printf '%s\\n' '{\"decision\":\"REJECT\",\"reasons\":[\"low RAM\"]}'\n",
+                encoding="utf-8",
+            )
+            python.chmod(0o755)
+            script = r'''source "$1"; source "$2"
+ai_cpu_fallback_runtime_ready(){ return 0; }
+ai_chat_generation_canary(){ printf 'visible-canary\n' >> "$EVENTS"; }
+ai_retry_compose(){ printf 'unexpected-compose\n' >> "$EVENTS"; return 99; }
+ai_start_cpu_fallback
+'''
+            result = subprocess.run(
+                ["bash", "-c", script, "bash", str(ROOT / "scripts/lib/ai-common.sh"),
+                 str(ROOT / "scripts/lib/ai-models.sh")],
+                env={**os.environ, "ROOT": str(ROOT), "EVENTS": str(events),
+                     "PYLOG": str(directory / "python.log"),
+                     "PATH": f"{directory}:{os.environ['PATH']}"},
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("already ready", result.stdout)
+            self.assertEqual(events.read_text().splitlines(), ["visible-canary"])
+            self.assertFalse((directory / "python.log").exists())
+
+    def test_cold_cpu_chat_runs_admission_compose_and_visible_canary(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            events = directory / "events"
+            python = directory / "python3"
+            python.write_text(
+                "#!/bin/bash\n"
+                "printf '%s\\n' \"$*\" >> \"$PYLOG\"\n"
+                "if [[ \"$1\" == -m && \"$2\" == apps.gateway.app.admission ]]; then\n"
+                "  printf '%s\\n' '{\"decision\":\"START\",\"stop_providers\":[]}'\n"
+                "  exit 0\n"
+                "fi\n"
+                f"exec {sys.executable} \"$@\"\n",
+                encoding="utf-8",
+            )
+            python.chmod(0o755)
+            script = r'''source "$1"; source "$2"
+ai_cpu_fallback_runtime_ready(){ return 1; }
+ai_retry_compose(){ printf 'compose %s\n' "$*" >> "$EVENTS"; }
+ai_wait_url(){ printf 'wait %s\n' "$*" >> "$EVENTS"; }
+ai_chat_generation_canary(){ printf 'visible-canary\n' >> "$EVENTS"; }
+ai_start_cpu_fallback
+'''
+            result = subprocess.run(
+                ["bash", "-c", script, "bash", str(ROOT / "scripts/lib/ai-common.sh"),
+                 str(ROOT / "scripts/lib/ai-models.sh")],
+                env={**os.environ, "ROOT": str(ROOT), "EVENTS": str(events),
+                     "PYLOG": str(directory / "python.log"),
+                     "PATH": f"{directory}:{os.environ['PATH']}"},
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            event_lines = events.read_text().splitlines()
+            self.assertEqual(event_lines[0], "compose --profile cpu-chat up -d llm-general-cpu")
+            self.assertTrue(event_lines[1].startswith("wait http://127.0.0.1:8089/v1/models"))
+            self.assertEqual(event_lines[2], "visible-canary")
+            python_calls = (directory / "python.log").read_text().splitlines()
+            self.assertIn("-m apps.gateway.app.admission llama-cpp-general-cpu --context 2048 --json", python_calls)
+
     def test_cpu_dependency_preserves_healthy_reranker(self) -> None:
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):  # noqa: N802 - stdlib handler API

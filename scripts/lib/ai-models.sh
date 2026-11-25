@@ -68,7 +68,28 @@ PY
 }
 
 ai_cpu_fallback_runtime_ready() {
-  curl -fsS --max-time 5 http://127.0.0.1:8089/v1/models >/dev/null 2>&1
+  ai_model_alias_ready \
+    "http://127.0.0.1:8089/v1/models" \
+    "ai-station-general-cpu"
+}
+
+ai_model_alias_ready() {
+  local url="$1" expected="$2"
+  PYTHONPATH="$ROOT" python3 - "$url" "$expected" <<'PY'
+import json
+import sys
+import urllib.request
+
+url, expected = sys.argv[1], sys.argv[2]
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+    models = payload.get("data") or []
+except (json.JSONDecodeError, TypeError, AttributeError, OSError, ValueError):
+    raise SystemExit(1)
+if not any(str(item.get("id")) == expected for item in models if isinstance(item, dict)):
+    raise SystemExit(1)
+PY
 }
 
 # Required retrieval/speech services are CPU-capable. Probe their loopback
@@ -126,15 +147,22 @@ PY
 ai_start_cpu_fallback() {
   local provider_id="llama-cpp-general-cpu"
   local decision admission_status=0 service="llm-general-cpu"
+  local started_here=0
 
-  decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission \
-    "$provider_id" --context 2048 --json)" || admission_status=$?
-  if (( admission_status != 0 )); then
-    echo "$decision" >&2
-    echo "ERROR: bounded CPU fallback admission rejected; no CPU runtime was started." >&2
-    return "$admission_status"
-  fi
-  if ! printf '%s\n' "$decision" | PYTHONPATH="$ROOT" python3 -c '
+  # A ready, explicitly opted-in CPU service is already the selected runtime.
+  # Reuse it before cold-start admission, while the direct canary below still
+  # proves that the configured service can generate a visible response.
+  if ai_cpu_fallback_runtime_ready; then
+    echo "OK: CPU chat runtime already ready"
+  else
+    decision="$(PYTHONPATH="$ROOT" python3 -m apps.gateway.app.admission \
+      "$provider_id" --context 2048 --json)" || admission_status=$?
+    if (( admission_status != 0 )); then
+      echo "$decision" >&2
+      echo "ERROR: bounded CPU fallback admission rejected; no CPU runtime was started." >&2
+      return "$admission_status"
+    fi
+    if ! printf '%s\n' "$decision" | PYTHONPATH="$ROOT" python3 -c '
 import json, sys
 decision = json.load(sys.stdin)
 if decision.get("decision") != "START":
@@ -145,19 +173,15 @@ if decision.get("decision") != "START":
 if decision.get("stop_providers"):
     raise SystemExit("ERROR: CPU fallback admission requested a provider stop")
 '; then
-    return 2
-  fi
+      return 2
+    fi
 
-  local started_here=0
-  if ! ai_cpu_fallback_runtime_ready; then
     ai_retry_compose --profile cpu-chat up -d "$service"
     started_here=1
     if ! ai_wait_url "http://127.0.0.1:8089/v1/models" "CPU chat runtime" 180; then
       ai_compose --profile cpu-chat stop "$service" >/dev/null 2>&1 || true
       return 1
     fi
-  else
-    echo "OK: CPU chat runtime already ready"
   fi
 
   if ! ai_chat_generation_canary \
