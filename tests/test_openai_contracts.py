@@ -335,7 +335,7 @@ class CatalogContractTests(unittest.TestCase):
         self.assertNotIn("ports", compose["services"]["station-voice"])
         audio_env = compose["services"]["open-webui"]["environment"]
         for kind, model in (
-            ("STT", "ai-station-call-asr"),
+            ("STT", "${AI_STATION_CALL_ASR_MODEL:-ai-station-asr}"),
             ("TTS", "ai-station-speech"),
         ):
             self.assertEqual(audio_env[f"AUDIO_{kind}_OPENAI_API_BASE_URL"], "http://llm-gateway:4000/v1")
