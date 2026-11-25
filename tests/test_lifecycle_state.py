@@ -30,7 +30,7 @@ class LifecycleStateTests(unittest.TestCase):
             python.chmod(0o755)
             script = r'''source "$1"; source "$2"
 ai_cpu_fallback_runtime_ready(){ return 0; }
-ai_chat_generation_canary(){ printf 'visible-canary\n' >> "$EVENTS"; }
+ai_chat_generation_canary(){ printf 'canary %s\n' "$*" >> "$EVENTS"; }
 ai_retry_compose(){ printf 'unexpected-compose\n' >> "$EVENTS"; return 99; }
 ai_start_cpu_fallback
 '''
@@ -44,7 +44,13 @@ ai_start_cpu_fallback
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("already ready", result.stdout)
-            self.assertEqual(events.read_text().splitlines(), ["visible-canary"])
+            canary = events.read_text().splitlines()
+            self.assertEqual(len(canary), 1)
+            self.assertIn(
+                "http://127.0.0.1:8089/v1/chat/completions ai-station-general-cpu",
+                canary[0],
+            )
+            self.assertTrue(canary[0].endswith("2 90 false 8 true none"))
             self.assertFalse((directory / "python.log").exists())
 
     def test_cold_cpu_chat_runs_admission_compose_and_visible_canary(self) -> None:

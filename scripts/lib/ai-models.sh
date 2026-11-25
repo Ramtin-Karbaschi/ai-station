@@ -187,7 +187,7 @@ if decision.get("stop_providers"):
   if ! ai_chat_generation_canary \
     "http://127.0.0.1:8089/v1/chat/completions" \
     "ai-station-general-cpu" "" "direct CPU runtime warm-up" \
-    2 90 false 8 false none; then
+    2 90 false 8 true none; then
     if (( started_here )); then
       ai_compose --profile cpu-chat stop "$service" >/dev/null 2>&1 || true
     fi
