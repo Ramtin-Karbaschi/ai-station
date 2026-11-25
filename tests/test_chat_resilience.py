@@ -66,13 +66,14 @@ class ChatResilienceTests(unittest.TestCase):
         max_tokens: int = 128,
         allow_reasoning: bool = False,
         require_key: bool = True,
+        reasoning_effort: str = "",
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
                 "bash", "-c",
-                'source "$1"; ai_chat_generation_canary "$2" "$3" "$4" fixture "$5" 2 "$7" "$6" "$8"',
+                'source "$1"; ai_chat_generation_canary "$2" "$3" "$4" fixture "$5" 2 "$7" "$6" "$8" "$9"',
                 "bash", str(CHAT_HELPER), self.endpoint, "fixture-model", key, str(attempts),
-                str(max_tokens), str(require_key).lower(), str(allow_reasoning).lower(),
+                str(max_tokens), str(require_key).lower(), str(allow_reasoning).lower(), reasoning_effort,
             ],
             capture_output=True,
             text=True,
@@ -88,6 +89,7 @@ class ChatResilienceTests(unittest.TestCase):
         self.assertEqual(payload["model"], "fixture-model")
         self.assertEqual(payload["max_tokens"], 128)
         self.assertFalse(payload["stream"])
+        self.assertNotIn("reasoning_effort", payload)
 
     def test_direct_runtime_accepts_reasoning_only_but_public_api_requires_visible_text(self) -> None:
         ChatCanaryHandler.response_payload = {
@@ -101,6 +103,22 @@ class ChatResilienceTests(unittest.TestCase):
         public = self.run_canary("fixture-key", max_tokens=512)
         self.assertNotEqual(public.returncode, 0)
         self.assertIn("empty or invalid completion", public.stderr)
+
+    def test_direct_cpu_canary_sets_reasoning_none_but_still_requires_visible_text(self) -> None:
+        ChatCanaryHandler.response_payload = {
+            "choices": [{"message": {"content": "", "reasoning_content": "thinking"}}]
+        }
+        result = self.run_canary("", reasoning_effort="none", require_key=False)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("empty or invalid completion", result.stderr)
+        self.assertEqual(ChatCanaryHandler.requests[0][1]["reasoning_effort"], "none")
+
+        ChatCanaryHandler.response_payload = {
+            "choices": [{"message": {"content": "ready"}}]
+        }
+        result = self.run_canary("", reasoning_effort="none", require_key=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(ChatCanaryHandler.requests[0][1]["reasoning_effort"], "none")
 
     def test_public_canary_fails_on_http_503_and_does_not_print_key(self) -> None:
         ChatCanaryHandler.response_status = 503

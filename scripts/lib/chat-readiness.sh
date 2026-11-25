@@ -40,6 +40,7 @@ ai_chat_generation_canary() {
   local require_key="${7:-true}"
   local max_tokens="${8:-128}"
   local allow_reasoning="${9:-false}"
+  local reasoning_effort="${10:-}"
   local payload response_with_code response code attempt
 
   if [[ "$require_key" == true && -z "$key" ]]; then
@@ -50,7 +51,7 @@ ai_chat_generation_canary() {
     echo "FAIL: ${label} received an invalid multiline API key" >&2
     return 1
   fi
-  if ! payload="$(python3 - "$model" "$max_tokens" <<'PY'
+  if ! payload="$(python3 - "$model" "$max_tokens" "$reasoning_effort" <<'PY'
 import json
 import sys
 
@@ -60,6 +61,8 @@ payload = {
     "max_tokens": int(sys.argv[2]),
     "stream": False,
 }
+if sys.argv[3]:
+    payload["reasoning_effort"] = sys.argv[3]
 print(json.dumps(payload))
 PY
   )"; then
