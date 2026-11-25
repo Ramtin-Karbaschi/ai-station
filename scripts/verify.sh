@@ -2,6 +2,13 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 
+ROOT="$PWD"
+AI_STATION_ROOT="$ROOT"
+# shellcheck source=scripts/lib/ai-common.sh
+source "$ROOT/scripts/lib/ai-common.sh"
+# shellcheck source=scripts/lib/chat-readiness.sh
+source "$ROOT/scripts/lib/chat-readiness.sh"
+
 fail=0
 active_profile=""
 
@@ -39,9 +46,28 @@ check_post_route_not_404() {
   esac
 }
 
-if [[ -f /srv/ai-station/runtime/active-heavy-profile ]]; then
-  active_profile="$(tr -d '[:space:]' </srv/ai-station/runtime/active-heavy-profile)"
-fi
+active_profile="$(ai_active_heavy_profile || true)"
+chat_max_tokens=128
+
+case "$active_profile" in
+  general|"") chat_model="Qwen3.8-27B-UD-Q4_K_M" ;;
+  coder|ornith) chat_model="Ornith-1.5-35B-Q4_K_M" ;;
+  reasoning)
+    chat_model="Qwen3.8-27B-Reasoning-UD-Q4_K_M"
+    chat_max_tokens=512
+    ;;
+  vision) chat_model="Qwen3.8-27B-Vision-UD-Q4_K_M" ;;
+  qwen38) chat_model="Qwen3.8-27B-UD-Q4_K_M" ;;
+  longwriter) chat_model="LongWriter-Zero-32B-Q4_K_M" ;;
+  comfyui-experimental)
+    echo "FAIL: no active chat model; ComfyUI is a media runtime"
+    fail=1
+    ;;
+  *)
+    echo "FAIL: no chat canary mapping for active profile '$active_profile'"
+    fail=1
+    ;;
+esac
 
 check_url http://127.0.0.1:3000 "Open WebUI"
 check_url http://127.0.0.1:4000/health/liveliness "LiteLLM Gateway"
@@ -103,6 +129,19 @@ case "$active_profile" in
     fail=1
     ;;
 esac
+
+if [[ -n "${chat_model:-}" ]]; then
+  master_key="$(ai_master_key)"
+  if ! ai_chat_generation_canary \
+    "http://127.0.0.1:4000/v1/chat/completions" \
+    "$chat_model" "$master_key" "LiteLLM public API" 2 45 true "$chat_max_tokens" false; then
+    fail=1
+    PYTHONPATH="$ROOT" python3 "$ROOT/scripts/lib/hardware_detect.py" detect --json \
+      | python3 -c 'import json,sys; report=json.load(sys.stdin); print("Current WSL GPU visibility: " + report["runtime_gpu"]["message"] + " (status=" + report["runtime_gpu"]["status"] + ").")' \
+      || true
+  fi
+  unset master_key
+fi
 
 docker exec -i ai-station-tika sh -lc 'tesseract --list-langs | grep -q fas' \
   && echo "OK: Persian OCR language pack" \

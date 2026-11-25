@@ -9,6 +9,7 @@ unset AI_LIFECYCLE_LOCK_FD
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ai-common.sh"
+source "$ROOT/scripts/lib/chat-readiness.sh"
 AI_STATION_ROOT="$ROOT"
 
 usage() {
@@ -146,19 +147,17 @@ EOF
 # HTTP 400 for an unknown model is a config error, not a load delay.
 ai_litellm_warmup_chat() {
   local profile="$1"
-  local public_name key tmp code body attempt
+  local public_name key
   local max_attempts=8
   public_name="$(public_name_for_profile "$profile")" || {
     echo "ERROR: no public model id for profile '${profile}'" >&2
     return 1
   }
-  tmp="$(mktemp)"
-
   # A CLI transition already owns the shared lifecycle flock. Calling the
   # host gateway here would re-enter that lock while the gateway waits on the
   # same transition. Probe the backend directly with its exact catalog model.
   if [[ -n "${AI_LIFECYCLE_LOCK_FD:-}" ]]; then
-    local runtime_port runtime_code backend_model
+    local runtime_port backend_model
     runtime_port="$(ai_profile_port "$profile")"
     backend_model="$(PYTHONPATH="$ROOT" python3 - "$ROOT/config/model-catalog.json" "$profile" <<'PY'
 import json, sys
@@ -175,57 +174,24 @@ PY
         ornith|qwen38) backend_model="ai-station-${profile}" ;;
       esac
     fi
-    [[ -n "$backend_model" ]] || { echo "ERROR: no backend model for ${profile}" >&2; rm -f "$tmp"; return 1; }
-    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-      runtime_code="$(curl -sS -o "$tmp" -w "%{http_code}" --max-time 90 \
-        -H "Content-Type: application/json" \
-        -d "{\"model\":\"${backend_model}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}" \
-        "http://127.0.0.1:${runtime_port}/v1/chat/completions" || true)"
-      if [[ "$runtime_code" == "200" ]]; then
-        echo "OK: direct runtime warm-up (${public_name})"
-        rm -f "$tmp"
-        return 0
-      fi
-      echo "warm-up ${public_name} attempt ${attempt}/${max_attempts}: HTTP ${runtime_code:-000}"
-      (( attempt < max_attempts )) && sleep 5
-    done
-    echo "ERROR: direct runtime warm-up failed for ${public_name}" >&2
-    rm -f "$tmp"
-    return 1
+    [[ -n "$backend_model" ]] || { echo "ERROR: no backend model for ${profile}" >&2; return 1; }
+    ai_chat_generation_canary \
+      "http://127.0.0.1:${runtime_port}/v1/chat/completions" \
+      "$backend_model" "" "direct runtime warm-up (${public_name})" \
+      "$max_attempts" 90 false 8 true
+    return $?
   fi
 
   key="$(ai_master_key)"
   if [[ -z "$key" ]]; then
-    echo "WARNING: skipping LiteLLM warm-up (no master key)"
-    rm -f "$tmp"
-    return 0
+    echo "ERROR: cannot verify chat readiness without the LiteLLM master key" >&2
+    return 1
   fi
 
-  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-    code="$(
-      curl -sS -o "$tmp" -w "%{http_code}" --max-time 90 \
-        -H "Authorization: Bearer ${key}" \
-        -H "Content-Type: application/json" \
-        -d "{\"model\":\"${public_name}\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":8}" \
-        "http://127.0.0.1:4000/v1/chat/completions" || true
-    )"
-    if [[ "$code" == "200" ]]; then
-      echo "OK: warm-up (${public_name})"
-      rm -f "$tmp"
-      return 0
-    fi
-    body="$(tr -d '\0' <"$tmp" 2>/dev/null | head -c 400 || true)"
-    if [[ "$code" == "400" ]] && grep -qiE 'invalid model|model_not_found|LLM Provider NOT provided' <<<"$body"; then
-      echo "ERROR: LiteLLM warm-up HTTP 400 for '${public_name}' (unknown model id, not a load delay): ${body}" >&2
-      rm -f "$tmp"
-      return 1
-    fi
-    echo "warm-up ${public_name} attempt ${attempt}/${max_attempts}: HTTP ${code:-000} (waiting for chat-ready)"
-    sleep 5
-  done
-  echo "WARNING: warm-up request failed after ${max_attempts} attempts for ${public_name} (runtime may still be loading)"
-  rm -f "$tmp"
-  return 0
+  ai_chat_generation_canary \
+    "http://127.0.0.1:4000/v1/chat/completions" \
+    "$public_name" "$key" "LiteLLM warm-up (${public_name})" \
+    "$max_attempts" 90 true 512 false
 }
 
 cmd_status() {
