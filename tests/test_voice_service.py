@@ -45,7 +45,9 @@ class VoiceServiceTests(unittest.TestCase):
         synth.assert_called_once_with("en", "hello", 1.0)
 
     def test_auto_and_mixed_explicit_turns_preserve_speed(self) -> None:
-        with patch.object(service.backend, "synthesize", return_value=b"ID3fixture") as synth:
+        with patch.object(service.backend, "synthesize", return_value=b"ID3fixture") as synth, patch.object(
+            service.backend, "synthesize_runs", return_value=b"ID3fixture"
+        ) as mixed_synth:
             auto = self.client.post(
                 "/v1/audio/speech",
                 json={"input": "\u0633\u0644\u0627\u0645 hello", "voice": "auto", "speed": 1.25},
@@ -56,8 +58,24 @@ class VoiceServiceTests(unittest.TestCase):
             )
         self.assertEqual(auto.status_code, 200)
         self.assertEqual(mixed.status_code, 200)
-        self.assertEqual(synth.call_args_list[0].args, ("fa", "\u0633\u0644\u0627\u0645 hello", 1.25))
-        self.assertEqual(synth.call_args_list[1].args, ("fa", "\u0633\u0644\u0627\u0645 hello", 0.75))
+        self.assertEqual(mixed_synth.call_args.args, ([
+            ("fa", "\u0633\u0644\u0627\u0645 "),
+            ("en", "hello"),
+        ], 1.25))
+        self.assertEqual(synth.call_args.args, ("fa", "\u0633\u0644\u0627\u0645 hello", 0.75))
+
+    def test_split_script_runs_keeps_neutral_text_with_previous_run(self) -> None:
+        self.assertEqual(
+            service.split_script_runs("\u0633\u0644\u0627\u0645 OpenAI 2026!", "fa"),
+            [("fa", "\u0633\u0644\u0627\u0645 "), ("en", "OpenAI 2026!")],
+        )
+
+    def test_falls_back_to_one_voice_for_pathological_script_run_count(self) -> None:
+        text = "\u0627a" * (service.MAX_SCRIPT_RUNS + 1)
+        with patch.object(service.backend, "synthesize", return_value=b"ID3fixture") as synth:
+            response = self.client.post("/v1/audio/speech", json={"input": text, "voice": "auto"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(synth.call_args.args, ("fa", text, 1.0))
 
     def test_rejects_non_string_voice_and_contradictory_explicit_language(self) -> None:
         non_string = self.client.post("/v1/audio/speech", json={"input": "hello", "voice": []})

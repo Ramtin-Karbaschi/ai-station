@@ -33,14 +33,23 @@ _COMMANDS = f"new Set({json.dumps(_HANGUP_PHRASES, ensure_ascii=True)})"
 
 TRANSCRIPTION_OLD = 'if(Me&&(Me.text,Me.text!=="")){const xt=await y()(Me.text,{_raw:!0})}'
 TRANSCRIPTION_NEW = (
-    'if(Me&&(Me.text,Me.text!=="")){if(hp.has(hn(Me.text))){await hu();return}'
-    'const xt=await y()(Me.text,{_raw:!0})}'
+    'if(Me&&typeof Me.text==="string"&&Me.text.trim()!==""){const xtText=Me.text.trim();'
+    'if(hp.has(hn(xtText))){await hu();return}const xt=await y()(xtText,{_raw:!0})}'
 )
 
 CLOSE_OLD = 'ue("click",Zr,async()=>{await fe(),await V(),r(w),r(J),oi.set(!1),g("close")})'
 CLOSE_NEW = 'ue("click",Zr,hu)'
 
 INTERRUPTION_DEFAULT = '.voiceInterruption)??!1'
+
+# The CallOverlay recording path has its own STT request builder.  Do not rely
+# on the settings object here: in the pinned bundle it is read by the caller
+# but is not forwarded to the multipart request.  A small persisted, strictly
+# allow-listed preference keeps the path fail-closed (missing/invalid means
+# auto-detect) while making the explicit Persian control useful.
+STT_CALL_OLD = 'd0(localStorage.token,ce,s().audio.stt.language)'
+STT_CALL_NEW = ('d0(localStorage.token,ce,(()=>{const e=localStorage.getItem('
+                '"station.call.language");return e==="en"?"en":"fa"})())')
 
 HELPER_ANCHOR = (
     'fe=async()=>{try{p&&p.stop()}catch($e){}r(w)&&(r(w).getAudioTracks().forEach('
@@ -62,7 +71,7 @@ def patch_text(text: str, *, expected_sha256: str = EXPECTED_SHA256) -> str:
     if digest != expected_sha256:
         raise ValueError(f"unexpected Open WebUI chunk sha256: {digest}")
 
-    for anchor in (HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD):
+    for anchor in (HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD, STT_CALL_OLD):
         count = text.count(anchor)
         if count != 1:
             raise ValueError(f"expected one compiled anchor, found {count}: {anchor[:80]}")
@@ -72,7 +81,7 @@ def patch_text(text: str, *, expected_sha256: str = EXPECTED_SHA256) -> str:
     result = text.replace(HELPER_ANCHOR, HELPER_REPLACEMENT)
     result = result.replace(TRANSCRIPTION_OLD, TRANSCRIPTION_NEW)
     result = result.replace(CLOSE_OLD, CLOSE_NEW)
-    result = result.replace(INTERRUPTION_DEFAULT, '.voiceInterruption)??!0')
+    result = result.replace(STT_CALL_OLD, STT_CALL_NEW)
     return result
 
 

@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import unittest
+import io
+import wave
+from unittest.mock import patch
 
 from email.parser import BytesParser
 from email.policy import default
@@ -15,7 +18,12 @@ from apps.gateway.app.stt import (
     clean_qwen_text,
     extract_audio_request,
     normalize_language,
+    _split_audio_on_pause,
+    _silence_metadata,
+    _decode_pcm16,
+    _whisper_transcribe,
     transcribe,
+    transcribe_station_audio,
 )
 
 
@@ -156,10 +164,118 @@ class DocumentRouterTests(unittest.TestCase):
 
 
 class SttRouterTests(unittest.TestCase):
+    @staticmethod
+    def _wav_with_samples(samples: bytes) -> bytes:
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(16000)
+            wav.writeframes(samples)
+        return out.getvalue()
+
+    def test_true_silence_returns_empty_no_speech_result(self):
+        silent = self._wav_with_samples(b"\x00\x00" * 16000)
+        with patch("apps.gateway.app.stt.qwen_asr_available", side_effect=AssertionError("silence must not reach ASR")):
+            result = transcribe_station_audio(silent)
+        self.assertEqual(result.text, "")
+        self.assertEqual(result.engine, "silence-gate")
+        self.assertEqual(result.reason, "no speech detected")
+
+    def test_quiet_non_silent_audio_is_not_gated(self):
+        quiet = self._wav_with_samples((100).to_bytes(2, "little", signed=True) * 16000)
+        decoded = _decode_pcm16(quiet)
+        self.assertIsNotNone(decoded)
+        self.assertEqual(_silence_metadata(decoded)[1], False)
+        expected = Transcript("quiet speech", "qwen3-asr-1.7b", None, None, False, "fixture")
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", return_value=expected
+        ):
+            result = transcribe_station_audio(quiet)
+        self.assertEqual(result.text, "quiet speech")
+    @staticmethod
+    def _paused_wav() -> bytes:
+        sample_rate = 16000
+        tone = (1200).to_bytes(2, "little", signed=True) * (sample_rate // 2)
+        silence = b"\x00\x00" * int(sample_rate * 0.7)
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(sample_rate)
+            wav.writeframes(tone + silence + tone)
+        return out.getvalue()
+
+    def test_pause_split_preserves_bounded_segments_for_mixed_default(self):
+        segments = _split_audio_on_pause(self._paused_wav())
+        self.assertIsNotNone(segments)
+        self.assertEqual(len(segments or []), 2)
+
+        responses = iter((
+            Transcript("English prefix", "qwen3-asr-1.7b", "en", None, False, "fixture"),
+            Transcript("\u062d\u0627\u0644\u062a \u0627\u0645\u0631\u0648\u0632 \u0686\u0637\u0648\u0631\u0647\u061f", "qwen3-asr-1.7b", "fa", None, False, "fixture"),
+        ))
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", side_effect=lambda audio, language, **kwargs: next(responses)
+        ):
+            result = transcribe_station_audio(self._paused_wav())
+        self.assertEqual(result.text, "English prefix \u062d\u0627\u0644\u062a \u0627\u0645\u0631\u0648\u0632 \u0686\u0637\u0648\u0631\u0647\u061f")
+        self.assertEqual(result.reason, "pause-segmented transcription")
+
+    def test_pause_split_failure_retries_intact_clip(self):
+        intact = Transcript("intact fallback", "qwen3-asr-1.7b", None, None, False, "fixture")
+        calls = []
+
+        def qwen(audio, language, **kwargs):
+            calls.append(audio)
+            if len(calls) == 1:
+                raise RuntimeError("segment failed")
+            return intact
+
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._split_audio_on_pause", return_value=[b"a", b"b"]
+        ), patch("apps.gateway.app.stt._qwen_transcribe", side_effect=qwen):
+            result = transcribe_station_audio(b"whole clip")
+        self.assertEqual(result.text, "intact fallback")
+        self.assertEqual(calls, [b"a", b"whole clip"])
+
+    def test_long_clip_bypasses_pause_segmentation(self):
+        sample_rate = 16000
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(sample_rate)
+            wav.writeframes(b"\x00\x00" * (sample_rate * 41))
+        self.assertIsNone(_split_audio_on_pause(out.getvalue()))
+
+    def test_pause_split_ranks_longest_silences_before_early_pauses(self):
+        sample_rate = 16000
+        tone = (1200).to_bytes(2, "little", signed=True) * sample_rate
+        silences = [
+            b"\x00\x00" * int(sample_rate * 0.6),
+            b"\x00\x00" * int(sample_rate * 1.3),
+            b"\x00\x00" * int(sample_rate * 0.7),
+        ]
+        raw = tone + silences[0] + tone + silences[1] + tone + silences[2] + tone
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(sample_rate)
+            wav.writeframes(raw)
+        segments = _split_audio_on_pause(out.getvalue())
+        self.assertIsNotNone(segments)
+        self.assertEqual(len(segments or []), 3)
+        # The first short pause is not selected, so the first segment spans
+        # the first two tones and their intervening 0.6s gap.
+        first_frames = (len((segments or [b""])[0]) - 44) // 2
+        self.assertGreater(first_frames / sample_rate, 2.0)
+
     def test_qwen_primary(self):
         def qwen(_b, lang):
             return Transcript("\u0633\u0644\u0627\u0645", "qwen3-asr-1.7b", lang, None, False, "ok")
-        def whisper(_b, lang):
+        def whisper(_b, lang, **_kwargs):
             return Transcript("w", "faster-whisper-large-v3", lang, [{"start": 0}], True, "ok")
         r = transcribe(b"x", language="fa", qwen_available=True, qwen_fn=qwen, whisper_fn=whisper)
         self.assertEqual(r.engine, "qwen3-asr-1.7b")
@@ -207,6 +323,72 @@ class SttRouterTests(unittest.TestCase):
         self.assertTrue(r.fallback_used)
         self.assertEqual(r.reason, "Whisper failed: RuntimeError")
 
+    def test_standard_farsi_route_prefers_whisper_after_normalization(self):
+        calls = []
+
+        def qwen(_b, _lang):
+            calls.append("qwen")
+            return Transcript("qwen", "qwen3-asr-1.7b", "fa", None, False, "ok")
+
+        def whisper(_b, lang, **_kwargs):
+            calls.append(("whisper", lang))
+            return Transcript("\u0641\u0627\u0631\u0633\u06cc", "faster-whisper-large-v3", lang, None, False, "ok")
+
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", side_effect=qwen
+        ), patch("apps.gateway.app.stt._whisper_transcribe", side_effect=whisper):
+            result = transcribe_station_audio(b"audio", language="fa-IR")
+        self.assertEqual(calls, [("whisper", "fa")])
+        self.assertEqual(result.engine, "faster-whisper-large-v3")
+        self.assertEqual(result.text, "\u0641\u0627\u0631\u0633\u06cc")
+
+    def test_standard_english_route_keeps_qwen_primary(self):
+        calls = []
+
+        def qwen(_b, lang, **_kwargs):
+            calls.append(("qwen", lang))
+            return Transcript("English", "qwen3-asr-1.7b", lang, None, False, "ok")
+
+        def whisper(_b, lang, **_kwargs):
+            calls.append(("whisper", lang))
+            return Transcript("Whisper", "faster-whisper-large-v3", lang, None, False, "ok")
+
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", side_effect=qwen
+        ), patch("apps.gateway.app.stt._whisper_transcribe", side_effect=whisper):
+            result = transcribe_station_audio(b"audio", language="en")
+        self.assertEqual(calls, [("qwen", "en")])
+        self.assertEqual(result.engine, "qwen3-asr-1.7b")
+
+    def test_farsi_whisper_empty_recovers_to_qwen(self):
+        calls = []
+
+        def qwen(_b, lang, **_kwargs):
+            calls.append("qwen")
+            return Transcript("fallback", "qwen3-asr-1.7b", lang, None, False, "ok")
+
+        def whisper(_b, lang, **_kwargs):
+            calls.append("whisper")
+            return Transcript("", "faster-whisper-large-v3", lang, None, False, "empty")
+
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", side_effect=qwen
+        ), patch("apps.gateway.app.stt._whisper_transcribe", side_effect=whisper):
+            result = transcribe_station_audio(b"audio", language="fa")
+        self.assertEqual(calls, ["whisper", "qwen"])
+        self.assertTrue(result.fallback_used)
+        self.assertEqual(result.text, "fallback")
+
+    def test_empty_whisper_and_qwen_do_not_succeed_silently(self):
+        def empty(_b, _lang, **_kwargs):
+            return Transcript("", "engine", None, None, False, "empty")
+
+        with patch("apps.gateway.app.stt.qwen_asr_available", return_value=True), patch(
+            "apps.gateway.app.stt._qwen_transcribe", side_effect=empty
+        ), patch("apps.gateway.app.stt._whisper_transcribe", side_effect=empty):
+            with self.assertRaisesRegex(RuntimeError, "empty transcript"):
+                transcribe_station_audio(b"audio", language="fa")
+
     def test_generic_timestamp_whisper_does_not_change_fallback_policy(self):
         def qwen(_b, lang):
             raise AssertionError("generic timestamp mode must not call Qwen")
@@ -235,6 +417,21 @@ class SttRouterTests(unittest.TestCase):
         r = transcribe(b"x", qwen_available=True, qwen_fn=qwen, whisper_fn=whisper)
         self.assertEqual(r.engine, "faster-whisper-large-v3")
         self.assertTrue(r.fallback_used)
+
+    def test_whisper_worker_has_inner_timeout_before_outer_deadline(self):
+        completed = type("Completed", (), {
+            "stdout": b'{"text":"ok","language":"fa","segments":[]}',
+        })()
+        with patch("apps.gateway.app.stt.subprocess.run", return_value=completed) as run:
+            result = _whisper_transcribe(b"audio", "fa", timeout=300.0)
+        command = run.call_args.args[0]
+        self.assertEqual(command[0:7], [
+            "docker", "exec", "-i", "ai-station-open-webui-1",
+            "/usr/bin/timeout", "--signal=TERM", "--kill-after=5s",
+        ])
+        self.assertEqual(command[7], "295.000s")
+        self.assertEqual(run.call_args.kwargs["timeout"], 300.0)
+        self.assertEqual(result.text, "ok")
 
     def _parse_asr_multipart(self, body: bytes):
         envelope = (

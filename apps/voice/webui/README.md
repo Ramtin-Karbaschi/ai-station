@@ -32,7 +32,8 @@ The exact installed revision is
 `D4rfk4Lu.js`, SHA-256
 `ea3ddfe01c42955d1fbf195234a494b4f50749f35bdcb236c64c15b46c1f5443`.
 The tool verifies this checksum and the expected anchors before writing output.
-It also enables native voice interruption when the user has no saved preference.
+It preserves native voice interruption as an explicit user setting; when no preference
+exists, playback interruption remains disabled to prevent assistant audio recapture.
 
 No new service or frontend is required. In a derived image build, run the
 patch after frontend assets are produced and replace only the verified chunk

@@ -23,6 +23,7 @@ from fastapi.responses import Response
 
 MAX_TEXT_CHARS = int(os.getenv("AI_STATION_TTS_MAX_CHARS", "4000"))
 MAX_BODY_BYTES = 64 * 1024
+MAX_SCRIPT_RUNS = 64
 SYNTHESIS_TIMEOUT_SECONDS = float(os.getenv("AI_STATION_TTS_TIMEOUT", "30"))
 MAX_CONCURRENT = int(os.getenv("AI_STATION_TTS_MAX_CONCURRENT", "1"))
 DEFAULT_FORMAT = "mp3"
@@ -57,6 +58,37 @@ def _has_persian(text: str) -> bool:
 
 def _has_latin(text: str) -> bool:
     return any("a" <= char.lower() <= "z" for char in text)
+
+
+def _script_alias(char: str) -> str | None:
+    if "a" <= char.lower() <= "z":
+        return "en"
+    if "\u0600" <= char <= "\u06ff":
+        return "fa"
+    return None
+
+
+def split_script_runs(text: str, default_alias: str) -> list[tuple[str, str]]:
+    """Split mixed Persian/Latin text while keeping punctuation with its phrase."""
+    runs: list[tuple[str, str]] = []
+    pending = ""
+    for char in text:
+        alias = _script_alias(char)
+        if alias is None:
+            pending += char
+            continue
+        if runs and runs[-1][0] == alias:
+            runs[-1] = (alias, runs[-1][1] + pending + char)
+        else:
+            if runs:
+                runs[-1] = (runs[-1][0], runs[-1][1] + pending)
+            runs.append((alias, char))
+        pending = ""
+    if runs:
+        runs[-1] = (runs[-1][0], runs[-1][1] + pending)
+    elif pending:
+        runs.append((default_alias, pending))
+    return [(alias, chunk) for alias, chunk in runs if chunk.strip()]
 
 
 def _load_piper(model_path: Path) -> Any:
@@ -129,6 +161,37 @@ class PiperBackend:
                 self._voices[alias] = voice
             wav_data = _wav_bytes(voice, text, speed)
         return _mp3_bytes(wav_data)
+
+    def synthesize_runs(self, runs: list[tuple[str, str]], speed: float) -> bytes:
+        if len(runs) == 1:
+            alias, text = runs[0]
+            return self.synthesize(alias, text, speed)
+        wav_parts: list[bytes] = []
+        params: tuple[int, int, int] | None = None
+        for alias, text in runs:
+            _, path = configured_model(alias)
+            with self._lock:
+                voice = self._voices.get(alias)
+                if voice is None:
+                    voice = self._loader(path)
+                    self._voices[alias] = voice
+                wav_data = _wav_bytes(voice, text, speed)
+            with wave.open(io.BytesIO(wav_data), "rb") as source:
+                current = (source.getnchannels(), source.getsampwidth(), source.getframerate())
+                if params is None:
+                    params = current
+                if current != params:
+                    raise VoiceServiceError("voice outputs have incompatible audio formats")
+                wav_parts.append(source.readframes(source.getnframes()))
+        if params is None:
+            raise VoiceServiceError("speech synthesis returned no audio")
+        output = io.BytesIO()
+        with wave.open(output, "wb") as target:
+            target.setnchannels(params[0])
+            target.setsampwidth(params[1])
+            target.setframerate(params[2])
+            target.writeframes(b"".join(wav_parts))
+        return _mp3_bytes(output.getvalue())
 
 
 app = FastAPI(title="AI Station Piper Voice", docs_url=None, redoc_url=None)
@@ -233,13 +296,25 @@ async def speech(request: Request) -> Response:
         )
         if contradictory:
             raise HTTPException(status_code=400, detail="voice does not match input language")
+        runs = (
+            split_script_runs(text.strip(), alias)
+            if requested_voice in {"auto", "alloy"}
+            else [(alias, text.strip())]
+        )
+        if len(runs) > MAX_SCRIPT_RUNS:
+            # Preserve the complete text and request budget for pathological alternation.
+            runs = [(alias, text.strip())]
         try:
             await asyncio.wait_for(slots.acquire(), timeout=0.05)
         except asyncio.TimeoutError:
             raise HTTPException(status_code=429, detail="voice service is busy") from None
-        task = asyncio.create_task(
-            run_in_threadpool(backend.synthesize, alias, text.strip(), float(speed))
+        synthesize = backend.synthesize if len(runs) == 1 else backend.synthesize_runs
+        synthesize_args = (
+            (runs[0][0], runs[0][1], float(speed))
+            if len(runs) == 1
+            else (runs, float(speed))
         )
+        task = asyncio.create_task(run_in_threadpool(synthesize, *synthesize_args))
         try:
             audio = await asyncio.wait_for(asyncio.shield(task), timeout=SYNTHESIS_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:

@@ -9,6 +9,8 @@ from apps.voice.webui.patch_compiled import (
     INTERRUPTION_DEFAULT,
     TRANSCRIPTION_NEW,
     TRANSCRIPTION_OLD,
+    STT_CALL_NEW,
+    STT_CALL_OLD,
     patch_text,
 )
 
@@ -18,8 +20,8 @@ class CompiledPatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unexpected Open WebUI chunk"):
             patch_text("not the pinned bundle")
 
-    def test_replacements_preserve_native_close_and_enable_interruption(self):
-        fixture = "\n".join((HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD,
+    def test_replacements_preserve_native_close_and_keep_interruption_opt_in(self):
+        fixture = "\n".join((HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD, STT_CALL_OLD,
                              INTERRUPTION_DEFAULT, INTERRUPTION_DEFAULT))
         digest = hashlib.sha256(fixture.encode()).hexdigest()
         patched = patch_text(fixture, expected_sha256=digest)
@@ -27,9 +29,10 @@ class CompiledPatchTests(unittest.TestCase):
         self.assertIn(TRANSCRIPTION_NEW, patched)
         self.assertIn(CLOSE_NEW, patched)
         self.assertNotIn(CLOSE_OLD, patched)
-        self.assertEqual(patched.count(".voiceInterruption)??!0"), 2)
+        self.assertIn(STT_CALL_NEW, patched)
+        self.assertEqual(patched.count(".voiceInterruption)??!1"), 2)
 
     def test_refuses_changed_interruption_structure(self):
-        fixture = "\n".join((HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD, INTERRUPTION_DEFAULT))
+        fixture = "\n".join((HELPER_ANCHOR, TRANSCRIPTION_OLD, CLOSE_OLD, STT_CALL_OLD, INTERRUPTION_DEFAULT))
         with self.assertRaisesRegex(ValueError, "interruption defaults"):
             patch_text(fixture, expected_sha256=hashlib.sha256(fixture.encode()).hexdigest())

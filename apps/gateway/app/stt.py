@@ -4,15 +4,23 @@
 from __future__ import annotations
 
 import json
+import io
+import logging
 import os
 import re
 import subprocess
+import struct
+import time
 import urllib.error
 import urllib.request
+import wave
 from dataclasses import dataclass
 from email.parser import BytesParser
 from email.policy import default as email_default
 from typing import Callable
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -30,6 +38,16 @@ TranscribeFn = Callable[[bytes, str | None], Transcript]
 _LANGUAGE_RE = re.compile(r"^[a-z]{2,3}(?:-[a-z]{2,4})?$", re.IGNORECASE)
 _QWEN_TEXT_PREFIX_RE = re.compile(r"^\s*language\s+[^<]+<asr_text>\s*", re.IGNORECASE)
 CALL_ASR_UPSTREAM_MODEL = "whisper-call-1"
+_MAX_SEGMENTS = 3
+_MIN_SEGMENT_SECONDS = 0.45
+_MIN_SILENCE_SECONDS = 0.55
+_SILENCE_WINDOW_SECONDS = 0.02
+_SEGMENT_PAD_SECONDS = 0.0
+_SEGMENT_DEADLINE_SECONDS = 40.0
+_MAX_SEGMENTABLE_SECONDS = 40.0
+_PERSIAN_WHISPER_DEADLINE_SECONDS = 45.0
+_SILENCE_PEAK_THRESHOLD = 64
+_SILENCE_RMS_THRESHOLD = 16.0
 
 
 def normalize_language(language: str | None) -> str | None:
@@ -53,6 +71,115 @@ def clean_qwen_text(text: str) -> str:
     """Remove the local Qwen server's metadata wrapper from transcript text."""
 
     return _QWEN_TEXT_PREFIX_RE.sub("", str(text or "")).strip()
+
+
+def _decode_pcm16(audio_bytes: bytes) -> tuple[bytes, int] | None:
+    """Decode common audio to mono 16-bit PCM for conservative silence splits."""
+    try:
+        with wave.open(io.BytesIO(audio_bytes), "rb") as source:
+            if source.getnchannels() != 1 or source.getsampwidth() != 2:
+                return None
+            if not source.getframerate() or source.getnframes() / source.getframerate() > _MAX_SEGMENTABLE_SECONDS:
+                return None
+            return source.readframes(source.getnframes()), source.getframerate()
+    except (EOFError, wave.Error):
+        pass
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-t", str(_MAX_SEGMENTABLE_SECONDS + 1), "-f", "s16le", "-ac", "1", "-ar", "16000", "pipe:1"],
+            input=audio_bytes,
+            capture_output=True,
+            check=True,
+            timeout=8,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if len(result.stdout) > int(_MAX_SEGMENTABLE_SECONDS * 16000 * 2):
+        return None
+    return result.stdout, 16000
+
+
+def _silence_metadata(decoded: tuple[bytes, int] | None) -> tuple[int | None, bool]:
+    """Return bounded duration/silence metadata without retaining audio text."""
+    if decoded is None:
+        return None, False
+    pcm, rate = decoded
+    if not pcm or rate <= 0:
+        return 0, True
+    samples = struct.unpack("<%dh" % (len(pcm) // 2), pcm)
+    peak = max((abs(value) for value in samples), default=0)
+    mean_square = sum(value * value for value in samples) / max(1, len(samples))
+    rms = mean_square ** 0.5
+    duration_ms = int(len(samples) * 1000 / rate)
+    return duration_ms, peak <= _SILENCE_PEAK_THRESHOLD and rms <= _SILENCE_RMS_THRESHOLD
+
+
+def _split_audio_on_pause(
+    audio_bytes: bytes, *, decoded: tuple[bytes, int] | None = None
+) -> list[bytes] | None:
+    """Return bounded WAV segments, or None when the input is not safely split."""
+    decoded = decoded if decoded is not None else _decode_pcm16(audio_bytes)
+    if decoded is None:
+        return None
+    pcm, rate = decoded
+    frame_bytes = 2
+    window = max(1, int(rate * _SILENCE_WINDOW_SECONDS))
+    samples = struct.unpack("<%dh" % (len(pcm) // frame_bytes), pcm)
+    if len(samples) < int(rate * _MIN_SEGMENT_SECONDS * 2):
+        return None
+    energies = [
+        sum(abs(value) for value in samples[start : start + window]) / max(1, len(samples[start : start + window]))
+        for start in range(0, len(samples), window)
+    ]
+    peak = max(energies, default=0.0)
+    threshold = max(180.0, peak * 0.035)
+    silence_windows = max(1, int(_MIN_SILENCE_SECONDS / _SILENCE_WINDOW_SECONDS))
+    cuts: list[tuple[int, int]] = []
+    run_start: int | None = None
+    for index, energy in enumerate(energies + [peak]):
+        if energy <= threshold and run_start is None:
+            run_start = index
+        elif energy > threshold and run_start is not None:
+            if index - run_start >= silence_windows:
+                cuts.append((run_start * window, index * window))
+            run_start = None
+    if not cuts:
+        return None
+    total = len(samples)
+    # Prefer the longest reliable pauses.  Taking the first pauses biases a
+    # natural mixed-language recording toward early intra-sentence gaps and
+    # leaves the language boundary in one oversized segment.  Keep the same
+    # bounded segment count, reject cuts that would create short segments, and
+    # use the midpoint as a deterministic tie-breaker.
+    minimum = int(rate * _MIN_SEGMENT_SECONDS)
+    selected: list[int] = []
+    ranked = sorted(cuts, key=lambda cut: (-(cut[1] - cut[0]), (cut[0] + cut[1]) // 2))
+    for start, end in ranked:
+        midpoint = (start + end) // 2
+        if midpoint < minimum or total - midpoint < minimum:
+            continue
+        if any(abs(midpoint - chosen) < minimum for chosen in selected):
+            continue
+        selected.append(midpoint)
+        if len(selected) >= _MAX_SEGMENTS - 1:
+            break
+    boundaries = [0, *sorted(selected)]
+    if len(boundaries) == 1:
+        return None
+    boundaries.append(total)
+    segments: list[bytes] = []
+    for start, end in zip(boundaries, boundaries[1:]):
+        pad = int(rate * _SEGMENT_PAD_SECONDS)
+        start = max(0, start - pad)
+        end = min(total, end + pad)
+        buffer = io.BytesIO()
+        with wave.open(buffer, "wb") as output:
+            output.setnchannels(1)
+            output.setsampwidth(2)
+            output.setframerate(rate)
+            output.writeframes(struct.pack("<%dh" % (end - start), *samples[start:end]))
+        segments.append(buffer.getvalue())
+    return segments
 
 
 def extract_audio_request(
@@ -120,10 +247,14 @@ def transcribe(
             )
         try:
             whisper = whisper_fn(audio_bytes, language)
+            if not whisper.text.strip():
+                raise RuntimeError("Whisper returned an empty transcript")
         except Exception as exc:
             if not qwen_available or qwen_fn is None:
                 raise
             fallback = qwen_fn(audio_bytes, language)
+            if not fallback.text.strip():
+                raise RuntimeError("Qwen3-ASR returned an empty transcript") from exc
             return Transcript(
                 text=fallback.text,
                 engine="qwen3-asr-1.7b",
@@ -145,6 +276,8 @@ def transcribe(
     if not use_whisper and qwen_fn is not None:
         try:
             result = qwen_fn(audio_bytes, language)
+            if not result.text.strip():
+                raise RuntimeError("Qwen3-ASR returned an empty transcript")
             return Transcript(
                 text=result.text,
                 engine="qwen3-asr-1.7b",
@@ -168,6 +301,8 @@ def transcribe(
     if whisper_fn is None:
         raise RuntimeError("Whisper fallback selected but no engine function was provided")
     whisper = whisper_fn(audio_bytes, language)
+    if not whisper.text.strip():
+        raise RuntimeError("Whisper returned an empty transcript")
     return Transcript(
         text=whisper.text,
         engine="faster-whisper-large-v3",
@@ -226,7 +361,9 @@ def _asr_multipart_body(
     return bytes(body)
 
 
-def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
+def _qwen_transcribe(
+    audio_bytes: bytes, language: str | None, *, timeout: float = 180.0
+) -> Transcript:
     language = normalize_language(language)
     boundary = ASR_MULTIPART_BOUNDARY
     body = _asr_multipart_body(audio_bytes, language, boundary=boundary)
@@ -236,7 +373,7 @@ def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=180) as response:
+    with urllib.request.urlopen(req, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8", errors="replace"))
     text = clean_qwen_text(payload.get("text") or "")
     if not text:
@@ -251,13 +388,23 @@ def _qwen_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
     )
 
 
-def _whisper_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
+def _whisper_transcribe(
+    audio_bytes: bytes, language: str | None, *, timeout: float = 300.0
+) -> Transcript:
+    # Keep the worker deadline inside the host-side deadline.  If the request
+    # is cancelled or the outer docker exec times out, the in-container
+    # timeout still terminates the model worker instead of leaving it resident.
+    worker_timeout = max(1.0, timeout - 5.0)
     result = subprocess.run(
         [
             "docker",
             "exec",
             "-i",
             "ai-station-open-webui-1",
+            "/usr/bin/timeout",
+            "--signal=TERM",
+            "--kill-after=5s",
+            f"{worker_timeout:.3f}s",
             "python",
             "-c",
             (
@@ -277,7 +424,7 @@ def _whisper_transcribe(audio_bytes: bytes, language: str | None) -> Transcript:
         input=audio_bytes,
         check=True,
         capture_output=True,
-        timeout=300,
+        timeout=timeout,
     )
     payload = json.loads(result.stdout.decode("utf-8"))
     return Transcript(
@@ -300,12 +447,79 @@ def transcribe_station_audio(
     language = normalize_language(language)
     if not audio_bytes:
         raise ValueError("audio body is empty")
+    decoded = _decode_pcm16(audio_bytes)
+    duration_ms, is_silent = _silence_metadata(decoded)
+    route = (
+        "whisper-call" if whisper_primary else
+        "whisper-fa" if language == "fa" else
+        "whisper-timestamps" if want_timestamps else
+        "qwen-auto" if language is None else "qwen-explicit"
+    )
+    logger.info(
+        "stt_audio_metadata language=%s route=%s duration_ms=%s silence=%s",
+        language or "auto", route, duration_ms if duration_ms is not None else "unknown", is_silent,
+    )
+    if is_silent:
+        return Transcript(
+            text="", engine="silence-gate", language=language, timestamps=None,
+            fallback_used=False, reason="no speech detected",
+        )
+    qwen_available = qwen_asr_available()
+    # The browser's explicit Persian preference is a quality request.  Keep
+    # Auto/English on the Qwen pause-splitting route, but use the validated
+    # local Whisper model for Persian before falling back to Qwen.
+    if language == "fa" and not whisper_primary:
+        return transcribe(
+            audio_bytes,
+            language=language,
+            want_timestamps=want_timestamps,
+            whisper_primary=True,
+            qwen_available=qwen_available,
+            qwen_fn=_qwen_transcribe,
+            whisper_fn=lambda data, lang: _whisper_transcribe(
+                data, lang, timeout=_PERSIAN_WHISPER_DEADLINE_SECONDS
+            ),
+        )
+    if language is None and not want_timestamps and not whisper_primary and qwen_available:
+        segments = _split_audio_on_pause(audio_bytes, decoded=decoded)
+        if segments and len(segments) > 1:
+            started = time.monotonic()
+            texts: list[str] = []
+            try:
+                for segment in segments:
+                    if time.monotonic() - started >= _SEGMENT_DEADLINE_SECONDS:
+                        raise TimeoutError("pause-segmented transcription deadline exceeded")
+                    remaining = _SEGMENT_DEADLINE_SECONDS - (time.monotonic() - started)
+                    if remaining <= 1.0:
+                        raise TimeoutError("pause-segmented transcription deadline exceeded")
+                    result = _qwen_transcribe(segment, None, timeout=remaining)
+                    if not result.text.strip():
+                        raise RuntimeError("pause segment returned empty transcript")
+                    texts.append(result.text.strip())
+                return Transcript(
+                    text=" ".join(texts),
+                    engine="qwen3-asr-1.7b",
+                    language=None,
+                    timestamps=None,
+                    fallback_used=False,
+                    reason="pause-segmented transcription",
+                )
+            except Exception as split_error:
+                # A split must never lose audio. Retry the original intact clip
+                # only within the shared budget for this segmented request.
+                remaining = _SEGMENT_DEADLINE_SECONDS - (time.monotonic() - started)
+                if remaining <= 1.0:
+                    raise split_error
+                try:
+                    return _qwen_transcribe(audio_bytes, None, timeout=remaining)
+                except Exception:
+                    raise split_error
     return transcribe(
         audio_bytes,
         language=language,
         want_timestamps=want_timestamps,
         whisper_primary=whisper_primary,
-        qwen_available=qwen_asr_available(),
+        qwen_available=qwen_available,
         qwen_fn=_qwen_transcribe,
         whisper_fn=_whisper_transcribe,
     )
