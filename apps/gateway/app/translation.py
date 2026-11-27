@@ -209,21 +209,19 @@ def chat_to_responses(payload: dict[str, Any], requested_model: str, response_id
 
 
 def flatten_reasoning_into_content(payload: Any) -> Any:
+    """Keep private reasoning separate from user-visible assistant content.
+
+    The compatibility helper remains in place for callers and imports, but a
+    reasoning-only response must not be promoted into ``content``: clients
+    such as voice/TTS may speak ``content`` directly.
+    """
     if not isinstance(payload, dict):
         return payload
     choices = payload.get("choices")
     if not isinstance(choices, list):
         return payload
-    for choice in choices:
-        if not isinstance(choice, dict):
-            continue
-        for key in ("message", "delta"):
-            block = choice.get(key)
-            if not isinstance(block, dict):
-                continue
-            reasoning = block.get("reasoning_content")
-            if content_is_empty(block.get("content")) and isinstance(reasoning, str) and reasoning.strip():
-                block["content"] = reasoning
+    # ``reasoning_content`` is an opt-in/private channel. Preserve it as
+    # supplied and never copy it into visible or spoken content.
     return payload
 
 

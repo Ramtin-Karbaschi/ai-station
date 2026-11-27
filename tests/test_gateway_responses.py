@@ -118,7 +118,7 @@ class ResponsesEndpointTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         gateway_main.QUEUE.clear()
 
-    async def _post(self, body: dict) -> httpx.Response:
+    async def _post(self, body: dict, *, reasoning_only: bool = False) -> httpx.Response:
         real_async_client = httpx.AsyncClient
 
         async def fake_start_runtime(model, request_body=None):
@@ -130,15 +130,18 @@ class ResponsesEndpointTests(unittest.IsolatedAsyncioTestCase):
             text = ""
 
             def json(self):
+                message = {
+                    "role": "assistant",
+                    "content": "" if reasoning_only else "RESPONSES_OK",
+                }
+                if reasoning_only:
+                    message["reasoning_content"] = "private reasoning"
                 return {
                     "id": "chat_test",
                     "created": 1,
                     "choices": [
                         {
-                            "message": {
-                                "role": "assistant",
-                                "content": "RESPONSES_OK",
-                            }
+                            "message": message
                         }
                     ],
                     "usage": {
@@ -186,6 +189,15 @@ class ResponsesEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["object"], "response")
         self.assertEqual(payload["status"], "completed")
         self.assertEqual(payload["output"][0]["content"][0]["text"], "RESPONSES_OK")
+        self.assertEqual(gateway_main.QUEUE, [])
+
+    async def test_nonstream_responses_keeps_reasoning_out_of_visible_output(self) -> None:
+        response = await self._post(
+            {"model": MODEL, "input": "reply", "max_output_tokens": 32},
+            reasoning_only=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["output"], [])
         self.assertEqual(gateway_main.QUEUE, [])
 
     async def test_stream_responses_endpoint_emits_openai_events(self) -> None:

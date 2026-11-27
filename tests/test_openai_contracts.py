@@ -685,7 +685,7 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(gateway_main.QUEUE, [])
 
-    async def test_empty_content_copies_reasoning_content(self) -> None:
+    async def test_empty_content_keeps_reasoning_private(self) -> None:
         real_async_client = httpx.AsyncClient
 
         async def fake_start_runtime(model, request_body=None):
@@ -750,11 +750,11 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         message = response.json()["choices"][0]["message"]
-        self.assertEqual(message["content"], "pong")
+        self.assertEqual(message["content"], "")
         self.assertEqual(message["reasoning_content"], "pong")
         self.assertEqual(message["tool_calls"][0]["function"]["name"], "get_time")
 
-    def test_flatten_helpers_cover_message_delta_and_sse(self) -> None:
+    def test_flatten_helpers_keep_reasoning_separate(self) -> None:
         payload = {
             "choices": [
                 {
@@ -766,9 +766,8 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
             ]
         }
         gateway_main.flatten_reasoning_into_content(payload)
-        self.assertEqual(
-            payload["choices"][0]["delta"]["content"], "think then answer"
-        )
+        self.assertIsNone(payload["choices"][0]["delta"]["content"])
+        self.assertEqual(payload["choices"][0]["delta"]["reasoning_content"], "think then answer")
         filled = {
             "choices": [
                 {"message": {"content": "keep me", "reasoning_content": "ignore"}}
@@ -780,7 +779,8 @@ class GatewayContractTests(unittest.IsolatedAsyncioTestCase):
             b'data: {"choices":[{"delta":{"content":"","reasoning_content":"pong"}}]}\n'
         )
         parsed = json.loads(line.decode("utf-8").split("data:", 1)[-1].strip())
-        self.assertEqual(parsed["choices"][0]["delta"]["content"], "pong")
+        self.assertEqual(parsed["choices"][0]["delta"]["content"], "")
+        self.assertEqual(parsed["choices"][0]["delta"]["reasoning_content"], "pong")
         self.assertEqual(gateway_main.flatten_sse_line(b"data: [DONE]\n"), b"data: [DONE]\n")
 
     async def test_stream_preserves_reasoning_and_content_delta_boundaries(self) -> None:
