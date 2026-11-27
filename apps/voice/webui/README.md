@@ -15,6 +15,9 @@ Recognized commands are exact standalone transcripts after normalization:
 Substring matches are rejected, so a sentence such as "do not end the call"
 remains an ordinary prompt. The command is evaluated only after server
 transcription of the user's recording; assistant playback is never parsed.
+Normal calls use automatic STT detection with no call-specific language menu
+or persisted browser language preference. The optional API language field
+remains available to other clients.
 The existing native cleanup (`stopAudioStream`, `stopVideoStream`,
 `showCallOverlay=false`, `dispatch('close')`) is reused by the spoken path.
 

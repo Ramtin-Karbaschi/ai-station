@@ -30,6 +30,8 @@ class CompiledPatchTests(unittest.TestCase):
         self.assertIn(CLOSE_NEW, patched)
         self.assertNotIn(CLOSE_OLD, patched)
         self.assertIn(STT_CALL_NEW, patched)
+        self.assertNotIn("station.call.language", patched)
+        self.assertNotIn("s().audio.stt.language", patched)
         self.assertEqual(patched.count(".voiceInterruption)??!1"), 2)
 
     def test_refuses_changed_interruption_structure(self):

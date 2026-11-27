@@ -42,14 +42,11 @@ CLOSE_NEW = 'ue("click",Zr,hu)'
 
 INTERRUPTION_DEFAULT = '.voiceInterruption)??!1'
 
-# The CallOverlay recording path has its own STT request builder.  Do not rely
-# on the settings object here: in the pinned bundle it is read by the caller
-# but is not forwarded to the multipart request.  A small persisted, strictly
-# allow-listed preference keeps the path fail-closed (missing/invalid means
-# auto-detect) while making the explicit Persian control useful.
-STT_CALL_OLD = 'd0(localStorage.token,ce,s().audio.stt.language)'
-STT_CALL_NEW = ('d0(localStorage.token,ce,(()=>{const e=localStorage.getItem('
-                '"station.call.language");return e==="en"?"en":"fa"})())')
+# The CallOverlay recording path has its own STT request builder. Keep normal
+# calls automatic: do not forward a fixed browser language preference into a
+# mixed-language utterance. Omitting the optional hint preserves API behavior.
+STT_CALL_OLD = 'd0(localStorage.token,ce,(ae=(Ge=(Ce=s())==null?void 0:Ce.audio)==null?void 0:Ge.stt)==null?void 0:ae.language).catch(xt=>(pt.error(`${xt}`),null))'
+STT_CALL_NEW = 'd0(localStorage.token,ce).catch(xt=>(pt.error(`${xt}`),null))'
 
 HELPER_ANCHOR = (
     'fe=async()=>{try{p&&p.stop()}catch($e){}r(w)&&(r(w).getAudioTracks().forEach('
